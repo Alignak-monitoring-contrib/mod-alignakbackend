@@ -4,13 +4,6 @@ python:
   - "2.6"
   - "2.7"
 
-matrix:
-  include:
-    - python: "2.7"
-      env: TEST_PYLINT=pylint --rcfile=.pylintrc --disable=I0011 -r no alignak/modules/*
-    - python: "2.6"
-      env: TEST_PYLINT=ls
-
 # command to install dependencies
 # some are only used for travis/coveralls so we are installing them here only
 install:
@@ -21,11 +14,10 @@ install:
 script:
   - cd test
   - pip freeze  # so to help eventual debug: know what exact versions are in use can be rather useful.
-  - nosetests -xv --with-coverage --cover-package=alignak
+  - nosetests -xv --process-restartworker --processes=1 --process-timeout=300  --with-coverage --cover-package=alignak
   - coverage combine
   - cd .. && pep8 --max-line-length=100 --exclude='*.pyc' alignak/*
-#  - pylint --rcfile=.pylintrc --disable=I0011 -r no alignak/modules/*
-  - #TEST_PYLINT
+  - pylint --rcfile=.pylintrc --disable=I0011 -r no alignak/modules/*
   - pep257 --select=D300 alignak
 # specific call to launch coverage data into coveralls.io
 after_success:

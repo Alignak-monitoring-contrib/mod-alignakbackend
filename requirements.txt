@@ -1,1 +1,3 @@
 -e git+https://github.com/Alignak-monitoring/alignak.git@develop#egg=alignak
+requests
+json

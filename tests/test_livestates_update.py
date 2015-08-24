@@ -73,7 +73,7 @@ class TestLivestatesUpdate(unittest2.TestCase):
 
     def test_send_to_backend_host(self):
         modconf = Module()
-        modconf.module_name = "surv"
+        modconf.module_name = "alignakbackend"
         module = AlignakBackendSched(modconf)
 
         with HTTMock(response_patch):
@@ -89,7 +89,7 @@ class TestLivestatesUpdate(unittest2.TestCase):
 
     def test_send_to_backend_service(self):
         modconf = Module()
-        modconf.module_name = "surv"
+        modconf.module_name = "alignakbackend"
         module = AlignakBackendSched(modconf)
 
         with HTTMock(response_patch):

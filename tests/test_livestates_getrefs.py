@@ -70,7 +70,7 @@ class TestLivestatesGetrefs(unittest2.TestCase):
         :return: None
         """
         modconf = Module()
-        modconf.module_name = "surv"
+        modconf.module_name = "alignakbackend"
         module = AlignakBackendSched(modconf)
 
         with HTTMock(response_get_all_hosts):
@@ -112,7 +112,7 @@ class TestLivestatesGetrefs(unittest2.TestCase):
         :return: None
         """
         modconf = Module()
-        modconf.module_name = "surv"
+        modconf.module_name = "alignakbackend"
         module = AlignakBackendSched(modconf)
 
         with HTTMock(response_get_all_hosts):

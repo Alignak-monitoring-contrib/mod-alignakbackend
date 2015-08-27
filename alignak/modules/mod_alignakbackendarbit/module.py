@@ -335,6 +335,7 @@ class AlignakBackendArbit(BaseModule):
             self.single_relation(timeperiod, 'use', 'name')
             for daterange in timeperiod['dateranges']:
                 timeperiod.update(daterange)
+            del timeperiod['dateranges']
             self.backend_ids['timeperiods'][timeperiod['_id']] = timeperiod['timeperiod_name']
             self.clean_unusable_keys(timeperiod)
             self.config['timeperiods'].append(timeperiod)
@@ -351,6 +352,7 @@ class AlignakBackendArbit(BaseModule):
         self.get_contact()
         self.get_hosts()
         self.get_hostgroups()
+        self.get_services()
         self.get_timeperiods()
 
         return self.config

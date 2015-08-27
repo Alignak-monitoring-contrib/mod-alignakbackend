@@ -181,10 +181,10 @@ class AlignakBackendArbit(BaseModule):
             self.multiple_relation(contact, 'contactgroups', 'contactgroup_name')
             # host_notification_commands
             self.multiple_relation(contact, 'host_notification_commands',
-                                   'host_notification_commands')
+                                   'command_name')
             # service_notification_commands
             self.multiple_relation(contact, 'service_notification_commands',
-                                   'service_notification_commands')
+                                   'command_name')
 
             self.backend_ids['contacts'][contact['_id']] = contact['contact_name']
             self.clean_unusable_keys(contact)

@@ -1,6 +1,6 @@
 # mod-alignakbackendsched
 
-[![Build Status](https://travis-ci.org/Alignak-monitoring/mod-alignakbackend.svg?branch=master)](https://travis-ci.org/Alignak-monitoring/mod-alignakbackend)
+[![Build Status](https://travis-ci.org/Alignak-monitoring-contrib/mod-alignakbackend.svg?branch=master)](https://travis-ci.org/Alignak-monitoring-contrib/mod-alignakbackend)
 
 This meta-module for alignak has 3 modules:
 

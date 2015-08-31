@@ -58,9 +58,9 @@ class AlignakBackendBrok(BaseModule):
     """ This class is used to send logs and livestate to alignak-backend
     """
 
-    def __init__(self, modconf):
-        BaseModule.__init__(self, modconf)
-        self.url = getattr(modconf, 'api_url', 'http://localhost:5000')
+    def __init__(self, mod_conf):
+        BaseModule.__init__(self, mod_conf)
+        self.url = getattr(mod_conf, 'api_url', 'http://localhost:5000')
         self.ref_live = {
             'host': {},
             'service': {}
@@ -161,7 +161,6 @@ class AlignakBackendBrok(BaseModule):
         :rtype: dict
         """
         start_time = time.time()
-        update = 0
         counters = {
             'livehost': 0,
             'liveservice': 0,
@@ -275,6 +274,13 @@ class AlignakBackendBrok(BaseModule):
         return ret
 
     def manage_brok(self, queue):
+        """
+        We get the data to manage
+
+        :param queue: Brok object
+        :type queue: object
+        :return: None
+        """
 
         if not self.ref_live['host']:
             self.get_refs('livehost')
@@ -287,6 +293,11 @@ class AlignakBackendBrok(BaseModule):
             self.update(queue.data, 'service')
 
     def main(self):
+        """
+        Main function where send queue to manage_brok function
+
+        :return: None
+        """
         self.set_proctitle(self.name)
         self.set_exit_handler()
         while not self.interrupted:

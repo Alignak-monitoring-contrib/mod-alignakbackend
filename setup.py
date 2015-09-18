@@ -29,14 +29,12 @@ with open(ver_file) as fh:
 
 os.environ['PBR_VERSION'] = VERSION
 
-packages = find_packages()
+packages = find_packages(exclude=['alignak', 'alignak.modules'])
 setuptools.setup(
     setup_requires=['pbr'],
     packages=packages,
     version=VERSION,
-    namespace_packages=['alignak',
-                        'alignak.modules',
-                        'alignak.modules.mod_alignakbackendsched',
+    namespace_packages=['alignak.modules.mod_alignakbackendsched',
                         'alignak.modules.mod_alignakbackendarbit'],
     pbr=True,
 )

@@ -26,7 +26,7 @@ This module is used to get configuration from alignak-backend with arbiter
 from alignak.basemodule import BaseModule
 # pylint: disable=F0401
 from alignak.log import logger
-from alignak.modules.mod_alignakbackendsched.alignakbackend import Backend
+from alignak_backend_client.client import Backend
 
 
 # pylint: disable=C0103
@@ -59,6 +59,12 @@ class AlignakBackendArbit(BaseModule):
     def __init__(self, modconf):
         BaseModule.__init__(self, modconf)
         self.url = getattr(modconf, 'api_url', 'http://localhost:5000')
+        self.backend = Backend(self.url)
+        self.backend.token = getattr(modconf, 'token', '')
+        if self.backend.token == '':
+            self.getToken(getattr(modconf, 'username', ''), getattr(modconf, 'password', ''),
+                          getattr(modconf, 'allowgeneratetoken', False))
+
         self.config = {'commands': [],
                        'timeperiods': [],
                        'hosts': [],
@@ -71,16 +77,11 @@ class AlignakBackendArbit(BaseModule):
                             'hostgroups': {},
                             'contacts': {}}
 
-    def endpoint(self, resource):
-        """
-        Produce endpoint with base url + the resource
-
-        :param resource: resource value
-        :type resource: str
-        :return: the complete endpoint
-        :rtype: str
-        """
-        return '%s/%s' % (self.url, resource)
+    def getToken(self, username, password, generatetoken):
+        generate = 'enabled'
+        if generatetoken == 'false':
+            generate = 'disabled'
+        self.backend.login(username, password, generate)
 
     @classmethod
     def single_relation(cls, resource, mapping, mapping_name):
@@ -144,8 +145,8 @@ class AlignakBackendArbit(BaseModule):
 
         :return: None
         """
-        backend = Backend()
-        all_commands = backend.method_get(self.endpoint('command?embedded={"use":1}'))
+        params = {'embedded': '{"use":1}'}
+        all_commands = self.backend.get_all('command', params)
         logger.warning("[Alignak Backend Arbit] Got %d commands", len(all_commands))
         for command in all_commands:
             command['imported_from'] = 'alignakbackend'
@@ -162,13 +163,10 @@ class AlignakBackendArbit(BaseModule):
 
         :return: None
         """
-        backend = Backend()
-        all_contacts = backend.method_get(self.endpoint('contact?embedded={"use":1,'
-                                                        '"contactgroups":1,'
-                                                        '"host_notification_period":1,'
-                                                        '"service_notification_period":1,'
-                                                        '"host_notification_commands":1,'
-                                                        '"service_notification_commands":1}'))
+        params = {'embedded': '{"use":1,"contactgroups":1,"host_notification_period":1,'
+                              '"service_notification_period":1,"host_notification_commands":1,'
+                              '"service_notification_commands":1}'}
+        all_contacts = self.backend.get_all('contact', params)
         for contact in all_contacts:
             contact['imported_from'] = 'alignakbackend'
             # use
@@ -196,12 +194,10 @@ class AlignakBackendArbit(BaseModule):
 
         :return: None
         """
-        backend = Backend()
-        all_hosts = backend.method_get(self.endpoint('host?embedded={"use":1,"parents":1,'
-                                                     '"hostgroups":1,"check_command":1,'
-                                                     '"contacts":1,"contact_groups":1,'
-                                                     '"escalations":1,"check_period":1,'
-                                                     '"notification_period":1}'))
+        params = {'embedded': '{"use":1,"parents":1,"hostgroups":1,"check_command":1,'
+                              '"contacts":1,"contact_groups":1,"escalations":1,"check_period":1,'
+                              '"notification_period":1}'}
+        all_hosts = self.backend.get_all('host', params)
         logger.warning("[Alignak Backend Arbit] Got %d hosts", len(all_hosts))
         for host in all_hosts:
             host['imported_from'] = 'alignakbackend'
@@ -218,9 +214,9 @@ class AlignakBackendArbit(BaseModule):
             if 'check_command_args' in host:
                 if 'check_command' not in host:
                     host['check_command'] = ''
-                else:
+                elif host['check_command_args'] != '':
                     host['check_command'] += '!'
-                host['check_command'] += host['check_command_args']
+                    host['check_command'] += host['check_command_args']
                 del host['check_command_args']
             # check_period
             self.single_relation(host, 'check_period', 'timeperiod_name')
@@ -248,9 +244,8 @@ class AlignakBackendArbit(BaseModule):
 
         :return: None
         """
-        backend = Backend()
-        all_hostgroups = backend.method_get(self.endpoint('hostgroup?embedded='
-                                                          '{"hostgroup_members":1,"members":1}'))
+        params = {'embedded': '{"hostgroup_members":1,"members":1}'}
+        all_hostgroups = self.backend.get_all('hostgroup', params)
         logger.info("[Alignak Backend Arbit] Got %d hostgroups", len(all_hostgroups))
         for hostgroup in all_hostgroups:
             hostgroup['imported_from'] = 'alignakbackend'
@@ -272,13 +267,11 @@ class AlignakBackendArbit(BaseModule):
 
         :return: None
         """
-        backend = Backend()
-        all_services = backend.method_get(self.endpoint('service?embedded={"use":1,"host_name":1,'
-                                                        '"servicegroups":1,"check_command":1,'
-                                                        '"check_period":1,"notification_period":1,'
-                                                        '"contacts":1,"contact_groups":1,'
-                                                        '"escalations":1,"maintenance_period":1,'
-                                                        '"service_dependencies":1}'))
+        params = {'embedded': '{"use":1,"host_name":1,"servicegroups":1,"check_command":1,'
+                              '"check_period":1,"notification_period":1,'
+                              '"contacts":1,"contact_groups":1,"escalations":1,'
+                              '"maintenance_period":1,"service_dependencies":1}'}
+        all_services = self.backend.get_all('service', params)
         logger.warning("[Alignak Backend Arbit] Got %d services", len(all_services))
         for service in all_services:
             service['imported_from'] = 'alignakbackend'
@@ -327,8 +320,8 @@ class AlignakBackendArbit(BaseModule):
 
         :return: None
         """
-        backend = Backend()
-        all_timeperiods = backend.method_get(self.endpoint('timeperiod?embedded={"use":1}'))
+        params = {'embedded': '{"use":1}'}
+        all_timeperiods = self.backend.get_all('timeperiod', params)
         for timeperiod in all_timeperiods:
             timeperiod['imported_from'] = 'alignakbackend'
             # use

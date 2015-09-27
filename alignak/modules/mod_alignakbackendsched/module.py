@@ -26,9 +26,7 @@ This module is used to manage retention and livestate to alignak-backend with sc
 from alignak.basemodule import BaseModule
 # pylint: disable=F0401
 from alignak.log import logger
-from alignak.modules.mod_alignakbackendsched.alignakbackend import Backend
-
-import ujson
+from alignak_backend_client.client import Backend
 
 
 # pylint: disable=C0103
@@ -57,17 +55,17 @@ class AlignakBackendSched(BaseModule):
     def __init__(self, modconf):
         BaseModule.__init__(self, modconf)
         self.url = getattr(modconf, 'api_url', 'http://localhost:5000')
+        self.backend = Backend(self.url)
+        self.backend.token = getattr(modconf, 'token', '')
+        if self.backend.token == '':
+            self.getToken(getattr(modconf, 'username', ''), getattr(modconf, 'password', ''),
+                          getattr(modconf, 'allowgeneratetoken', False))
 
-    def endpoint(self, resource):
-        """
-        Produce endpoint with base url + the resource
-
-        :param resource: resource value
-        :type resource: str
-        :return: the complete endpoint
-        :rtype: str
-        """
-        return '%s/%s' % (self.url, resource)
+    def getToken(self, username, password, generatetoken):
+        generate = 'enabled'
+        if generatetoken == 'false':
+            generate = 'disabled'
+        self.backend.login(username, password, generate)
 
     def hook_load_retention(self, scheduler):
         """
@@ -77,12 +75,11 @@ class AlignakBackendSched(BaseModule):
         :type scheduler: object
         :return: None
         """
-        backend = Backend()
         all_data = {'hosts': {}, 'services': {}}
-        response = backend.method_get(self.endpoint('retentionhost'))
+        response = self.backend.get_all('retentionhost')
         for host in response:
             all_data['hosts'][host['host']] = host
-        response = backend.method_get(self.endpoint('retentionservice'))
+        response = self.backend.get_all('retentionservice')
         for service in response:
             all_data['services'][(service['service'][0], service['service'][1])] = service
 
@@ -96,23 +93,18 @@ class AlignakBackendSched(BaseModule):
         :type scheduler: object
         :return: None
         """
-        backend = Backend()
         headers = {'Content-Type': 'application/json'}
         data_to_save = scheduler.get_retention_data()
         # clean all hosts first
-        backend.method_delete(self.endpoint('retentionhost'))
+        self.backend.delete('retentionhost', headers)
         # Add all hosts after
         for host in data_to_save['hosts']:
             data_to_save['hosts'][host]['host'] = host
-            backend.method_post(self.endpoint('retentionhost'),
-                                ujson.dumps(data_to_save['hosts'][host]),
-                                headers=headers)
+            self.backend.post('retentionhost', data_to_save['hosts'][host], headers)
 
         # clean all services first
-        backend.method_delete(self.endpoint('retentionservice'))
+        self.backend.delete('retentionservice', headers)
         # Add all services after
         for service in data_to_save['services']:
             data_to_save['services'][service]['service'] = service
-            backend.method_post(self.endpoint('retentionservice'),
-                                ujson.dumps(data_to_save['services'][service]),
-                                headers=headers)
+            self.backend.post('retentionservice', data_to_save['services'][service], headers)

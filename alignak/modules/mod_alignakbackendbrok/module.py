@@ -23,13 +23,12 @@ This module is used to send logs and livestate to alignak-backend with broker
 """
 
 import time
-import ujson
 
 # pylint: disable=F0401
 from alignak.basemodule import BaseModule
 # pylint: disable=F0401
 from alignak.log import logger
-from alignak.modules.mod_alignakbackendsched.alignakbackend import Backend
+from alignak_backend_client.client import Backend
 
 
 # pylint: disable=C0103
@@ -58,9 +57,14 @@ class AlignakBackendBrok(BaseModule):
     """ This class is used to send logs and livestate to alignak-backend
     """
 
-    def __init__(self, mod_conf):
-        BaseModule.__init__(self, mod_conf)
-        self.url = getattr(mod_conf, 'api_url', 'http://localhost:5000')
+    def __init__(self, modconf):
+        BaseModule.__init__(self, modconf)
+        self.url = getattr(modconf, 'api_url', 'http://localhost:5000')
+        self.backend = Backend(self.url)
+        self.backend.token = getattr(modconf, 'token', '')
+        if self.backend.token == '':
+            self.getToken(getattr(modconf, 'username', ''), getattr(modconf, 'password', ''),
+                          getattr(modconf, 'allowgeneratetoken', False))
         self.ref_live = {
             'host': {},
             'service': {}
@@ -72,16 +76,11 @@ class AlignakBackendBrok(BaseModule):
         self.hosts = {}
         self.services = {}
 
-    def endpoint(self, resource):
-        """
-        Produce endpoint with base url + the resource
-
-        :param resource: resource value
-        :type resource: str
-        :return: the complete endpoint
-        :rtype: str
-        """
-        return '%s/%s' % (self.url, resource)
+    def getToken(self, username, password, generatetoken):
+        generate = 'enabled'
+        if generatetoken == 'false':
+            generate = 'disabled'
+        self.backend.login(username, password, generate)
 
     def get_refs(self, type_data):
         """
@@ -91,17 +90,17 @@ class AlignakBackendBrok(BaseModule):
         :type type_data: str
         :return: None
         """
-        backend = Backend()
         if type_data == 'livehost':
-            content = backend.method_get(self.endpoint('host?projection={"host_name":1}'
-                                                       '&where={"register":true}'))
+            params = {'projection': '{"host_name":1}', "where": '{"register":true}'}
+            content = self.backend.get_all('host', params)
             hosts = {}
             for item in content:
                 hosts[item['_id']] = item['host_name']
                 self.mapping['host'][item['host_name']] = item['_id']
             # get all livehost
-            contentlh = backend.method_get(self.endpoint('livehost?embedded={"host_name":1}'
-                                                         '&projection={"host_name":1}'))
+            params = {'embedded': '{"host_name":1}', 'projection': '{"host_name":1}',
+                      'where': '{"service_description":null}'}
+            contentlh = self.backend.get_all('livestate', params)
             for item in contentlh:
                 self.ref_live['host'][item['host_name']['_id']] = {
                     '_id': item['_id'],
@@ -110,28 +109,29 @@ class AlignakBackendBrok(BaseModule):
                 del hosts[item['host_name']['_id']]
             # create livehost for hosts not added
             for key_id in hosts:
-                data = {'host_name': key_id}
+                data = {'host_name': key_id, 'service_description': None}
                 headers = {'Content-Type': 'application/json'}
-                contentadd = backend.method_post(self.endpoint('livehost'), ujson.dumps(data),
-                                                 headers=headers)
+                contentadd = self.backend.post('livestate', data, headers)
                 self.ref_live['host'][key_id] = {
                     '_id': contentadd['_id'],
                     '_etag': contentadd['_etag']
                 }
         elif type_data == 'liveservice':
-            content = backend.method_get(self.endpoint('service?projection={'
-                                                       '"service_description":1,"host_name":1}'
-                                                       '&embedded={"host_name":1}'
-                                                       '&where={"register":true}'))
+            params = {'projection': '{"service_description":1,"host_name":1}',
+                      'embedded': '{"host_name":1}', 'where': '{"register":true}'}
+            content = self.backend.get_all('service', params)
             services = {}
+            services_host = {}
             for item in content:
                 services[item['_id']] = item['service_description']
+                services_host[item['_id']] = item['host_name']['_id']
                 self.mapping['service'][''.join([item['host_name']['host_name'],
                                                  item['service_description']])] = item['_id']
             # get all liveservice
-            contentls = backend.method_get(self.endpoint('liveservice?'
-                                                         'embedded={"service_description":1}'
-                                                         '&projection={"service_description":1}'))
+            params = {'embedded': '{"service_description":1}',
+                      'projection': '{"service_description":1}',
+                      'where': '{"service_description":{"$ne": null}}'}
+            contentls = self.backend.get_all('livestate', params)
             for item in contentls:
                 self.ref_live['service'][item['service_description']['_id']] = {
                     '_id': item['_id'],
@@ -140,10 +140,9 @@ class AlignakBackendBrok(BaseModule):
                 del services[item['service_description']['_id']]
             # create liveservice for services not added
             for key_id in services:
-                data = {'service_description': key_id}
+                data = {'service_description': key_id, 'host_name': services_host[key_id]}
                 headers = {'Content-Type': 'application/json'}
-                contentadd = backend.method_post(self.endpoint('liveservice'), ujson.dumps(data),
-                                                 headers=headers)
+                contentadd = self.backend.post('livestate', data, headers)
                 self.ref_live['service'][key_id] = {
                     '_id': contentadd['_id'],
                     '_etag': contentadd['_etag']
@@ -224,19 +223,17 @@ class AlignakBackendBrok(BaseModule):
         :return: True if send is ok, False otherwise
         :rtype: bool
         """
-        backend = Backend()
         headers = {
             'Content-Type': 'application/json',
         }
         ret = True
         if type_data == 'livehost':
             headers['If-Match'] = self.ref_live['host'][self.mapping['host'][name]]['_etag']
-            response = backend.method_patch(
-                self.endpoint('livehost/%s'
-                              % self.ref_live['host'][self.mapping['host'][name]]['_id']),
-                ujson.dumps(data),
-                headers=headers
-            )
+
+            response = self.backend.patch(
+                'livestate/%s' % self.ref_live['host'][self.mapping['host'][name]]['_id'],
+                data,
+                headers)
             if response['_status'] == 'ERR':
                 logger.error(response['_issues'])
                 ret = False
@@ -244,12 +241,10 @@ class AlignakBackendBrok(BaseModule):
                 self.ref_live['host'][self.mapping['host'][name]]['_etag'] = response['_etag']
         elif type_data == 'liveservice':
             headers['If-Match'] = self.ref_live['service'][self.mapping['service'][name]]['_etag']
-            response = backend.method_patch(
-                self.endpoint('liveservice/%s'
-                              % self.ref_live['service'][self.mapping['service'][name]]['_id']),
-                ujson.dumps(data),
-                headers=headers
-            )
+            response = self.backend.patch(
+                'livestate/%s' % self.ref_live['service'][self.mapping['service'][name]]['_id'],
+                data,
+                headers)
             if response['_status'] == 'ERR':
                 logger.error(response['_issues'])
                 ret = False
@@ -257,17 +252,13 @@ class AlignakBackendBrok(BaseModule):
                 self.ref_live['service'][self.mapping['service'][name]]['_etag'] = response['_etag']
         elif type_data == 'loghost':
             data['host_name'] = self.mapping['host'][name]
-            response = backend.method_post(
-                self.endpoint('loghost'), ujson.dumps(data), headers=headers
-            )
+            response = self.backend.post('loghost', data, headers)
             if response['_status'] == 'ERR':
                 logger.error(response['_issues'])
                 ret = False
         elif type_data == 'logservice':
             data['service_description'] = self.mapping['service'][name]
-            response = backend.method_post(
-                self.endpoint('logservice'), ujson.dumps(data), headers=headers
-            )
+            response = self.backend.post('logservice', data, headers)
             if response['_status'] == 'ERR':
                 logger.error(response['_issues'])
                 ret = False

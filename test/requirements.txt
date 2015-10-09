@@ -10,3 +10,4 @@ pylint
 pep8
 pep257
 httmock
+-e git+https://github.com/Alignak-monitoring-contrib/alignak-backend.git#egg=alignak-backend

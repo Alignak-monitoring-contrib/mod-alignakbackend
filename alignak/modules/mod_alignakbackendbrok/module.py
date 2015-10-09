@@ -30,7 +30,6 @@ from alignak.basemodule import BaseModule
 from alignak.log import logger
 from alignak_backend_client.client import Backend
 
-
 # pylint: disable=C0103
 properties = {
     'daemons': ['broker'],
@@ -93,59 +92,38 @@ class AlignakBackendBrok(BaseModule):
         if type_data == 'livehost':
             params = {'projection': '{"host_name":1}', "where": '{"register":true}'}
             content = self.backend.get_all('host', params)
-            hosts = {}
             for item in content:
-                hosts[item['_id']] = item['host_name']
                 self.mapping['host'][item['host_name']] = item['_id']
             # get all livehost
-            params = {'embedded': '{"host_name":1}', 'projection': '{"host_name":1}',
+            params = {'embedded': '{"host_name":1}',
+                      'projection': '{"host_name":1,"state":1,"state_type":1}',
                       'where': '{"service_description":null}'}
             contentlh = self.backend.get_all('livestate', params)
             for item in contentlh:
                 self.ref_live['host'][item['host_name']['_id']] = {
                     '_id': item['_id'],
-                    '_etag': item['_etag']
-                }
-                del hosts[item['host_name']['_id']]
-            # create livehost for hosts not added
-            for key_id in hosts:
-                data = {'host_name': key_id, 'service_description': None}
-                headers = {'Content-Type': 'application/json'}
-                contentadd = self.backend.post('livestate', data, headers)
-                self.ref_live['host'][key_id] = {
-                    '_id': contentadd['_id'],
-                    '_etag': contentadd['_etag']
+                    '_etag': item['_etag'],
+                    'initial_state': item['state'],
+                    'initial_state_type': item['state_type']
                 }
         elif type_data == 'liveservice':
             params = {'projection': '{"service_description":1,"host_name":1}',
                       'embedded': '{"host_name":1}', 'where': '{"register":true}'}
             content = self.backend.get_all('service', params)
-            services = {}
-            services_host = {}
             for item in content:
-                services[item['_id']] = item['service_description']
-                services_host[item['_id']] = item['host_name']['_id']
                 self.mapping['service'][''.join([item['host_name']['host_name'],
                                                  item['service_description']])] = item['_id']
             # get all liveservice
             params = {'embedded': '{"service_description":1}',
-                      'projection': '{"service_description":1}',
+                      'projection': '{"service_description":1,"state":1,"state_type":1}',
                       'where': '{"service_description":{"$ne": null}}'}
             contentls = self.backend.get_all('livestate', params)
             for item in contentls:
                 self.ref_live['service'][item['service_description']['_id']] = {
                     '_id': item['_id'],
-                    '_etag': item['_etag']
-                }
-                del services[item['service_description']['_id']]
-            # create liveservice for services not added
-            for key_id in services:
-                data = {'service_description': key_id, 'host_name': services_host[key_id]}
-                headers = {'Content-Type': 'application/json'}
-                contentadd = self.backend.post('livestate', data, headers)
-                self.ref_live['service'][key_id] = {
-                    '_id': contentadd['_id'],
-                    '_etag': contentadd['_etag']
+                    '_etag': item['_etag'],
+                    'initial_state': item['state'],
+                    'initial_state_type': item['state_type']
                 }
 
     def update(self, data, obj_type):
@@ -169,20 +147,30 @@ class AlignakBackendBrok(BaseModule):
 
         if obj_type == 'host':
             if data['host_name'] in self.mapping['host']:
+                logger.warning(data)
                 data_to_update = {
                     'state': data['state'],
                     'state_type': data['state_type'],
                     'last_check': data['last_chk'],
+                    'last_state': data['last_state'],
+                    'last_state_type': data['last_state_type'],
                     'output': data['output'],
                     'long_output': data['long_output'],
                     'perf_data': data['perf_data'],
                     'acknowledged': data['problem_has_been_acknowledged'],
                 }
+                if 'initial_state' in self.ref_live['host'][self.mapping['host'][data['host_name']]]:
+                    data_to_update['last_state'] = self.ref_live['host'][self.mapping['host'][data['host_name']]]['initial_state']
+                    data_to_update['last_state_type'] = self.ref_live['host'][self.mapping['host'][data['host_name']]]['initial_state_type']
+                    del self.ref_live['host'][self.mapping['host'][data['host_name']]]['initial_state']
+                    del self.ref_live['host'][self.mapping['host'][data['host_name']]]['initial_state_type']
+
                 # Update live state
                 ret = self.send_to_backend('livehost', data['host_name'], data_to_update)
                 if ret:
                     counters['livehost'] += 1
                 # Add log
+                del data_to_update['last_state_type']
                 ret = self.send_to_backend('loghost', data['host_name'], data_to_update)
                 if ret:
                     counters['loghost'] += 1
@@ -193,16 +181,24 @@ class AlignakBackendBrok(BaseModule):
                     'state': data['state'],
                     'state_type': data['state_type'],
                     'last_check': data['last_chk'],
+                    'last_state': data['last_state'],
+                    'last_state_type': data['last_state_type'],
                     'output': data['output'],
                     'long_output': data['long_output'],
                     'perf_data': data['perf_data'],
                     'acknowledged': data['problem_has_been_acknowledged'],
                 }
+                if 'initial_state' in self.ref_live['service'][data['service_description']]:
+                    data_to_update['last_state'] = self.ref_live['service'][data['service_description']]['initial_state']
+                    data_to_update['last_state_type'] = self.ref_live['service'][data['service_description']]['initial_state_type']
+                    del self.ref_live['service'][data['service_description']]['initial_state']
+                    del self.ref_live['service'][data['service_description']]['initial_state_type']
                 # Update live state
                 ret = self.send_to_backend('liveservice', service_name, data_to_update)
                 if ret:
                     counters['liveservice'] += 1
                 # Add log
+                del data_to_update['last_state_type']
                 self.send_to_backend('logservice', service_name, data_to_update)
                 if ret:
                     counters['logservice'] += 1

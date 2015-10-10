@@ -147,7 +147,6 @@ class AlignakBackendBrok(BaseModule):
 
         if obj_type == 'host':
             if data['host_name'] in self.mapping['host']:
-                logger.warning(data)
                 data_to_update = {
                     'state': data['state'],
                     'state_type': data['state_type'],

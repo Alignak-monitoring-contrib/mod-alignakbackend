@@ -187,8 +187,7 @@ class AlignakBackendBrok(BaseModule):
                     'perf_data': data['perf_data'],
                     'acknowledged': data['problem_has_been_acknowledged'],
                 }
-                s_id = self.mapping['service'][''.join([data['host_name'],
-                                                        data['service_description']])]
+                s_id = self.mapping['service'][service_name]
                 if 'initial_state' in self.ref_live['service'][s_id]:
                     data_to_update['last_state'] = self.ref_live['service'][s_id]['initial_state']
                     data_to_update['last_state_type'] = self.ref_live['service'][s_id]['initial_state_type']

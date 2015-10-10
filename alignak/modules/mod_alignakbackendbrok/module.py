@@ -188,11 +188,13 @@ class AlignakBackendBrok(BaseModule):
                     'perf_data': data['perf_data'],
                     'acknowledged': data['problem_has_been_acknowledged'],
                 }
-                if 'initial_state' in self.ref_live['service'][data['service_description']]:
-                    data_to_update['last_state'] = self.ref_live['service'][data['service_description']]['initial_state']
-                    data_to_update['last_state_type'] = self.ref_live['service'][data['service_description']]['initial_state_type']
-                    del self.ref_live['service'][data['service_description']]['initial_state']
-                    del self.ref_live['service'][data['service_description']]['initial_state_type']
+                s_id = self.mapping['service'][''.join([data['host_name'],
+                                                        data['service_description']])]
+                if 'initial_state' in self.ref_live['service'][s_id]:
+                    data_to_update['last_state'] = self.ref_live['service'][s_id]['initial_state']
+                    data_to_update['last_state_type'] = self.ref_live['service'][s_id]['initial_state_type']
+                    del self.ref_live['service'][s_id]['initial_state']
+                    del self.ref_live['service'][s_id]['initial_state_type']
                 # Update live state
                 ret = self.send_to_backend('liveservice', service_name, data_to_update)
                 if ret:

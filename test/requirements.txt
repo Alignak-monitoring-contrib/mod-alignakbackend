@@ -10,6 +10,11 @@ pylint
 pep8
 pep257
 httmock
-alignak-backend
 -e git+https://github.com/Alignak-monitoring-contrib/alignak-backend.git#egg=alignak-backend
+Eve>=0.5
+docopt
+jsonschema
+Eve-docs
+flask-bootstrap
+configparser ; python_version < '3.0'
 

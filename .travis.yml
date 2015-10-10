@@ -1,8 +1,12 @@
 language: python
 sudo: true
 python:
-  - "2.6"
+#  - "2.6"
   - "2.7"
+
+services:
+  - mongodb
+
 
 # command to install dependencies
 # some are only used for travis/coveralls so we are installing them here only

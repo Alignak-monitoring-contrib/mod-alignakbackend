@@ -100,8 +100,9 @@ class AlignakBackendArbit(BaseModule):
         :type mapping_name: str
         """
         if mapping in resource:
-            if mapping_name in resource[mapping]:
-                resource[mapping] = resource[mapping][mapping_name]
+            if resource[mapping] is not None:
+                if mapping_name in resource[mapping]:
+                    resource[mapping] = resource[mapping][mapping_name]
 
     @classmethod
     def multiple_relation(cls, resource, mapping, mapping_name):

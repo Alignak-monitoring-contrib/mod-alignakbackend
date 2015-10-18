@@ -71,11 +71,6 @@ class AlignakBackendArbit(BaseModule):
                        'hostgroups': [],
                        'services': [],
                        'contacts': []}
-        self.backend_ids = {'commands': {},
-                            'timeperiods': {},
-                            'hosts': {},
-                            'hostgroups': {},
-                            'contacts': {}}
 
     def getToken(self, username, password, generatetoken):
         generate = 'enabled'
@@ -124,7 +119,10 @@ class AlignakBackendArbit(BaseModule):
         if mapping in resource:
             members = []
             for member in resource[mapping]:
-                members.append(member[mapping_name])
+                if mapping_name in member:
+                    members.append(member[mapping_name])
+                else:
+                    members.append(member['name'])
             resource[mapping] = ','.join(members)
 
     @classmethod
@@ -154,7 +152,6 @@ class AlignakBackendArbit(BaseModule):
             # use
             self.multiple_relation(command, 'use', 'name')
 
-            self.backend_ids['commands'][command['_id']] = command['command_name']
             self.clean_unusable_keys(command)
             self.config['commands'].append(command)
 
@@ -168,26 +165,25 @@ class AlignakBackendArbit(BaseModule):
                               '"service_notification_period":1,"host_notification_commands":1,'
                               '"service_notification_commands":1}'}
         all_contacts = self.backend.get_all('contact', params)
-        for contact in all_contacts:
-            contact['imported_from'] = 'alignakbackend'
-            # use
-            self.multiple_relation(contact, 'use', 'name')
-            # host_notification_period
-            self.single_relation(contact, 'host_notification_period', 'timeperiod_name')
-            # service_notification_period
-            self.single_relation(contact, 'service_notification_period', 'timeperiod_name')
-            # contactgroups
-            self.multiple_relation(contact, 'contactgroups', 'contactgroup_name')
-            # host_notification_commands
-            self.multiple_relation(contact, 'host_notification_commands',
-                                   'command_name')
-            # service_notification_commands
-            self.multiple_relation(contact, 'service_notification_commands',
-                                   'command_name')
+        #for contact in all_contacts:
+        #    contact['imported_from'] = 'alignakbackend'
+        #    # use
+        #    self.multiple_relation(contact, 'use', 'name')
+        #    # host_notification_period
+        #    self.single_relation(contact, 'host_notification_period', 'timeperiod_name')
+        #    # service_notification_period
+        #    self.single_relation(contact, 'service_notification_period', 'timeperiod_name')
+        #    # contactgroups
+        #    self.multiple_relation(contact, 'contactgroups', 'contactgroup_name')
+        #    # host_notification_commands
+        #    self.multiple_relation(contact, 'host_notification_commands',
+        #                           'command_name')
+        #    # service_notification_commands
+        #    self.multiple_relation(contact, 'service_notification_commands',
+        #                           'command_name')
 
-            self.backend_ids['contacts'][contact['_id']] = contact['contact_name']
-            self.clean_unusable_keys(contact)
-            self.config['contacts'].append(contact)
+        #    self.clean_unusable_keys(contact)
+        #    self.config['contacts'].append(contact)
 
     def get_hosts(self):
         """
@@ -235,7 +231,6 @@ class AlignakBackendArbit(BaseModule):
             self.multiple_relation(host, 'escalations', 'escalation_name')
             if host['realm'] is None:
                 del host['realm']
-            self.backend_ids['hosts'][host['_id']] = host['host_name']
             self.clean_unusable_keys(host)
             self.config['hosts'].append(host)
 
@@ -258,7 +253,6 @@ class AlignakBackendArbit(BaseModule):
             if hostgroup['realm'] is None:
                 del hostgroup['realm']
 
-            self.backend_ids['hostgroups'][hostgroup['_id']] = hostgroup['hostgroup_name']
             self.clean_unusable_keys(hostgroup)
             self.config['hostgroups'].append(hostgroup)
 
@@ -330,7 +324,6 @@ class AlignakBackendArbit(BaseModule):
             for daterange in timeperiod['dateranges']:
                 timeperiod.update(daterange)
             del timeperiod['dateranges']
-            self.backend_ids['timeperiods'][timeperiod['_id']] = timeperiod['timeperiod_name']
             self.clean_unusable_keys(timeperiod)
             self.config['timeperiods'].append(timeperiod)
 

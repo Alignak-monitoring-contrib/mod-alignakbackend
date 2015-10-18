@@ -151,7 +151,7 @@ class AlignakBackendArbit(BaseModule):
         for command in all_commands:
             command['imported_from'] = 'alignakbackend'
             # use
-            self.single_relation(command, 'use', 'name')
+            self.multiple_relation(command, 'use', 'name')
 
             self.backend_ids['commands'][command['_id']] = command['command_name']
             self.clean_unusable_keys(command)
@@ -170,7 +170,7 @@ class AlignakBackendArbit(BaseModule):
         for contact in all_contacts:
             contact['imported_from'] = 'alignakbackend'
             # use
-            self.single_relation(contact, 'use', 'name')
+            self.multiple_relation(contact, 'use', 'name')
             # host_notification_period
             self.single_relation(contact, 'host_notification_period', 'timeperiod_name')
             # service_notification_period
@@ -202,7 +202,7 @@ class AlignakBackendArbit(BaseModule):
         for host in all_hosts:
             host['imported_from'] = 'alignakbackend'
             # use
-            self.single_relation(host, 'use', 'name')
+            self.multiple_relation(host, 'use', 'name')
             # check_command
             if 'check_command' in host:
                 if host['check_command'] is None:
@@ -291,7 +291,7 @@ class AlignakBackendArbit(BaseModule):
                 service['check_command'] += service['check_command_args']
                 del service['check_command_args']
             # use
-            self.single_relation(service, 'use', 'name')
+            self.multiple_relation(service, 'use', 'name')
             # host_name
             self.single_relation(service, 'host_name', 'host_name')
             # check_period
@@ -325,7 +325,7 @@ class AlignakBackendArbit(BaseModule):
         for timeperiod in all_timeperiods:
             timeperiod['imported_from'] = 'alignakbackend'
             # use
-            self.single_relation(timeperiod, 'use', 'name')
+            self.multiple_relation(timeperiod, 'use', 'name')
             for daterange in timeperiod['dateranges']:
                 timeperiod.update(daterange)
             del timeperiod['dateranges']

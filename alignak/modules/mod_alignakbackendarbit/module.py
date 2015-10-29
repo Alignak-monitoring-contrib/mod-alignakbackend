@@ -165,7 +165,7 @@ class AlignakBackendArbit(BaseModule):
                               '"service_notification_period":1,"host_notification_commands":1,'
                               '"service_notification_commands":1}'}
         all_contacts = self.backend.get_all('contact', params)
-        #for contact in all_contacts:
+        # for contact in all_contacts:
         #    contact['imported_from'] = 'alignakbackend'
         #    # use
         #    self.multiple_relation(contact, 'use', 'name')

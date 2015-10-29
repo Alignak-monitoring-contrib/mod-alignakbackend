@@ -73,8 +73,19 @@ class AlignakBackendArbit(BaseModule):
                        'contacts': []}
 
     def getToken(self, username, password, generatetoken):
+        """
+        Authenticate and get the token
+
+        :param username: login name
+        :type username: str
+        :param password: password
+        :type password: str
+        :param generatetoken: if True allow generate token, otherwise not generate
+        :type generatetoken: bool
+        :return: None
+        """
         generate = 'enabled'
-        if generatetoken == 'false':
+        if not generatetoken:
             generate = 'disabled'
         self.backend.login(username, password, generate)
 
@@ -164,7 +175,8 @@ class AlignakBackendArbit(BaseModule):
         params = {'embedded': '{"use":1,"contactgroups":1,"host_notification_period":1,'
                               '"service_notification_period":1,"host_notification_commands":1,'
                               '"service_notification_commands":1}'}
-        all_contacts = self.backend.get_all('contact', params)
+        self.backend.get_all('contact', params)
+        # all_contacts = self.backend.get_all('contact', params)
         # for contact in all_contacts:
         #    contact['imported_from'] = 'alignakbackend'
         #    # use

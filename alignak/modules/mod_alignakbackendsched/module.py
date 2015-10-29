@@ -62,8 +62,19 @@ class AlignakBackendSched(BaseModule):
                           getattr(modconf, 'allowgeneratetoken', False))
 
     def getToken(self, username, password, generatetoken):
+        """
+        Authenticate and get the token
+
+        :param username: login name
+        :type username: str
+        :param password: password
+        :type password: str
+        :param generatetoken: if True allow generate token, otherwise not generate
+        :type generatetoken: bool
+        :return: None
+        """
         generate = 'enabled'
-        if generatetoken == 'false':
+        if not generatetoken:
             generate = 'disabled'
         self.backend.login(username, password, generate)
 

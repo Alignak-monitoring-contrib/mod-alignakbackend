@@ -160,6 +160,7 @@ class AlignakBackendBrok(BaseModule):
             if data['host_name'] in self.mapping['host']:
                 data_to_update = {
                     'state': data['state'],
+                    'state_id': data['state_id'],
                     'state_type': data['state_type'],
                     'last_check': data['last_chk'],
                     'last_state': data['last_state'],
@@ -191,6 +192,7 @@ class AlignakBackendBrok(BaseModule):
             if service_name in self.mapping['service']:
                 data_to_update = {
                     'state': data['state'],
+                    'state_id': data['state_id'],
                     'state_type': data['state_type'],
                     'last_check': data['last_chk'],
                     'last_state': data['last_state'],

@@ -46,7 +46,7 @@ def get_instance(mod_conf):
     :return: AlignakBackendArbit instance
     :rtype: object
     """
-    logger.info("[Alignak Backend Brok] Get a Alignak log & livestate module for plugin %s"
+    logger.info("[Backend Broker] Get a Alignak log & livestate module for plugin %s"
                 % mod_conf.get_name())
     instance = AlignakBackendBrok(mod_conf)
     return instance

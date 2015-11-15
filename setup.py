@@ -16,25 +16,17 @@ try:
 except ImportError:
     pass
 
+# Better to use exec to load the VERSION so to not have to import the alignak package:
+with open(os.path.join('alignak_module_backend', 'version.py')) as fh:
+    ns = {}
+    exec(fh.read(), ns)
+    VERSION = ns['VERSION']
 
-# Better to use exec to load the VERSION from alignak/bin/__init__
-# so to not have to import the alignak package:
-VERSION = "unknown"
-ver_file = os.path.join('alignak',
-                        'modules',
-                        'mod_alignakbackendsched',
-                        '__init__.py')
-with open(ver_file) as fh:
-    exec(fh.read())
 
 os.environ['PBR_VERSION'] = VERSION
 
-packages = find_packages(exclude=['alignak', 'alignak.modules'])
 setuptools.setup(
     setup_requires=['pbr'],
-    packages=packages,
     version=VERSION,
-    namespace_packages=['alignak.modules.mod_alignakbackendsched',
-                        'alignak.modules.mod_alignakbackendarbit'],
     pbr=True,
 )

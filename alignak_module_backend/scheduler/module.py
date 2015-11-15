@@ -40,7 +40,7 @@ properties = {
 
 def get_instance(mod_conf):
     """ Return a module instance for the plugin manager """
-    logger.info("[Alignak Backend Sched] Get a Alignak config module for plugin %s"
+    logger.info("[Backend Scheduler] Get a Alignak config module for plugin %s"
                 % mod_conf.get_name())
 
     instance = AlignakBackendSched(mod_conf)

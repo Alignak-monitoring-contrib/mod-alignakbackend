@@ -114,31 +114,34 @@ class AlignakBackendBrok(BaseModule):
             for item in content:
                 self.mapping['host'][item['host_name']] = item['_id']
             # get all livehost
-            params = {'embedded': '{"host_name":1}',
-                      'projection': '{"host_name":1,"state":1,"state_type":1}',
+            params = {'projection': '{"host_name":1,"state":1,"state_type":1}',
                       'where': '{"service_description":null}'}
             contentlh = self.backend.get_all('livestate', params)
             for item in contentlh:
-                self.ref_live['host'][item['host_name']['_id']] = {
+                self.ref_live['host'][item['host_name']] = {
                     '_id': item['_id'],
                     '_etag': item['_etag'],
                     'initial_state': item['state'],
                     'initial_state_type': item['state_type']
                 }
         elif type_data == 'liveservice':
+            params = {'projection': '{"host_name":1}', "where": '{"register":true}'}
+            contenth = self.backend.get_all('host', params)
+            hosts = {}
+            for item in contenth:
+                hosts[item['_id']] = item['host_name']
             params = {'projection': '{"service_description":1,"host_name":1}',
-                      'embedded': '{"host_name":1}', 'where': '{"register":true}'}
+                      'where': '{"register":true}'}
             content = self.backend.get_all('service', params)
             for item in content:
-                self.mapping['service'][''.join([item['host_name']['host_name'],
+                self.mapping['service'][''.join([hosts[item['host_name']],
                                                  item['service_description']])] = item['_id']
             # get all liveservice
-            params = {'embedded': '{"service_description":1}',
-                      'projection': '{"service_description":1,"state":1,"state_type":1}',
+            params = {'projection': '{"service_description":1,"state":1,"state_type":1}',
                       'where': '{"service_description":{"$ne": null}}'}
             contentls = self.backend.get_all('livestate', params)
             for item in contentls:
-                self.ref_live['service'][item['service_description']['_id']] = {
+                self.ref_live['service'][item['service_description']] = {
                     '_id': item['_id'],
                     '_etag': item['_etag'],
                     'initial_state': item['state'],

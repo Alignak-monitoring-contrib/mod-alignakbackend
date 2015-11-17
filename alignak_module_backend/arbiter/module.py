@@ -22,6 +22,7 @@
 This module is used to get configuration from alignak-backend with arbiter
 """
 
+import time
 # pylint: disable=F0401
 from alignak.basemodule import BaseModule
 # pylint: disable=F0401
@@ -46,8 +47,8 @@ def get_instance(mod_conf):
     :return: AlignakBackendArbit instance
     :rtype: object
     """
-    logger.info("[Backend Arbiter] Get a Alignak config module for plugin %s"
-                % mod_conf.get_name())
+    logger.info("[Backend Arbiter] Get a Alignak config module for plugin %s",
+                mod_conf.get_name())
     instance = AlignakBackendArbit(mod_conf)
     return instance
 
@@ -71,6 +72,14 @@ class AlignakBackendArbit(BaseModule):
                        'hostgroups': [],
                        'services': [],
                        'contacts': []}
+
+    # Common functions
+    def do_loop_turn(self):
+        """This function is called/used when you need a module with
+        a loop function (and use the parameter 'external': True)
+        """
+        logger.info("[Backend Arbiter] In loop")
+        time.sleep(1)
 
     def getToken(self, username, password, generatetoken):
         """

@@ -46,8 +46,8 @@ def get_instance(mod_conf):
     :return: AlignakBackendArbit instance
     :rtype: object
     """
-    logger.info("[Backend Broker] Get a Alignak log & livestate module for plugin %s"
-                % mod_conf.get_name())
+    logger.info("[Backend Broker] Get a Alignak log & livestate module for plugin %s",
+                mod_conf.get_name())
     instance = AlignakBackendBrok(mod_conf)
     return instance
 
@@ -74,6 +74,14 @@ class AlignakBackendBrok(BaseModule):
         }
         self.hosts = {}
         self.services = {}
+
+    # Common functions
+    def do_loop_turn(self):
+        """This function is called/used when you need a module with
+        a loop function (and use the parameter 'external': True)
+        """
+        logger.info("[Backend Broker] In loop")
+        time.sleep(1)
 
     def getToken(self, username, password, generatetoken):
         """
@@ -219,7 +227,7 @@ class AlignakBackendBrok(BaseModule):
                 if ret:
                     counters['logservice'] += 1
         if (counters['livehost'] + counters['liveservice']) > 0:
-            logger.debug("--- %s seconds ---" % (time.time() - start_time))
+            logger.debug("--- %s seconds ---", (time.time() - start_time))
         return counters
 
     def send_to_backend(self, type_data, name, data):

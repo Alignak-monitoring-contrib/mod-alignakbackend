@@ -22,6 +22,7 @@
 This module is used to manage retention and livestate to alignak-backend with scheduler
 """
 
+import time
 # pylint: disable=F0401
 from alignak.basemodule import BaseModule
 # pylint: disable=F0401
@@ -40,8 +41,8 @@ properties = {
 
 def get_instance(mod_conf):
     """ Return a module instance for the plugin manager """
-    logger.info("[Backend Scheduler] Get a Alignak config module for plugin %s"
-                % mod_conf.get_name())
+    logger.info("[Backend Scheduler] Get a Alignak config module for plugin %s",
+                mod_conf.get_name())
 
     instance = AlignakBackendSched(mod_conf)
     return instance
@@ -60,6 +61,14 @@ class AlignakBackendSched(BaseModule):
         if self.backend.token == '':
             self.getToken(getattr(modconf, 'username', ''), getattr(modconf, 'password', ''),
                           getattr(modconf, 'allowgeneratetoken', False))
+
+    # Common functions
+    def do_loop_turn(self):
+        """This function is called/used when you need a module with
+        a loop function (and use the parameter 'external': True)
+        """
+        logger.info("[Backend Broker] In loop")
+        time.sleep(1)
 
     def getToken(self, username, password, generatetoken):
         """

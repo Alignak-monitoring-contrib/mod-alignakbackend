@@ -25,7 +25,7 @@ import unittest2
 import time
 import subprocess
 import json
-from alignak.modules.mod_alignakbackendbrok.module import AlignakBackendBrok
+from alignak_module_backend.broker.module import AlignakBackendBrok
 from alignak.objects.module import Module
 from alignak.brok import Brok
 from alignak_backend_client.client import Backend

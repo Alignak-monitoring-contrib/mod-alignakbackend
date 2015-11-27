@@ -35,7 +35,7 @@ properties = {
     'daemons': ['arbiter'],
     'type': 'alignakbackendarbit',
     'external': False,
-    'phases': ['configuration'],
+    'phases': ['configuration', 'running'],
     }
 
 
@@ -99,11 +99,11 @@ class AlignakBackendArbit(BaseModule):
         self.backend.login(username, password, generate)
 
     @classmethod
-    def single_relation(cls, resource, mapping, mapping_name):
+    def single_relation(cls, resource, mapping):
         """
         Convert single embedded data to name of relation_data
         Example:
-        {'contacts': {'_id': a3659204fe,'contact_name':'admin'}}
+        {'contacts': {'_id': a3659204fe,'name':'admin'}}
         converted to:
         {'contacts': 'admin'}
 
@@ -111,13 +111,11 @@ class AlignakBackendArbit(BaseModule):
         :type resource: dict
         :param mapping: key value of resource
         :type mapping: str
-        :param mapping_name: key name of embedded data to use
-        :type mapping_name: str
         """
         if mapping in resource:
             if resource[mapping] is not None:
-                if mapping_name in resource[mapping]:
-                    resource[mapping] = resource[mapping][mapping_name]
+                if 'name' in resource[mapping]:
+                    resource[mapping] = resource[mapping]['name']
 
     @classmethod
     def multiple_relation(cls, resource, mapping, mapping_name):
@@ -154,25 +152,32 @@ class AlignakBackendArbit(BaseModule):
         :type resource: dict
         :return:
         """
-        fields = ['_links', '_updated', '_created', '_etag', '_id']
+        fields = ['_links', '_updated', '_created', '_etag', '_id', 'name', 'ui']
         for field in fields:
-            del resource[field]
+            if field in resource:
+                del resource[field]
 
+    @classmethod
+    def convert_lists(cls, resource):
+        for prop in resource:
+            if isinstance(resource[prop], list):
+                resource[prop] = ','.join(str(e) for e in resource[prop])
+            elif isinstance(resource[prop], dict):
+                logger.warning("=====> %s", prop)
+                logger.warning(resource[prop])
     def get_commands(self):
         """
         Get commands from alignak_backend
 
         :return: None
         """
-        params = {'embedded': '{"use":1}'}
-        all_commands = self.backend.get_all('command', params)
+        all_commands = self.backend.get_all('command')
         logger.warning("[Alignak Backend Arbit] Got %d commands", len(all_commands))
         for command in all_commands:
             command['imported_from'] = 'alignakbackend'
-            # use
-            self.multiple_relation(command, 'use', 'name')
-
+            command['command_name'] = command['name']
             self.clean_unusable_keys(command)
+            self.convert_lists(command)
             self.config['commands'].append(command)
 
     def get_contact(self):
@@ -181,30 +186,39 @@ class AlignakBackendArbit(BaseModule):
 
         :return: None
         """
-        params = {'embedded': '{"use":1,"contactgroups":1,"host_notification_period":1,'
+        params = {'embedded': '{"contactgroups":1,"host_notification_period":1,'
                               '"service_notification_period":1,"host_notification_commands":1,'
                               '"service_notification_commands":1}'}
         self.backend.get_all('contact', params)
-        # all_contacts = self.backend.get_all('contact', params)
-        # for contact in all_contacts:
-        #    contact['imported_from'] = 'alignakbackend'
-        #    # use
-        #    self.multiple_relation(contact, 'use', 'name')
-        #    # host_notification_period
-        #    self.single_relation(contact, 'host_notification_period', 'timeperiod_name')
-        #    # service_notification_period
-        #    self.single_relation(contact, 'service_notification_period', 'timeperiod_name')
-        #    # contactgroups
-        #    self.multiple_relation(contact, 'contactgroups', 'contactgroup_name')
-        #    # host_notification_commands
-        #    self.multiple_relation(contact, 'host_notification_commands',
-        #                           'command_name')
-        #    # service_notification_commands
-        #    self.multiple_relation(contact, 'service_notification_commands',
-        #                           'command_name')
+        all_contacts = self.backend.get_all('contact', params)
+        for contact in all_contacts:
+            contact['imported_from'] = 'alignakbackend'
+            contact['contact_name'] = contact['name']
 
-        #    self.clean_unusable_keys(contact)
-        #    self.config['contacts'].append(contact)
+            # host_notification_period
+            self.single_relation(contact, 'host_notification_period')
+            # service_notification_period
+            self.single_relation(contact, 'service_notification_period')
+            # host_notification_commands
+            self.multiple_relation(contact, 'host_notification_commands', 'contact')
+            # service_notification_commands
+            self.multiple_relation(contact, 'service_notification_commands', 'contact')
+            # contactgroups
+            self.multiple_relation(contact, 'contactgroups', 'contact')
+
+            if 'host_notification_commands' not in contact:
+                contact['host_notification_commands'] = ''
+            if 'service_notification_commands' not in contact:
+                contact['service_notification_commands'] = ''
+            if 'host_notification_period' not in contact:
+                contact['host_notification_period'] = self.config['timeperiods'][0]['timeperiod_name']
+                contact['host_notifications_enabled'] = False
+            if 'service_notification_period' not in contact:
+                contact['service_notification_period'] = self.config['timeperiods'][0]['timeperiod_name']
+                contact['service_notifications_enabled'] = False
+            self.clean_unusable_keys(contact)
+            self.convert_lists(contact)
+            self.config['contacts'].append(contact)
 
     def get_hosts(self):
         """
@@ -212,21 +226,20 @@ class AlignakBackendArbit(BaseModule):
 
         :return: None
         """
-        params = {'embedded': '{"use":1,"parents":1,"hostgroups":1,"check_command":1,'
+        params = {'embedded': '{"parents":1,"hostgroups":1,"check_command":1,'
                               '"contacts":1,"contact_groups":1,"escalations":1,"check_period":1,'
                               '"notification_period":1}'}
         all_hosts = self.backend.get_all('host', params)
         logger.warning("[Alignak Backend Arbit] Got %d hosts", len(all_hosts))
         for host in all_hosts:
+            host['host_name'] = host['name']
             host['imported_from'] = 'alignakbackend'
-            # use
-            self.multiple_relation(host, 'use', 'name')
             # check_command
             if 'check_command' in host:
                 if host['check_command'] is None:
                     host['check_command'] = ''
-                elif 'command_name' in host['check_command']:
-                    host['check_command'] = host['check_command']['command_name']
+                elif 'name' in host['check_command']:
+                    host['check_command'] = host['check_command']['name']
                 else:
                     host['check_command'] = ''
             if 'check_command_args' in host:
@@ -237,9 +250,9 @@ class AlignakBackendArbit(BaseModule):
                     host['check_command'] += host['check_command_args']
                 del host['check_command_args']
             # check_period
-            self.single_relation(host, 'check_period', 'timeperiod_name')
+            self.single_relation(host, 'check_period')
             # notification_period
-            self.single_relation(host, 'notification_period', 'timeperiod_name')
+            self.single_relation(host, 'notification_period')
             # parents
             self.multiple_relation(host, 'parents', 'host_name')
             # hostgroups
@@ -250,9 +263,11 @@ class AlignakBackendArbit(BaseModule):
             self.multiple_relation(host, 'contact_groups', 'contactgroup_name')
             # escalations
             self.multiple_relation(host, 'escalations', 'escalation_name')
-            if host['realm'] is None:
-                del host['realm']
+            if 'realm' in host:
+                if host['realm'] is None:
+                    del host['realm']
             self.clean_unusable_keys(host)
+            self.convert_lists(host)
             self.config['hosts'].append(host)
 
     def get_hostgroups(self):
@@ -266,6 +281,7 @@ class AlignakBackendArbit(BaseModule):
         logger.info("[Alignak Backend Arbit] Got %d hostgroups", len(all_hostgroups))
         for hostgroup in all_hostgroups:
             hostgroup['imported_from'] = 'alignakbackend'
+            hostgroup['hostgroup_name'] = hostgroup['name']
             # members
             self.multiple_relation(hostgroup, 'members', 'host_name')
             # hostgroup_members
@@ -275,6 +291,7 @@ class AlignakBackendArbit(BaseModule):
                 del hostgroup['realm']
 
             self.clean_unusable_keys(hostgroup)
+            self.convert_lists(hostgroup)
             self.config['hostgroups'].append(hostgroup)
 
     def get_services(self):
@@ -283,7 +300,7 @@ class AlignakBackendArbit(BaseModule):
 
         :return: None
         """
-        params = {'embedded': '{"use":1,"host_name":1,"servicegroups":1,"check_command":1,'
+        params = {'embedded': '{"host_name":1,"servicegroups":1,"check_command":1,'
                               '"check_period":1,"notification_period":1,'
                               '"contacts":1,"contact_groups":1,"escalations":1,'
                               '"maintenance_period":1,"service_dependencies":1}'}
@@ -291,6 +308,7 @@ class AlignakBackendArbit(BaseModule):
         logger.warning("[Alignak Backend Arbit] Got %d services", len(all_services))
         for service in all_services:
             service['imported_from'] = 'alignakbackend'
+            service['service_name'] = service['name']
             # check_command
             if 'check_command' in service:
                 if service['check_command'] is None:
@@ -306,16 +324,14 @@ class AlignakBackendArbit(BaseModule):
                     service['check_command'] += '!'
                 service['check_command'] += service['check_command_args']
                 del service['check_command_args']
-            # use
-            self.multiple_relation(service, 'use', 'name')
             # host_name
-            self.single_relation(service, 'host_name', 'host_name')
+            self.single_relation(service, 'host_name')
             # check_period
-            self.single_relation(service, 'check_period', 'timeperiod_name')
+            self.single_relation(service, 'check_period')
             # notification_period
-            self.single_relation(service, 'notification_period', 'timeperiod_name')
+            self.single_relation(service, 'notification_period')
             # maintenance_period
-            self.single_relation(service, 'maintenance_period', 'timeperiod_name')
+            self.single_relation(service, 'maintenance_period')
             # servicegroups
             self.multiple_relation(service, 'servicegroups', 'servicegroup_name')
             # contacts
@@ -328,6 +344,7 @@ class AlignakBackendArbit(BaseModule):
             self.multiple_relation(service, 'service_dependencies', 'service_name')
 
             self.clean_unusable_keys(service)
+            self.convert_lists(service)
             self.config['services'].append(service)
 
     def get_timeperiods(self):
@@ -336,16 +353,16 @@ class AlignakBackendArbit(BaseModule):
 
         :return: None
         """
-        params = {'embedded': '{"use":1}'}
+        params = {}
         all_timeperiods = self.backend.get_all('timeperiod', params)
         for timeperiod in all_timeperiods:
             timeperiod['imported_from'] = 'alignakbackend'
-            # use
-            self.multiple_relation(timeperiod, 'use', 'name')
+            timeperiod['timeperiod_name'] = timeperiod['name']
             for daterange in timeperiod['dateranges']:
                 timeperiod.update(daterange)
             del timeperiod['dateranges']
             self.clean_unusable_keys(timeperiod)
+            self.convert_lists(timeperiod)
             self.config['timeperiods'].append(timeperiod)
 
     def get_objects(self):
@@ -357,10 +374,10 @@ class AlignakBackendArbit(BaseModule):
         """
 
         self.get_commands()
+        self.get_timeperiods()
         self.get_contact()
         self.get_hosts()
         self.get_hostgroups()
         self.get_services()
-        self.get_timeperiods()
 
         return self.config

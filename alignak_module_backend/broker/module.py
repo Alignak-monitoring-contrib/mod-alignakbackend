@@ -111,10 +111,10 @@ class AlignakBackendBrok(BaseModule):
         :return: None
         """
         if type_data == 'livehost':
-            params = {'projection': '{"host_name":1}', "where": '{"register":true}'}
+            params = {'projection': '{"name":1}'}
             content = self.backend.get_all('host', params)
             for item in content:
-                self.mapping['host'][item['host_name']] = item['_id']
+                self.mapping['host'][item['name']] = item['_id']
             # get all livehost
             params = {'projection': '{"host_name":1,"state":1,"state_type":1}',
                       'where': '{"service_description":null}'}
@@ -128,17 +128,16 @@ class AlignakBackendBrok(BaseModule):
                 }
             self.loaded_hosts = True
         elif type_data == 'liveservice':
-            params = {'projection': '{"host_name":1}', "where": '{"register":true}'}
+            params = {'projection': '{"name":1}'}
             contenth = self.backend.get_all('host', params)
             hosts = {}
             for item in contenth:
-                hosts[item['_id']] = item['host_name']
-            params = {'projection': '{"service_description":1,"host_name":1}',
-                      'where': '{"register":true}'}
+                hosts[item['_id']] = item['name']
+            params = {'projection': '{"name":1,"host_name":1}'}
             content = self.backend.get_all('service', params)
             for item in content:
                 self.mapping['service'][''.join([hosts[item['host_name']],
-                                                 item['service_description']])] = item['_id']
+                                                 item['name']])] = item['_id']
             # get all liveservice
             params = {'projection': '{"service_description":1,"state":1,"state_type":1}',
                       'where': '{"service_description":{"$ne": null}}'}

@@ -35,7 +35,7 @@ properties = {
     'daemons': ['arbiter'],
     'type': 'alignakbackendarbit',
     'external': False,
-    'phases': ['configuration', 'running'],
+    'phases': ['configuration'],
     }
 
 

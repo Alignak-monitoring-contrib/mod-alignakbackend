@@ -74,6 +74,8 @@ class AlignakBackendBrok(BaseModule):
         }
         self.hosts = {}
         self.services = {}
+        self.loaded_hosts = False
+        self.loaded_services = False
 
     # Common functions
     def do_loop_turn(self):
@@ -124,6 +126,7 @@ class AlignakBackendBrok(BaseModule):
                     'initial_state': item['state'],
                     'initial_state_type': item['state_type']
                 }
+            self.loaded_hosts = True
         elif type_data == 'liveservice':
             params = {'projection': '{"host_name":1}', "where": '{"register":true}'}
             contenth = self.backend.get_all('host', params)
@@ -147,6 +150,7 @@ class AlignakBackendBrok(BaseModule):
                     'initial_state': item['state'],
                     'initial_state_type': item['state_type']
                 }
+            self.loaded_services = True
 
     def update(self, data, obj_type):
         """
@@ -296,9 +300,9 @@ class AlignakBackendBrok(BaseModule):
         :return: None
         """
 
-        if not self.ref_live['host']:
+        if not self.loaded_hosts:
             self.get_refs('livehost')
-        if not self.ref_live['service']:
+        if not self.loaded_services:
             self.get_refs('liveservice')
 
         if queue.type == 'host_check_result':

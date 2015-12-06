@@ -23,11 +23,11 @@ This module is used to get configuration from alignak-backend with arbiter
 """
 
 import time
+from alignak_backend_client.client import Backend
 # pylint: disable=F0401
 from alignak.basemodule import BaseModule
 # pylint: disable=F0401
 from alignak.log import logger
-from alignak_backend_client.client import Backend
 
 
 # pylint: disable=C0103
@@ -158,6 +158,13 @@ class AlignakBackendArbit(BaseModule):
 
     @classmethod
     def convert_lists(cls, resource):
+        """
+        Convert lists into string with values separated with comma
+
+        :param resource: ressource
+        :type resource: dict
+        :return: None
+        """
         for prop in resource:
             if isinstance(resource[prop], list):
                 resource[prop] = ','.join(str(e) for e in resource[prop])
@@ -247,10 +254,12 @@ class AlignakBackendArbit(BaseModule):
             if 'service_notification_commands' not in contact:
                 contact['service_notification_commands'] = ''
             if 'host_notification_period' not in contact:
-                contact['host_notification_period'] = self.config['timeperiods'][0]['timeperiod_name']
+                contact['host_notification_period'] = \
+                    self.config['timeperiods'][0]['timeperiod_name']
                 contact['host_notifications_enabled'] = False
             if 'service_notification_period' not in contact:
-                contact['service_notification_period'] = self.config['timeperiods'][0]['timeperiod_name']
+                contact['service_notification_period'] = \
+                    self.config['timeperiods'][0]['timeperiod_name']
                 contact['service_notifications_enabled'] = False
             self.clean_unusable_keys(contact)
             self.convert_lists(contact)
@@ -270,10 +279,10 @@ class AlignakBackendArbit(BaseModule):
             hostgroup['imported_from'] = 'alignakbackend'
             hostgroup['hostgroup_name'] = hostgroup['name']
             # members
-            ### self.multiple_relation(hostgroup, 'members', 'host_name')
+            # ## self.multiple_relation(hostgroup, 'members', 'host_name')
             hostgroup['members'] = ''
             # hostgroup_members
-            ### self.multiple_relation(hostgroup, 'hostgroup_members', 'hostgroup_name')
+            # ## self.multiple_relation(hostgroup, 'hostgroup_members', 'hostgroup_name')
             hostgroup['hostgroup_members'] = ''
             # realm
             if hostgroup['realm'] is None:
@@ -316,7 +325,7 @@ class AlignakBackendArbit(BaseModule):
             # notification_period
             self.single_relation(host, 'notification_period', 'timeperiods')
             # parents
-            ### self.multiple_relation(host, 'parents', 'host_name')
+            # ## self.multiple_relation(host, 'parents', 'host_name')
             host['parents'] = ''
             # hostgroups
             self.multiple_relation(host, 'hostgroups', 'hostgroups')
@@ -325,7 +334,7 @@ class AlignakBackendArbit(BaseModule):
             # contact_groups
             self.multiple_relation(host, 'contact_groups', 'contactgroups')
             # escalations
-            ### self.multiple_relation(host, 'escalations', 'escalation_name')
+            # ## self.multiple_relation(host, 'escalations', 'escalation_name')
             if 'escalation' in host and host['escalation'] == '':
                 del host['escalation']
             if 'alias' in host and host['alias'] == '':
@@ -351,10 +360,10 @@ class AlignakBackendArbit(BaseModule):
             servicegroup['imported_from'] = 'alignakbackend'
             servicegroup['servicegroup_name'] = servicegroup['name']
             # members
-            ### self.multiple_relation(servicegroup, 'members', 'service_description')
+            # ## self.multiple_relation(servicegroup, 'members', 'service_description')
             servicegroup['members'] = ''
             # servicegroup_members
-            ### self.multiple_relation(servicegroup, 'servicegroup_members', 'servicegroup_name')
+            # ## self.multiple_relation(servicegroup, 'servicegroup_members', 'servicegroup_name')
             servicegroup['servicegroup_members'] = ''
             # realm
             if servicegroup['realm'] is None:
@@ -406,11 +415,11 @@ class AlignakBackendArbit(BaseModule):
             # contact_groups
             self.multiple_relation(service, 'contact_groups', 'contactgroups')
             # escalations
-            ### self.multiple_relation(service, 'escalations', 'escalation_name')
+            # ## self.multiple_relation(service, 'escalations', 'escalation_name')
             if 'escalation' in service and service['escalation'] == '':
                 del service['escalation']
             # service_dependencies
-            ### self.multiple_relation(service, 'service_dependencies', 'service_name')
+            # ## self.multiple_relation(service, 'service_dependencies', 'service_name')
             service['service_dependencies'] = ''
             if 'alias' in service and service['alias'] == '':
                 del service['alias']
@@ -435,6 +444,6 @@ class AlignakBackendArbit(BaseModule):
         self.get_hosts()
         self.get_servicegroups()
         self.get_services()
-        logger.info("[backend arbiter] loaded in --- %s seconds ---" % (time.time() - start_time))
+        logger.info("[backend arbiter] loaded in --- %s seconds ---", (time.time() - start_time))
 
         return self.config

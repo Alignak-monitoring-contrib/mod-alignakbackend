@@ -35,7 +35,7 @@ class TestBrokerCommon(unittest2.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.p = subprocess.Popen(['alignak_backend', 'start'])
+        cls.p = subprocess.Popen(['uwsgi', '-w', 'alignakbackend:app', '--socket', '0.0.0.0:5000', '--protocol=http', '--enable-threads'])
         time.sleep(3)
         cls.backend = Backend('http://127.0.0.1:5000')
         cls.backend.login("admin", "admin", "force")
@@ -44,28 +44,39 @@ class TestBrokerCommon(unittest2.TestCase):
         cls.backend.delete("command", {})
         cls.backend.delete("livestate", {})
         cls.backend.delete("livesynthesis", {})
-        # add host
-        data = json.loads(open('cfg/host_srv001.json').read())
-        cls.data_host = cls.backend.post("host", data)
+        realms = cls.backend.get_all('realm')
+        for cont in realms:
+            cls.realm_all = cont['_id']
+
         # add commands
         data = json.loads(open('cfg/command_ping.json').read())
+        data['_realm'] = cls.realm_all
         data_cmd_ping = cls.backend.post("command", data)
         data = json.loads(open('cfg/command_http.json').read())
+        data['_realm'] = cls.realm_all
         data_cmd_http = cls.backend.post("command", data)
+        # add host
+        data = json.loads(open('cfg/host_srv001.'
+                               'json').read())
+        data['check_command'] = data_cmd_ping['_id']
+        data['realm'] = cls.realm_all
+        cls.data_host = cls.backend.post("host", data)
         # add 2 services
         data = json.loads(open('cfg/service_srv001_ping.json').read())
         data['host_name'] = cls.data_host['_id']
         data['check_command'] = data_cmd_ping['_id']
+        data['_realm'] = cls.realm_all
         cls.data_srv_ping = cls.backend.post("service", data)
 
         data = json.loads(open('cfg/service_srv001_http.json').read())
         data['host_name'] = cls.data_host['_id']
         data['check_command'] = data_cmd_http['_id']
+        data['_realm'] = cls.realm_all
         cls.data_srv_http = cls.backend.post("service", data)
 
         # Start broker module
         modconf = Module()
-        modconf.module_name = "alignakbackend"
+        modconf.module_alias = "alignakbackendarbit"
         modconf.username = "admin"
         modconf.password = "admin"
         modconf.api_url = 'http://127.0.0.1:5000'
@@ -186,6 +197,3 @@ class TestBrokerCommon(unittest2.TestCase):
         self.assertEqual(r['_items'][0]['services_critical_soft'], 0)
         self.assertEqual(r['_items'][0]['services_unknown_hard'], 0)
         self.assertEqual(r['_items'][0]['services_unknown_soft'], 0)
-
-
-

@@ -1,4 +1,4 @@
 {
-    "command_name": "check_http",
+    "name": "check_http",
     "command_line": "check_http -H $HOSTADDRESS$"
 }

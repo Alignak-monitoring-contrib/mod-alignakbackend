@@ -151,7 +151,8 @@ class AlignakBackendArbit(BaseModule):
         :type resource: dict
         :return:
         """
-        fields = ['_links', '_updated', '_created', '_etag', '_id', 'name', 'ui']
+        fields = ['_links', '_updated', '_created', '_etag', '_id', 'name', 'ui', '_realm',
+                  '_sub_realm', '_users_read', '_users_update', '_users_delete']
         for field in fields:
             if field in resource:
                 del resource[field]
@@ -171,6 +172,18 @@ class AlignakBackendArbit(BaseModule):
             elif isinstance(resource[prop], dict):
                 logger.warning("=====> %s", prop)
                 logger.warning(resource[prop])
+
+    def get_realms(self):
+        """
+        Get realms from alignak_backend
+
+        :return: None
+        """
+        self.configraw['realms'] = {}
+        all_realms = self.backend.get_all('realm')
+        logger.warning("[Alignak Backend Arbit] Got %d realms", len(all_realms))
+        for realm in all_realms:
+            self.configraw['realms'][realm['_id']] = realm['name']
 
     def get_commands(self):
         """
@@ -322,6 +335,8 @@ class AlignakBackendArbit(BaseModule):
                 del host['check_command_args']
             # check_period
             self.single_relation(host, 'check_period', 'timeperiods')
+            # realm
+            self.single_relation(host, 'realm', 'realms')
             # notification_period
             self.single_relation(host, 'notification_period', 'timeperiods')
             # parents
@@ -436,6 +451,7 @@ class AlignakBackendArbit(BaseModule):
         :rtype: dict
         """
         start_time = time.time()
+        self.get_realms()
         self.get_commands()
         self.get_timeperiods()
         self.get_contactgroups()

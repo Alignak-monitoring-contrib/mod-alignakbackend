@@ -191,7 +191,7 @@ class AlignakBackendArbit(BaseModule):
             realm['imported_from'] = 'alignakbackend'
             realm['realm_name'] = realm['name']
             self.clean_unusable_keys(realm)
-            #self.convert_lists(realm)
+            # self.convert_lists(realm)
             self.config['realms'].append(realm)
 
     def get_commands(self):

@@ -116,13 +116,14 @@ class AlignakBackendBrok(BaseModule):
             for item in content:
                 self.mapping['host'][item['name']] = item['_id']
             # get all livehost
-            params = {'projection': '{"host_name":1,"state":1,"state_type":1}',
+            params = {'projection': '{"host_name":1,"state":1,"state_type":1,"_realm":1}',
                       'where': '{"service_description":null}'}
             contentlh = self.backend.get_all('livestate', params)
             for item in contentlh:
                 self.ref_live['host'][item['host_name']] = {
                     '_id': item['_id'],
                     '_etag': item['_etag'],
+                    '_realm': item['_realm'],
                     'initial_state': item['state'],
                     'initial_state_type': item['state_type']
                 }
@@ -139,13 +140,14 @@ class AlignakBackendBrok(BaseModule):
                 self.mapping['service'][''.join([hosts[item['host_name']],
                                                  item['name']])] = item['_id']
             # get all liveservice
-            params = {'projection': '{"service_description":1,"state":1,"state_type":1}',
+            params = {'projection': '{"service_description":1,"state":1,"state_type":1,"_realm":1}',
                       'where': '{"service_description":{"$ne": null}}'}
             contentls = self.backend.get_all('livestate', params)
             for item in contentls:
                 self.ref_live['service'][item['service_description']] = {
                     '_id': item['_id'],
                     '_etag': item['_etag'],
+                    '_realm': item['_realm'],
                     'initial_state': item['state'],
                     'initial_state_type': item['state_type']
                 }
@@ -192,6 +194,8 @@ class AlignakBackendBrok(BaseModule):
                     del self.ref_live['host'][h_id]['initial_state']
                     del self.ref_live['host'][h_id]['initial_state_type']
 
+                data_to_update['_realm'] = self.ref_live['host'][h_id]['_realm']
+
                 # Update live state
                 ret = self.send_to_backend('livehost', data['host_name'], data_to_update)
                 if ret:
@@ -223,6 +227,9 @@ class AlignakBackendBrok(BaseModule):
                         self.ref_live['service'][s_id]['initial_state_type']
                     del self.ref_live['service'][s_id]['initial_state']
                     del self.ref_live['service'][s_id]['initial_state_type']
+
+                data_to_update['_realm'] = self.ref_live['service'][s_id]['_realm']
+
                 # Update live state
                 ret = self.send_to_backend('liveservice', service_name, data_to_update)
                 if ret:
@@ -255,7 +262,6 @@ class AlignakBackendBrok(BaseModule):
         ret = True
         if type_data == 'livehost':
             headers['If-Match'] = self.ref_live['host'][self.mapping['host'][name]]['_etag']
-
             response = self.backend.patch(
                 'livestate/%s' % self.ref_live['host'][self.mapping['host'][name]]['_id'],
                 data,

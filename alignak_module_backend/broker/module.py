@@ -24,11 +24,11 @@ This module is used to send logs and livestate to alignak-backend with broker
 
 import time
 
+from alignak_backend_client.client import Backend
 # pylint: disable=F0401
 from alignak.basemodule import BaseModule
 # pylint: disable=F0401
 from alignak.log import logger
-from alignak_backend_client.client import Backend
 
 # pylint: disable=C0103
 properties = {

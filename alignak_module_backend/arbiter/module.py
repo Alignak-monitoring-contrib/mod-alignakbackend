@@ -556,9 +556,11 @@ class AlignakBackendArbit(BaseModule):
         """
         self.configraw['servicedependencies'] = {}
         all_servicedependencies = self.backend.get_all('servicedependency')
-        logger.warning("[Alignak Backend Arbit] Got %d servicedependencies", len(all_servicedependencies))
+        logger.warning("[Alignak Backend Arbit] Got %d servicedependencies",
+                       len(all_servicedependencies))
         for servicedependency in all_servicedependencies:
-            self.configraw['servicedependencies'][servicedependency['_id']] = servicedependency['name']
+            self.configraw['servicedependencies'][servicedependency['_id']] = \
+                servicedependency['name']
             servicedependency['imported_from'] = 'alignakbackend'
             servicedependency['servicedependency_name'] = servicedependency['name']
             # dependent_host_name
@@ -583,9 +585,11 @@ class AlignakBackendArbit(BaseModule):
         """
         self.configraw['serviceescalations'] = {}
         all_serviceescalations = self.backend.get_all('serviceescalation')
-        logger.warning("[Alignak Backend Arbit] Got %d serviceescalations", len(all_serviceescalations))
+        logger.warning("[Alignak Backend Arbit] Got %d serviceescalations",
+                       len(all_serviceescalations))
         for serviceescalation in all_serviceescalations:
-            self.configraw['serviceescalations'][serviceescalation['_id']] = serviceescalation['name']
+            self.configraw['serviceescalations'][serviceescalation['_id']] = \
+                serviceescalation['name']
             serviceescalation['serviceescalation_name'] = serviceescalation['name']
             serviceescalation['imported_from'] = 'alignakbackend'
             # host_name

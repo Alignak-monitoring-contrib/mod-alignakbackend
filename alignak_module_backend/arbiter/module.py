@@ -72,7 +72,10 @@ class AlignakBackendArbit(BaseModule):
                        'hosts': [],
                        'hostgroups': [],
                        'services': [],
-                       'contacts': []}
+                       'contacts': [],
+                       'contactgroups': [],
+                       'servicegroups': [],
+                       'realms': []}
 
     # Common functions
     def do_loop_turn(self):
@@ -152,7 +155,8 @@ class AlignakBackendArbit(BaseModule):
         :return:
         """
         fields = ['_links', '_updated', '_created', '_etag', '_id', 'name', 'ui', '_realm',
-                  '_sub_realm', '_users_read', '_users_update', '_users_delete']
+                  '_sub_realm', '_users_read', '_users_update', '_users_delete', '_parent',
+                  '_tree_parents', '_tree_children', '_level']
         for field in fields:
             if field in resource:
                 del resource[field]
@@ -184,6 +188,11 @@ class AlignakBackendArbit(BaseModule):
         logger.warning("[Alignak Backend Arbit] Got %d realms", len(all_realms))
         for realm in all_realms:
             self.configraw['realms'][realm['_id']] = realm['name']
+            realm['imported_from'] = 'alignakbackend'
+            realm['realm_name'] = realm['name']
+            self.clean_unusable_keys(realm)
+            #self.convert_lists(realm)
+            self.config['realms'].append(realm)
 
     def get_commands(self):
         """
@@ -291,6 +300,8 @@ class AlignakBackendArbit(BaseModule):
             self.configraw['hostgroups'][hostgroup['_id']] = hostgroup['name']
             hostgroup['imported_from'] = 'alignakbackend'
             hostgroup['hostgroup_name'] = hostgroup['name']
+            # realm
+            self.single_relation(hostgroup, 'realm', 'realms')
             # members
             # ## self.multiple_relation(hostgroup, 'members', 'host_name')
             hostgroup['members'] = ''
@@ -380,9 +391,6 @@ class AlignakBackendArbit(BaseModule):
             # servicegroup_members
             # ## self.multiple_relation(servicegroup, 'servicegroup_members', 'servicegroup_name')
             servicegroup['servicegroup_members'] = ''
-            # realm
-            if servicegroup['realm'] is None:
-                del servicegroup['realm']
 
             self.clean_unusable_keys(servicegroup)
             self.convert_lists(servicegroup)

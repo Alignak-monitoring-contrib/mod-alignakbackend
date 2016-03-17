@@ -17,4 +17,4 @@ jsonschema
 Eve-docs
 flask-bootstrap
 configparser ; python_version < '3.0'
-
+uwsgi

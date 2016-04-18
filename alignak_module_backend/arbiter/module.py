@@ -23,6 +23,8 @@ This module is used to get configuration from alignak-backend with arbiter
 """
 
 import time
+from datetime import datetime
+import os, signal
 from alignak_backend_client.client import Backend
 # pylint: disable=F0401
 from alignak.basemodule import BaseModule
@@ -65,7 +67,8 @@ class AlignakBackendArbit(BaseModule):
         if self.backend.token == '':
             self.getToken(getattr(modconf, 'username', ''), getattr(modconf, 'password', ''),
                           getattr(modconf, 'allowgeneratetoken', False))
-
+        self.verify_modification = int(getattr(modconf, 'verify_modification', 5))
+        self.next_check = 0
         self.configraw = {}
         self.config = {'commands': [],
                        'timeperiods': [],
@@ -666,6 +669,24 @@ class AlignakBackendArbit(BaseModule):
         self.get_serviceextinfos()
         self.get_triggers()
 
-        logger.info("[backend arbiter] loaded in --- %s seconds ---", (time.time() - start_time))
+        self.time_loaded_conf = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
 
+        logger.info("[backend arbiter] loaded in --- %s seconds ---", (time.time() - start_time))
+        # Planify next execution in 10 minutes (need time to finish load config)
         return self.config
+
+    def hook_tick(self, arbiter):
+        if int(time.time()) > self.next_check:
+            logger.debug('Check if config in backend has changed')
+            resources = ['realm', 'command', 'timeperiod', 'contactgroup', 'contact', 'hostgroup',
+                         'host', 'servicegroup', 'service', 'escalation', 'hostdependency',
+                         'hostescalation', 'hostextinfo', 'servicedependency', 'serviceescalation',
+                         'serviceextinfo', 'trigger']
+            for resource in resources:
+                ret = self.backend.get(resource, {'where': '{"_updated":{"$gte": "' + self.time_loaded_conf + '"}}'})
+                if ret['_meta']['total'] > 0:
+                    logger.warning('Hey, we must reload conf from backend !!!!')
+                    with open(arbiter.pidfile, 'r') as f:
+                        arbiterpid = f.readline()
+                    os.kill(int(arbiterpid), signal.SIGUSR1)
+            self.next_check = int(time.time()) + (60 * self.verify_modification)

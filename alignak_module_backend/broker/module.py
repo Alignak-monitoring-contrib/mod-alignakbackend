@@ -141,7 +141,7 @@ class AlignakBackendBrok(BaseModule):
                                                  item['name']])] = item['_id']
             # get all liveservice
             params = {'projection': '{"service_description":1,"state":1,"state_type":1,"_realm":1}',
-                      'where': '{"type":"service"}}'}
+                      'where': '{"type":"service"}'}
             contentls = self.backend.get_all('livestate', params)
             for item in contentls:
                 self.ref_live['service'][item['service_description']] = {

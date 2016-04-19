@@ -24,7 +24,8 @@ This module is used to get configuration from alignak-backend with arbiter
 
 import time
 from datetime import datetime
-import os, signal
+import os
+import signal
 from alignak_backend_client.client import Backend
 # pylint: disable=F0401
 from alignak.basemodule import BaseModule
@@ -69,6 +70,7 @@ class AlignakBackendArbit(BaseModule):
                           getattr(modconf, 'allowgeneratetoken', False))
         self.verify_modification = int(getattr(modconf, 'verify_modification', 5))
         self.next_check = 0
+        self.time_loaded_conf = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
         self.configraw = {}
         self.config = {'commands': [],
                        'timeperiods': [],
@@ -676,6 +678,14 @@ class AlignakBackendArbit(BaseModule):
         return self.config
 
     def hook_tick(self, arbiter):
+        """
+        Hook in arbiter used to check if configuration has changed in the backend since
+        last configuration loaded
+
+        :param arbiter: alignak.daemons.arbiterdaemon.Arbiter
+        :type arbiter: object
+        :return: None
+        """
         if int(time.time()) > self.next_check:
             logger.debug('Check if config in backend has changed')
             resources = ['realm', 'command', 'timeperiod', 'contactgroup', 'contact', 'hostgroup',
@@ -683,7 +693,8 @@ class AlignakBackendArbit(BaseModule):
                          'hostescalation', 'hostextinfo', 'servicedependency', 'serviceescalation',
                          'serviceextinfo', 'trigger']
             for resource in resources:
-                ret = self.backend.get(resource, {'where': '{"_updated":{"$gte": "' + self.time_loaded_conf + '"}}'})
+                ret = self.backend.get(resource, {'where': '{"_updated":{"$gte": "' +
+                                                           self.time_loaded_conf + '"}}'})
                 if ret['_meta']['total'] > 0:
                     logger.warning('Hey, we must reload conf from backend !!!!')
                     with open(arbiter.pidfile, 'r') as f:

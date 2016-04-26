@@ -336,7 +336,7 @@ class AlignakBackendArbit(BaseModule):
         :return: None
         """
         self.configraw['hosts'] = {}
-        all_hosts = self.backend.get_all('host', {'_is_template': False})
+        all_hosts = self.backend.get_all('host', {"where": '{"_is_template": false}'})
         logger.warning("[Alignak Backend Arbit] Got %d hosts", len(all_hosts))
         for host in all_hosts:
             self.configraw['hosts'][host['_id']] = host['name']
@@ -415,7 +415,7 @@ class AlignakBackendArbit(BaseModule):
 
         :return: None
         """
-        params = {'embedded': '{"escalations":1,"service_dependencies":1}','_is_template': False}
+        params = {'embedded': '{"escalations":1,"service_dependencies":1}', "where": '{"_is_template": false}'}
         all_services = self.backend.get_all('service', params)
         logger.warning("[Alignak Backend Arbit] Got %d services", len(all_services))
         for service in all_services:

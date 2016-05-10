@@ -692,12 +692,15 @@ class AlignakBackendArbit(BaseModule):
                          'host', 'servicegroup', 'service', 'escalation', 'hostdependency',
                          'hostescalation', 'hostextinfo', 'servicedependency', 'serviceescalation',
                          'serviceextinfo', 'trigger']
+            reload_conf = False
             for resource in resources:
                 ret = self.backend.get(resource, {'where': '{"_updated":{"$gte": "' +
                                                            self.time_loaded_conf + '"}}'})
                 if ret['_meta']['total'] > 0:
-                    logger.warning('Hey, we must reload conf from backend !!!!')
-                    with open(arbiter.pidfile, 'r') as f:
-                        arbiterpid = f.readline()
-                    os.kill(int(arbiterpid), signal.SIGUSR1)
+                    reload_conf = True
+            if reload_conf:
+                logger.warning('Hey, we must reload conf from backend !!!!')
+                with open(arbiter.pidfile, 'r') as f:
+                    arbiterpid = f.readline()
+                os.kill(int(arbiterpid), signal.SIGHUP)
             self.next_check = int(time.time()) + (60 * self.verify_modification)

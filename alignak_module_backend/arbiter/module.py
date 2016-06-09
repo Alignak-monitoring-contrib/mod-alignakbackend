@@ -363,6 +363,10 @@ class AlignakBackendArbit(BaseModule):
             self.single_relation(host, 'realm', 'realms')
             # notification_period
             self.single_relation(host, 'notification_period', 'timeperiods')
+            # maintenance_period
+            self.single_relation(host, 'maintenance_period', 'timeperiods')
+            # snapshot_period
+            self.single_relation(host, 'snapshot_period', 'timeperiods')
             # parents
             # ## self.multiple_relation(host, 'parents', 'host_name')
             host['parents'] = ''
@@ -675,6 +679,7 @@ class AlignakBackendArbit(BaseModule):
 
         logger.info("[backend arbiter] loaded in --- %s seconds ---", (time.time() - start_time))
         # Planify next execution in 10 minutes (need time to finish load config)
+        self.next_check = int(time.time()) + (180 * self.verify_modification)
         return self.config
 
     def hook_tick(self, arbiter):
@@ -696,7 +701,7 @@ class AlignakBackendArbit(BaseModule):
             for resource in resources:
                 ret = self.backend.get(resource, {'where': '{"_updated":{"$gte": "' +
                                                            self.time_loaded_conf + '"}}'})
-                if ret['_meta']['total'] > 0:
+                if ret['_meta']['total'] > -1:
                     reload_conf = True
             if reload_conf:
                 logger.warning('Hey, we must reload conf from backend !!!!')

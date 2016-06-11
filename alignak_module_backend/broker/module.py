@@ -24,7 +24,7 @@ This module is used to send logs and livestate to alignak-backend with broker
 
 import time
 
-from alignak_backend_client.client import Backend
+from alignak_backend_client.client import Backend, BackendException
 # pylint: disable=F0401
 from alignak.basemodule import BaseModule
 # pylint: disable=F0401
@@ -113,13 +113,13 @@ class AlignakBackendBrok(BaseModule):
         if type_data == 'livehost':
             params = {'projection': '{"name":1}'}
             content = self.backend.get_all('host', params)
-            for item in content:
+            for item in content['_items']:
                 self.mapping['host'][item['name']] = item['_id']
             # get all livehost
             params = {'projection': '{"host_name":1,"state":1,"state_type":1,"_realm":1}',
                       'where': '{"type":"host"}'}
             contentlh = self.backend.get_all('livestate', params)
-            for item in contentlh:
+            for item in contentlh['_items']:
                 self.ref_live['host'][item['host_name']] = {
                     '_id': item['_id'],
                     '_etag': item['_etag'],
@@ -132,18 +132,18 @@ class AlignakBackendBrok(BaseModule):
             params = {'projection': '{"name":1}'}
             contenth = self.backend.get_all('host', params)
             hosts = {}
-            for item in contenth:
+            for item in contenth['_items']:
                 hosts[item['_id']] = item['name']
             params = {'projection': '{"name":1,"host_name":1}'}
             content = self.backend.get_all('service', params)
-            for item in content:
+            for item in content['_items']:
                 self.mapping['service'][''.join([hosts[item['host_name']],
                                                  item['name']])] = item['_id']
             # get all liveservice
             params = {'projection': '{"service_description":1,"state":1,"state_type":1,"_realm":1}',
                       'where': '{"type":"service"}'}
             contentls = self.backend.get_all('livestate', params)
-            for item in contentls:
+            for item in contentls['_items']:
                 self.ref_live['service'][item['service_description']] = {
                     '_id': item['_id'],
                     '_etag': item['_etag'],
@@ -185,6 +185,8 @@ class AlignakBackendBrok(BaseModule):
                     'long_output': data['long_output'],
                     'perf_data': data['perf_data'],
                     'acknowledged': data['problem_has_been_acknowledged'],
+                    'execution_time': data['execution_time'],
+                    'latency': data['latency']
                 }
                 h_id = self.mapping['host'][data['host_name']]
                 if 'initial_state' in self.ref_live['host'][h_id]:
@@ -219,6 +221,8 @@ class AlignakBackendBrok(BaseModule):
                     'long_output': data['long_output'],
                     'perf_data': data['perf_data'],
                     'acknowledged': data['problem_has_been_acknowledged'],
+                    'execution_time': data['execution_time'],
+                    'latency': data['latency']
                 }
                 s_id = self.mapping['service'][service_name]
                 if 'initial_state' in self.ref_live['service'][s_id]:
@@ -262,37 +266,51 @@ class AlignakBackendBrok(BaseModule):
         ret = True
         if type_data == 'livehost':
             headers['If-Match'] = self.ref_live['host'][self.mapping['host'][name]]['_etag']
-            response = self.backend.patch(
-                'livestate/%s' % self.ref_live['host'][self.mapping['host'][name]]['_id'],
-                data,
-                headers)
-            if response['_status'] == 'ERR':
-                logger.error(response['_issues'])
-                ret = False
-            else:
-                self.ref_live['host'][self.mapping['host'][name]]['_etag'] = response['_etag']
+            try:
+                response = self.backend.patch(
+                    'livestate/%s' % self.ref_live['host'][self.mapping['host'][name]]['_id'],
+                    data,
+                    headers)
+                if response['_status'] == 'ERR':
+                    logger.error(response['_issues'])
+                    ret = False
+                else:
+                    self.ref_live['host'][self.mapping['host'][name]]['_etag'] = response['_etag']
+            except BackendException as e:
+                logger.error('Patch livestate host %s has error: %s' % (self.mapping['host'][name],
+                             str(e)))
+                if "_issues" in e.response:
+                    logger.error("***** issues: %s" % e.response['_issues'])
         elif type_data == 'liveservice':
             headers['If-Match'] = self.ref_live['service'][self.mapping['service'][name]]['_etag']
-            response = self.backend.patch(
-                'livestate/%s' % self.ref_live['service'][self.mapping['service'][name]]['_id'],
-                data,
-                headers)
-            if response['_status'] == 'ERR':
-                logger.error(response['_issues'])
-                ret = False
-            else:
-                self.ref_live['service'][self.mapping['service'][name]]['_etag'] = response['_etag']
+            try:
+                response = self.backend.patch(
+                    'livestate/%s' % self.ref_live['service'][self.mapping['service'][name]]['_id'],
+                    data,
+                    headers)
+                if response['_status'] == 'ERR':
+                    logger.error(response['_issues'])
+                    ret = False
+                else:
+                    self.ref_live['service'][self.mapping['service'][name]]['_etag'] = response[
+                        '_etag']
+            except BackendException as e:
+                logger.error('Patch livestate service %s has error: %s' %
+                             (self.mapping['service'][name], str(e)))
         elif type_data == 'loghost':
             data['host_name'] = self.mapping['host'][name]
-            response = self.backend.post('loghost', data, headers)
-            if response['_status'] == 'ERR':
-                logger.error(response['_issues'])
+            try:
+                response = self.backend.post('loghost', data)
+            except BackendException as e:
+                logger.error('Post loghost %s has error: %s' % (self.mapping['host'][name], str(e)))
                 ret = False
         elif type_data == 'logservice':
             data['service_description'] = self.mapping['service'][name]
-            response = self.backend.post('logservice', data, headers)
-            if response['_status'] == 'ERR':
-                logger.error(response['_issues'])
+            try:
+                response = self.backend.post('logservice', data)
+            except BackendException as e:
+                logger.error('Post logservice %s has error: %s' % (self.mapping['service'][name],
+                             str(e)))
                 ret = False
         return ret
 

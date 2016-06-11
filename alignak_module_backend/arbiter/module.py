@@ -198,8 +198,8 @@ class AlignakBackendArbit(BaseModule):
         """
         self.configraw['realms'] = {}
         all_realms = self.backend.get_all('realm')
-        logger.warning("[Alignak Backend Arbit] Got %d realms", len(all_realms))
-        for realm in all_realms:
+        logger.warning("[Alignak Backend Arbit] Got %d realms", len(all_realms['_items']))
+        for realm in all_realms['_items']:
             self.configraw['realms'][realm['_id']] = realm['name']
             realm['imported_from'] = 'alignakbackend'
             realm['realm_name'] = realm['name']
@@ -215,8 +215,8 @@ class AlignakBackendArbit(BaseModule):
         """
         self.configraw['commands'] = {}
         all_commands = self.backend.get_all('command')
-        logger.warning("[Alignak Backend Arbit] Got %d commands", len(all_commands))
-        for command in all_commands:
+        logger.warning("[Alignak Backend Arbit] Got %d commands", len(all_commands['_items']))
+        for command in all_commands['_items']:
             self.configraw['commands'][command['_id']] = command['name']
             command['imported_from'] = 'alignakbackend'
             command['command_name'] = command['name']
@@ -232,7 +232,8 @@ class AlignakBackendArbit(BaseModule):
         """
         self.configraw['timeperiods'] = {}
         all_timeperiods = self.backend.get_all('timeperiod')
-        for timeperiod in all_timeperiods:
+        logger.warning("[Alignak Backend Arbit] Got %d timeperiods", len(all_timeperiods['_items']))
+        for timeperiod in all_timeperiods['_items']:
             self.configraw['timeperiods'][timeperiod['_id']] = timeperiod['name']
             timeperiod['imported_from'] = 'alignakbackend'
             timeperiod['timeperiod_name'] = timeperiod['name']
@@ -251,8 +252,8 @@ class AlignakBackendArbit(BaseModule):
         """
         self.configraw['contactgroups'] = {}
         all_contactgroups = self.backend.get_all('contactgroup')
-        logger.warning("[Alignak Backend Arbit] Got %d contactgroups", len(all_contactgroups))
-        for contactgroup in all_contactgroups:
+        logger.warning("[Alignak Backend Arbit] Got %d contactgroups", len(all_contactgroups['_items']))
+        for contactgroup in all_contactgroups['_items']:
             self.configraw['contactgroups'][contactgroup['_id']] = contactgroup['name']
             contactgroup['imported_from'] = 'alignakbackend'
             contactgroup['contactgroup_name'] = contactgroup['name']
@@ -268,7 +269,7 @@ class AlignakBackendArbit(BaseModule):
         """
         self.configraw['contacts'] = {}
         all_contacts = self.backend.get_all('contact')
-        for contact in all_contacts:
+        for contact in all_contacts['_items']:
             self.configraw['contacts'][contact['_id']] = contact['name']
             contact['imported_from'] = 'alignakbackend'
             contact['contact_name'] = contact['name']
@@ -308,8 +309,8 @@ class AlignakBackendArbit(BaseModule):
         """
         self.configraw['hostgroups'] = {}
         all_hostgroups = self.backend.get_all('hostgroup')
-        logger.warning("[Alignak Backend Arbit] Got %d hostgroups", len(all_hostgroups))
-        for hostgroup in all_hostgroups:
+        logger.warning("[Alignak Backend Arbit] Got %d hostgroups", len(all_hostgroups['_items']))
+        for hostgroup in all_hostgroups['_items']:
             self.configraw['hostgroups'][hostgroup['_id']] = hostgroup['name']
             hostgroup['imported_from'] = 'alignakbackend'
             hostgroup['hostgroup_name'] = hostgroup['name']
@@ -337,8 +338,8 @@ class AlignakBackendArbit(BaseModule):
         """
         self.configraw['hosts'] = {}
         all_hosts = self.backend.get_all('host', {"where": '{"_is_template": false}'})
-        logger.warning("[Alignak Backend Arbit] Got %d hosts", len(all_hosts))
-        for host in all_hosts:
+        logger.warning("[Alignak Backend Arbit] Got %d hosts", len(all_hosts['_items']))
+        for host in all_hosts['_items']:
             self.configraw['hosts'][host['_id']] = host['name']
             host['host_name'] = host['name']
             host['imported_from'] = 'alignakbackend'
@@ -397,8 +398,8 @@ class AlignakBackendArbit(BaseModule):
         """
         self.configraw['servicegroups'] = {}
         all_servicegroups = self.backend.get_all('servicegroup')
-        logger.warning("[Alignak Backend Arbit] Got %d servicegroups", len(all_servicegroups))
-        for servicegroup in all_servicegroups:
+        logger.warning("[Alignak Backend Arbit] Got %d servicegroups", len(all_servicegroups['_items']))
+        for servicegroup in all_servicegroups['_items']:
             self.configraw['servicegroups'][servicegroup['_id']] = servicegroup['name']
             servicegroup['imported_from'] = 'alignakbackend'
             servicegroup['servicegroup_name'] = servicegroup['name']
@@ -421,8 +422,8 @@ class AlignakBackendArbit(BaseModule):
         """
         params = {'embedded': '{"escalations":1,"service_dependencies":1}', "where": '{"_is_template": false}'}
         all_services = self.backend.get_all('service', params)
-        logger.warning("[Alignak Backend Arbit] Got %d services", len(all_services))
-        for service in all_services:
+        logger.warning("[Alignak Backend Arbit] Got %d services", len(all_services['_items']))
+        for service in all_services['_items']:
             service['imported_from'] = 'alignakbackend'
             service['service_description'] = service['name']
             # check_command
@@ -448,6 +449,8 @@ class AlignakBackendArbit(BaseModule):
             self.single_relation(service, 'notification_period', 'timeperiods')
             # maintenance_period
             self.single_relation(service, 'maintenance_period', 'timeperiods')
+            # snapshot_period
+            self.single_relation(service, 'snapshot_period', 'timeperiods')
             # servicegroups
             self.multiple_relation(service, 'servicegroups', 'servicegroups')
             # contacts
@@ -476,8 +479,8 @@ class AlignakBackendArbit(BaseModule):
         """
         self.configraw['escalations'] = {}
         all_escalations = self.backend.get_all('escalation')
-        logger.warning("[Alignak Backend Arbit] Got %d escalations", len(all_escalations))
-        for escalation in all_escalations:
+        logger.warning("[Alignak Backend Arbit] Got %d escalations", len(all_escalations['_items']))
+        for escalation in all_escalations['_items']:
             self.configraw['escalations'][escalation['_id']] = escalation['name']
             escalation['escalation_name'] = escalation['name']
             escalation['imported_from'] = 'alignakbackend'
@@ -497,8 +500,8 @@ class AlignakBackendArbit(BaseModule):
         """
         self.configraw['hostdependencies'] = {}
         all_hostdependencies = self.backend.get_all('hostdependency')
-        logger.warning("[Alignak Backend Arbit] Got %d hostdependencies", len(all_hostdependencies))
-        for hostdependency in all_hostdependencies:
+        logger.warning("[Alignak Backend Arbit] Got %d hostdependencies", len(all_hostdependencies['_items']))
+        for hostdependency in all_hostdependencies['_items']:
             self.configraw['hostdependencies'][hostdependency['_id']] = hostdependency['name']
             hostdependency['imported_from'] = 'alignakbackend'
             hostdependency['hostdependency_name'] = hostdependency['name']
@@ -523,8 +526,8 @@ class AlignakBackendArbit(BaseModule):
         """
         self.configraw['hostescalations'] = {}
         all_hostescalations = self.backend.get_all('hostescalation')
-        logger.warning("[Alignak Backend Arbit] Got %d hostescalations", len(all_hostescalations))
-        for hostescalation in all_hostescalations:
+        logger.warning("[Alignak Backend Arbit] Got %d hostescalations", len(all_hostescalations['_items']))
+        for hostescalation in all_hostescalations['_items']:
             self.configraw['hostescalations'][hostescalation['_id']] = hostescalation['name']
             hostescalation['hostescalation_name'] = hostescalation['name']
             hostescalation['imported_from'] = 'alignakbackend'
@@ -547,8 +550,8 @@ class AlignakBackendArbit(BaseModule):
         :return: None
         """
         all_hostextinfos = self.backend.get_all('hostextinfo')
-        logger.warning("[Alignak Backend Arbit] Got %d hostextinfos", len(all_hostextinfos))
-        for hostextinfo in all_hostextinfos:
+        logger.warning("[Alignak Backend Arbit] Got %d hostextinfos", len(all_hostextinfos['_items']))
+        for hostextinfo in all_hostextinfos['_items']:
             hostextinfo['hostextinfo_name'] = hostextinfo['name']
             hostextinfo['imported_from'] = 'alignakbackend'
             # host_name
@@ -566,8 +569,8 @@ class AlignakBackendArbit(BaseModule):
         self.configraw['servicedependencies'] = {}
         all_servicedependencies = self.backend.get_all('servicedependency')
         logger.warning("[Alignak Backend Arbit] Got %d servicedependencies",
-                       len(all_servicedependencies))
-        for servicedependency in all_servicedependencies:
+                       len(all_servicedependencies['_items']))
+        for servicedependency in all_servicedependencies['_items']:
             self.configraw['servicedependencies'][servicedependency['_id']] = \
                 servicedependency['name']
             servicedependency['imported_from'] = 'alignakbackend'
@@ -595,8 +598,8 @@ class AlignakBackendArbit(BaseModule):
         self.configraw['serviceescalations'] = {}
         all_serviceescalations = self.backend.get_all('serviceescalation')
         logger.warning("[Alignak Backend Arbit] Got %d serviceescalations",
-                       len(all_serviceescalations))
-        for serviceescalation in all_serviceescalations:
+                       len(all_serviceescalations['_items']))
+        for serviceescalation in all_serviceescalations['_items']:
             self.configraw['serviceescalations'][serviceescalation['_id']] = \
                 serviceescalation['name']
             serviceescalation['serviceescalation_name'] = serviceescalation['name']
@@ -622,8 +625,8 @@ class AlignakBackendArbit(BaseModule):
         :return: None
         """
         all_serviceextinfos = self.backend.get_all('serviceextinfo')
-        logger.warning("[Alignak Backend Arbit] Got %d serviceextinfos", len(all_serviceextinfos))
-        for serviceextinfo in all_serviceextinfos:
+        logger.warning("[Alignak Backend Arbit] Got %d serviceextinfos", len(all_serviceextinfos['_items']))
+        for serviceextinfo in all_serviceextinfos['_items']:
             serviceextinfo['serviceextinfo_name'] = serviceextinfo['name']
             serviceextinfo['imported_from'] = 'alignakbackend'
             # host_name
@@ -641,8 +644,8 @@ class AlignakBackendArbit(BaseModule):
         :return: None
         """
         all_triggers = self.backend.get_all('trigger')
-        logger.warning("[Alignak Backend Arbit] Got %d triggers", len(all_triggers))
-        for trigger in all_triggers:
+        logger.warning("[Alignak Backend Arbit] Got %d triggers", len(all_triggers['_items']))
+        for trigger in all_triggers['_items']:
             trigger['trigger_name'] = trigger['name']
             trigger['imported_from'] = 'alignakbackend'
             self.clean_unusable_keys(trigger)

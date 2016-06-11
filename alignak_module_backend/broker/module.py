@@ -277,10 +277,8 @@ class AlignakBackendBrok(BaseModule):
                 else:
                     self.ref_live['host'][self.mapping['host'][name]]['_etag'] = response['_etag']
             except BackendException as e:
-                logger.error('Patch livestate host %s has error: %s' % (self.mapping['host'][name],
-                             str(e)))
-                if "_issues" in e.response:
-                    logger.error("***** issues: %s" % e.response['_issues'])
+                logger.error('Patch livestate host %s has error: %s', self.mapping['host'][name],
+                             str(e))
         elif type_data == 'liveservice':
             headers['If-Match'] = self.ref_live['service'][self.mapping['service'][name]]['_etag']
             try:
@@ -295,22 +293,22 @@ class AlignakBackendBrok(BaseModule):
                     self.ref_live['service'][self.mapping['service'][name]]['_etag'] = response[
                         '_etag']
             except BackendException as e:
-                logger.error('Patch livestate service %s has error: %s' %
-                             (self.mapping['service'][name], str(e)))
+                logger.error('Patch livestate service %s has error: %s',
+                             self.mapping['service'][name], str(e))
         elif type_data == 'loghost':
             data['host_name'] = self.mapping['host'][name]
             try:
                 response = self.backend.post('loghost', data)
             except BackendException as e:
-                logger.error('Post loghost %s has error: %s' % (self.mapping['host'][name], str(e)))
+                logger.error('Post loghost %s has error: %s', self.mapping['host'][name], str(e))
                 ret = False
         elif type_data == 'logservice':
             data['service_description'] = self.mapping['service'][name]
             try:
                 response = self.backend.post('logservice', data)
             except BackendException as e:
-                logger.error('Post logservice %s has error: %s' % (self.mapping['service'][name],
-                             str(e)))
+                logger.error('Post logservice %s has error: %s', self.mapping['service'][name],
+                             str(e))
                 ret = False
         return ret
 

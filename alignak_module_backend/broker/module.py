@@ -345,10 +345,6 @@ class AlignakBackendBrok(BaseModule):
             l = self.to_q.get()
             for b in l:
                 b.prepare()
-                #f = open('/tmp/broks_' + b.type, 'a')
-                #f.write(str(b))
-                #f.write("\n\n")
-                #f.close()
                 self.manage_brok(b)
 
             logger.debug("[Alignak Backend Brok] time to manage %s broks (%d secs)", len(l),

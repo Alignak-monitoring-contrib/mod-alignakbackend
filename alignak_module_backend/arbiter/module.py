@@ -31,7 +31,7 @@ from alignak_backend_client.client import Backend
 from alignak.basemodule import BaseModule
 # pylint: disable=F0401
 from alignak.log import logger
-from shinken.external_command import ExternalCommand
+from alignak.external_command import ExternalCommand
 
 
 # pylint: disable=C0103
@@ -772,9 +772,9 @@ class AlignakBackendArbit(BaseModule):
         :return: None
         """
         all_downt = self.backend.get_all('actiondowntime',
-                                        {'where': '{"processed": "False"}',
-                                         'embedded': '{"host": 1, "service": 1, "trigger": 1, '
-                                                     '"user": 1}'})
+                                         {'where': '{"processed": "False"}',
+                                          'embedded': '{"host": 1, "service": 1, "trigger": 1, '
+                                                      '"user": 1}'})
         for downt in all_downt['_items']:
             if downt['action'] == 'add':
                 if downt['service']:

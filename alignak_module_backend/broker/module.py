@@ -116,11 +116,11 @@ class AlignakBackendBrok(BaseModule):
             for item in content['_items']:
                 self.mapping['host'][item['name']] = item['_id']
             # get all livehost
-            params = {'projection': '{"host_name":1,"state":1,"state_type":1,"_realm":1}',
+            params = {'projection': '{"host":1,"state":1,"state_type":1,"_realm":1}',
                       'where': '{"type":"host"}'}
             contentlh = self.backend.get_all('livestate', params)
             for item in contentlh['_items']:
-                self.ref_live['host'][item['host_name']] = {
+                self.ref_live['host'][item['host']] = {
                     '_id': item['_id'],
                     '_etag': item['_etag'],
                     '_realm': item['_realm'],
@@ -134,17 +134,17 @@ class AlignakBackendBrok(BaseModule):
             hosts = {}
             for item in contenth['_items']:
                 hosts[item['_id']] = item['name']
-            params = {'projection': '{"name":1,"host_name":1}'}
+            params = {'projection': '{"name":1,"host":1}'}
             content = self.backend.get_all('service', params)
             for item in content['_items']:
-                self.mapping['service'][''.join([hosts[item['host_name']],
+                self.mapping['service'][''.join([hosts[item['host']],
                                                  item['name']])] = item['_id']
             # get all liveservice
-            params = {'projection': '{"service_description":1,"state":1,"state_type":1,"_realm":1}',
+            params = {'projection': '{"service":1,"state":1,"state_type":1,"_realm":1}',
                       'where': '{"type":"service"}'}
             contentls = self.backend.get_all('livestate', params)
             for item in contentls['_items']:
-                self.ref_live['service'][item['service_description']] = {
+                self.ref_live['service'][item['service']] = {
                     '_id': item['_id'],
                     '_etag': item['_etag'],
                     '_realm': item['_realm'],
@@ -296,14 +296,14 @@ class AlignakBackendBrok(BaseModule):
                 logger.error('Patch livestate service %s has error: %s',
                              self.mapping['service'][name], str(e))
         elif type_data == 'loghost':
-            data['host_name'] = self.mapping['host'][name]
+            data['host'] = self.mapping['host'][name]
             try:
                 response = self.backend.post('loghost', data)
             except BackendException as e:
                 logger.error('Post loghost %s has error: %s', self.mapping['host'][name], str(e))
                 ret = False
         elif type_data == 'logservice':
-            data['service_description'] = self.mapping['service'][name]
+            data['service'] = self.mapping['service'][name]
             try:
                 response = self.backend.post('logservice', data)
             except BackendException as e:
@@ -345,6 +345,10 @@ class AlignakBackendBrok(BaseModule):
             l = self.to_q.get()
             for b in l:
                 b.prepare()
+                #f = open('/tmp/broks_' + b.type, 'a')
+                #f.write(str(b))
+                #f.write("\n\n")
+                #f.close()
                 self.manage_brok(b)
 
             logger.debug("[Alignak Backend Brok] time to manage %s broks (%d secs)", len(l),

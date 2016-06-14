@@ -1,6 +1,5 @@
 {
-    "register": true,
-    "service_description": "ping",
-    "name": "srv001",
+    "name": "ping",
+    "host": "srv001",
     "check_command": "ping"
 }

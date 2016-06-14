@@ -1,6 +1,5 @@
 {
-    "register": true,
-    "service_description": "http toto.com",
-    "name": "srv001",
+    "name": "http toto.com",
+    "host": "srv001",
     "check_command": "check_http"
 }

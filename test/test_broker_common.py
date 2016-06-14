@@ -19,8 +19,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 
-from httmock import all_requests, response, HTTMock
 import ujson
+import shlex
 import unittest2
 import time
 import subprocess
@@ -35,17 +35,20 @@ class TestBrokerCommon(unittest2.TestCase):
 
     @classmethod
     def setUpClass(cls):
+
+        # Delete used mongo DBs
+        exit_code = subprocess.call(
+            shlex.split(
+                'mongo %s --eval "db.dropDatabase()"' % 'alignak-backend')
+        )
+        assert exit_code == 0
+
         cls.p = subprocess.Popen(['uwsgi', '-w', 'alignakbackend:app', '--socket', '0.0.0.0:5000', '--protocol=http', '--enable-threads'])
         time.sleep(3)
         cls.backend = Backend('http://127.0.0.1:5000')
         cls.backend.login("admin", "admin", "force")
-        cls.backend.delete("host", {})
-        cls.backend.delete("service", {})
-        cls.backend.delete("command", {})
-        cls.backend.delete("livestate", {})
-        cls.backend.delete("livesynthesis", {})
         realms = cls.backend.get_all('realm')
-        for cont in realms:
+        for cont in realms['_items']:
             cls.realm_all = cont['_id']
 
         # add commands
@@ -56,20 +59,19 @@ class TestBrokerCommon(unittest2.TestCase):
         data['_realm'] = cls.realm_all
         data_cmd_http = cls.backend.post("command", data)
         # add host
-        data = json.loads(open('cfg/host_srv001.'
-                               'json').read())
+        data = json.loads(open('cfg/host_srv001.json').read())
         data['check_command'] = data_cmd_ping['_id']
         data['realm'] = cls.realm_all
         cls.data_host = cls.backend.post("host", data)
         # add 2 services
         data = json.loads(open('cfg/service_srv001_ping.json').read())
-        data['host_name'] = cls.data_host['_id']
+        data['host'] = cls.data_host['_id']
         data['check_command'] = data_cmd_ping['_id']
         data['_realm'] = cls.realm_all
         cls.data_srv_ping = cls.backend.post("service", data)
 
         data = json.loads(open('cfg/service_srv001_http.json').read())
-        data['host_name'] = cls.data_host['_id']
+        data['host'] = cls.data_host['_id']
         data['check_command'] = data_cmd_http['_id']
         data['_realm'] = cls.realm_all
         cls.data_srv_http = cls.backend.post("service", data)
@@ -84,10 +86,9 @@ class TestBrokerCommon(unittest2.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.backend.delete("contact", {})
         cls.p.kill()
 
-    def test_get_refs_host(self):
+    def test_01_get_refs_host(self):
         self.brokmodule.get_refs('livehost')
 
         self.assertEqual(len(self.brokmodule.ref_live['host']), 1)
@@ -100,7 +101,7 @@ class TestBrokerCommon(unittest2.TestCase):
         r = self.backend.get('livestate')
         self.assertEqual(len(r['_items']), 3)
 
-    def test_get_refs_service(self):
+    def test_02_get_refs_service(self):
         self.brokmodule.get_refs('liveservice')
 
         self.assertEqual(len(self.brokmodule.ref_live['service']), 2)
@@ -113,17 +114,17 @@ class TestBrokerCommon(unittest2.TestCase):
         ref = {'srv001ping': self.data_srv_ping['_id'], 'srv001http toto.com': self.data_srv_http['_id']}
         self.assertEqual(self.brokmodule.mapping['service'], ref)
 
-    def test_manage_brok_host(self):
+    def test_03_manage_brok_host(self):
 
         data = json.loads(open('cfg/brok_host_srv001_up.json').read())
-        b = Brok('host_check_result', data)
+        b = Brok({'data': data, 'type': 'host_check_result'}, False)
         b.prepare()
         self.brokmodule.manage_brok(b)
 
         items = self.backend.get('livestate')
         number = 0
         for index, item in enumerate(items['_items']):
-            if item['service_description'] == None:
+            if item['service'] == None:
                 self.assertEqual(item['last_state'], 'UNREACHABLE')
                 self.assertEqual(item['state'], 'UP')
                 self.assertEqual(item['last_state_type'], 'HARD')
@@ -158,14 +159,14 @@ class TestBrokerCommon(unittest2.TestCase):
 
         # Add down host
         data = json.loads(open('cfg/brok_host_srv001_down.json').read())
-        b = Brok('host_check_result', data)
+        b = Brok({'data': data, 'type': 'host_check_result'}, False)
         b.prepare()
         self.brokmodule.manage_brok(b)
 
         items = self.backend.get('livestate')
         number = 0
         for index, item in enumerate(items['_items']):
-            if item['service_description'] == None:
+            if item['service'] == None:
                 self.assertEqual(item['last_state'], 'UP')
                 self.assertEqual(item['state'], 'DOWN')
                 self.assertEqual(item['last_state_type'], 'HARD')

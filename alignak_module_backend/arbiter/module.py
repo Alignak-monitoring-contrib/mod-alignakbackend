@@ -31,6 +31,7 @@ from alignak_backend_client.client import Backend
 from alignak.basemodule import BaseModule
 # pylint: disable=F0401
 from alignak.log import logger
+from shinken.external_command import ExternalCommand
 
 
 # pylint: disable=C0103
@@ -85,7 +86,7 @@ class AlignakBackendArbit(BaseModule):
                        'hostdependencies': [],
                        'hostescalations': [],
                        'hostextinfo': [],
-                       'servciedependencies': [],
+                       'servicedependencies': [],
                        'serviceescalations': [],
                        'serviceextinfo': [],
                        'triggers': []}
@@ -169,7 +170,10 @@ class AlignakBackendArbit(BaseModule):
         """
         fields = ['_links', '_updated', '_created', '_etag', '_id', 'name', 'ui', '_realm',
                   '_sub_realm', '_users_read', '_users_update', '_users_delete', '_parent',
-                  '_tree_parents', '_tree_children', '_level']
+                  '_tree_parents', '_tree_children', '_level', 'customs', 'host', 'service',
+                  'back_role_super_admin', 'token', '_templates', '_template_fields', 'note',
+                  '_is_template', '_templates_with_services', '_templates_from_host_template',
+                  'merge_host_users']
         for field in fields:
             if field in resource:
                 del resource[field]
@@ -252,7 +256,7 @@ class AlignakBackendArbit(BaseModule):
         :return: None
         """
         self.configraw['contactgroups'] = {}
-        all_contactgroups = self.backend.get_all('contactgroup')
+        all_contactgroups = self.backend.get_all('usergroup')
         logger.warning("[Alignak Backend Arbit] Got %d contactgroups",
                        len(all_contactgroups['_items']))
         for contactgroup in all_contactgroups['_items']:
@@ -270,7 +274,7 @@ class AlignakBackendArbit(BaseModule):
         :return: None
         """
         self.configraw['contacts'] = {}
-        all_contacts = self.backend.get_all('contact')
+        all_contacts = self.backend.get_all('user')
         for contact in all_contacts['_items']:
             self.configraw['contacts'][contact['_id']] = contact['name']
             contact['imported_from'] = 'alignakbackend'
@@ -299,6 +303,8 @@ class AlignakBackendArbit(BaseModule):
                 contact['service_notification_period'] = \
                     self.config['timeperiods'][0]['timeperiod_name']
                 contact['service_notifications_enabled'] = False
+            for key, value in contact['customs'].iteritems():
+                contact[key] = value
             self.clean_unusable_keys(contact)
             self.convert_lists(contact)
             self.config['contacts'].append(contact)
@@ -388,6 +394,8 @@ class AlignakBackendArbit(BaseModule):
             if 'realm' in host:
                 if host['realm'] is None:
                     del host['realm']
+            for key, value in host['customs'].iteritems():
+                host[key] = value
             self.clean_unusable_keys(host)
             self.convert_lists(host)
             self.config['hosts'].append(host)
@@ -430,6 +438,8 @@ class AlignakBackendArbit(BaseModule):
         for service in all_services['_items']:
             service['imported_from'] = 'alignakbackend'
             service['service_description'] = service['name']
+            service['host_name'] = service['host']
+            service['merge_host_contacts'] = service['merge_host_users']
             # check_command
             if 'check_command' in service:
                 if service['check_command'] is None:
@@ -470,7 +480,8 @@ class AlignakBackendArbit(BaseModule):
             service['service_dependencies'] = ''
             if 'alias' in service and service['alias'] == '':
                 del service['alias']
-
+            for key, value in service['customs'].iteritems():
+                service[key] = value
             self.clean_unusable_keys(service)
             self.convert_lists(service)
             self.config['services'].append(service)
@@ -721,3 +732,70 @@ class AlignakBackendArbit(BaseModule):
                     arbiterpid = f.readline()
                 os.kill(int(arbiterpid), signal.SIGHUP)
             self.next_check = int(time.time()) + (60 * self.verify_modification)
+
+    def get_acknowledge(self):
+        """
+        Get acknowledge from backend
+
+        :return: None
+        """
+        all_ack = self.backend.get_all('actionacknowledge',
+                                       {'where': '{"processed": "False"}',
+                                        'embedded': '{"host": 1, "service": 1, "user": 1}'})
+        for ack in all_ack['_items']:
+            if ack['action'] == 'add':
+                if ack['service']:
+                    command = '[{}] ACKNOWLEDGE_SVC_PROBLEM;{};{};{};{};{};{};{}\n'.\
+                        format(ack['_created'], ack['host']['name'], ack['service']['name'],
+                               ack['sticky'], ack['notify'], ack['persistent'], ack['user']['_id'],
+                               ack['comment'])
+                else:
+                    command = '[{}] ACKNOWLEDGE_HOST_PROBLEM;{};{};{};{};{};{}\n'. \
+                        format(ack['_created'], ack['host']['name'], ack['sticky'], ack['notify'],
+                               ack['persistent'], ack['user']['_id'], ack['comment'])
+            elif ack['action'] == 'delete':
+                if ack['service']:
+                    command = '[{}] REMOVE_SVC_ACKNOWLEDGEMENT;{};{}\n'.\
+                        format(ack['_created'], ack['host']['name'], ack['service']['name'])
+                else:
+                    command = '[{}] REMOVE_HOST_ACKNOWLEDGEMENT;{}\n'. \
+                        format(ack['_created'], ack['host']['name'])
+
+        logger.debug("[backend arbiter] command: %s", str(command))
+        ext = ExternalCommand(command)
+        self.from_q.put(ext)
+
+    def get_downtime(self):
+        """
+        Get downtime from backend
+
+        :return: None
+        """
+        all_downt = self.backend.get_all('actiondowntime',
+                                        {'where': '{"processed": "False"}',
+                                         'embedded': '{"host": 1, "service": 1, "trigger": 1, '
+                                                     '"user": 1}'})
+        for downt in all_downt['_items']:
+            if downt['action'] == 'add':
+                if downt['service']:
+                    command = '[{}] SCHEDULE_SVC_DOWNTIME;{};{};{};{};{};{};{};{}\n'.\
+                        format(downt['_created'], downt['host']['name'], downt['service']['name'],
+                               downt['start_time'], downt['end_time'], downt['fixed'],
+                               downt['trigger']['_id'], downt['duration'], downt['user']['_id'],
+                               downt['comment'])
+                else:
+                    command = '[{}] SCHEDULE_HOST_DOWNTIME;{};{};{};{};{};{};{}\n'.\
+                        format(downt['_created'], downt['host']['name'], downt['start_time'],
+                               downt['end_time'], downt['fixed'], downt['trigger']['_id'],
+                               downt['duration'], downt['user']['_id'], downt['comment'])
+            elif downt['action'] == 'delete':
+                if downt['service']:
+                    command = '[{}] DEL_ALL_SVC_DOWNTIMES;{};{}\n'.\
+                        format(downt['_created'], downt['host']['name'], downt['service']['name'])
+                else:
+                    command = '[{}] DEL_ALL_HOST_DOWNTIMES;{}\n'. \
+                        format(downt['_created'], downt['host']['name'])
+
+        logger.debug("[backend arbiter] command: %s", str(command))
+        ext = ExternalCommand(command)
+        self.from_q.put(ext)

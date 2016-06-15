@@ -12,6 +12,7 @@ from alignak.objects.module import Module
 from alignak.objects.command import Command
 from alignak.objects.contact import Contact
 from alignak.objects.host import Host
+from alignak.objects.hostgroup import Hostgroup
 from alignak.objects.realm import Realm
 from alignak.objects.service import Service
 from alignak_backend_client.client import Backend
@@ -54,10 +55,15 @@ class TestArbiterLoadconf(unittest2.TestCase):
         data['realm'] = cls.realm_all
         cls.data_host = cls.backend.post("host", data)
 
+        # Add hostgroup
+        data = {'name': 'allmyhosts', 'realm': cls.realm_all}
+        hostgroup = cls.backend.post("hostgroup", data)
+
         # add host
         data = json.loads(open('cfg/host_srv001.json').read())
         data['check_command'] = data_cmd_ping['_id']
         data['realm'] = cls.realm_all
+        data['hostgroups'] = [hostgroup['_id']]
         cls.data_host = cls.backend.post("host", data)
         # add 2 services
         data = json.loads(open('cfg/service_srv001_ping.json').read())
@@ -209,8 +215,26 @@ class TestArbiterLoadconf(unittest2.TestCase):
         self.assertEqual(reference, self.objects['serviceescalations'])
 
     def test_hostgroups(self):
-        reference = []
+        reference = [
+            {
+                'action_url': '',
+                'alias': '',
+                'definition_order': 100,
+                'hostgroup_members': '',
+                'hostgroup_name': 'allmyhosts',
+                'imported_from': 'alignakbackend',
+                'members': '',
+                'notes': '',
+                'notes_url': '',
+                'realm': 'All'
+            }
+        ]
         self.assertEqual(reference, self.objects['hostgroups'])
+        for hostgrp in self.objects['hostgroups']:
+            for key, value in hostgrp.iteritems():
+                # problem in alignak because not defined
+                if key not in ['hostgroup_members']:
+                    self.assertTrue(Hostgroup.properties[key])
 
     def test_serviceextinfos(self):
         reference = []
@@ -238,6 +262,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 'snapshot_enabled': False,
                 'low_flap_threshold': 25,
                 'process_perf_data': True,
+                'hostgroups': 'allmyhosts',
                 'icon_image': '',
                 'service_overrides': '',
                 'snapshot_interval': 5,

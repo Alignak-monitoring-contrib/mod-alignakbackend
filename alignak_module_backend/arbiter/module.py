@@ -82,13 +82,10 @@ class AlignakBackendArbit(BaseModule):
                        'contactgroups': [],
                        'servicegroups': [],
                        'realms': [],
-                       'escalations': [],
                        'hostdependencies': [],
                        'hostescalations': [],
-                       'hostextinfo': [],
                        'servicedependencies': [],
                        'serviceescalations': [],
-                       'serviceextinfo': [],
                        'triggers': []}
 
     # Common functions
@@ -486,28 +483,6 @@ class AlignakBackendArbit(BaseModule):
             self.convert_lists(service)
             self.config['services'].append(service)
 
-    def get_escalations(self):
-        """
-        Get escalations from alignak_backend
-
-        :return: None
-        """
-        self.configraw['escalations'] = {}
-        all_escalations = self.backend.get_all('escalation')
-        logger.warning("[Alignak Backend Arbit] Got %d escalations",
-                       len(all_escalations['_items']))
-        for escalation in all_escalations['_items']:
-            self.configraw['escalations'][escalation['_id']] = escalation['name']
-            escalation['escalation_name'] = escalation['name']
-            escalation['imported_from'] = 'alignakbackend'
-            # contacts
-            self.multiple_relation(escalation, 'contacts', 'contacts')
-            # contact_groups
-            self.multiple_relation(escalation, 'contact_groups', 'contactgroups')
-            self.clean_unusable_keys(escalation)
-            self.convert_lists(escalation)
-            self.config['escalations'].append(escalation)
-
     def get_hostdependencies(self):
         """
         Get hostdependencies from alignak_backend
@@ -562,24 +537,6 @@ class AlignakBackendArbit(BaseModule):
             self.clean_unusable_keys(hostescalation)
             self.convert_lists(hostescalation)
             self.config['hostescalations'].append(hostescalation)
-
-    def get_hostextinfos(self):
-        """
-        Get hostextinfos from alignak_backend
-
-        :return: None
-        """
-        all_hostextinfos = self.backend.get_all('hostextinfo')
-        logger.warning("[Alignak Backend Arbit] Got %d hostextinfos",
-                       len(all_hostextinfos['_items']))
-        for hostextinfo in all_hostextinfos['_items']:
-            hostextinfo['hostextinfo_name'] = hostextinfo['name']
-            hostextinfo['imported_from'] = 'alignakbackend'
-            # host_name
-            self.single_relation(hostextinfo, 'host_name', 'hosts')
-            self.clean_unusable_keys(hostextinfo)
-            self.convert_lists(hostextinfo)
-            self.config['hostextinfos'].append(hostextinfo)
 
     def get_servicedependencies(self):
         """
@@ -639,26 +596,6 @@ class AlignakBackendArbit(BaseModule):
             self.convert_lists(serviceescalation)
             self.config['serviceescalations'].append(serviceescalation)
 
-    def get_serviceextinfos(self):
-        """
-        Get serviceextinfos from alignak_backend
-
-        :return: None
-        """
-        all_serviceextinfos = self.backend.get_all('serviceextinfo')
-        logger.warning("[Alignak Backend Arbit] Got %d serviceextinfos",
-                       len(all_serviceextinfos['_items']))
-        for serviceextinfo in all_serviceextinfos['_items']:
-            serviceextinfo['serviceextinfo_name'] = serviceextinfo['name']
-            serviceextinfo['imported_from'] = 'alignakbackend'
-            # host_name
-            self.single_relation(serviceextinfo, 'host_name', 'hosts')
-            # service_description
-            self.single_relation(serviceextinfo, 'service_description', 'hosts')
-            self.clean_unusable_keys(serviceextinfo)
-            self.convert_lists(serviceextinfo)
-            self.config['serviceextinfos'].append(serviceextinfo)
-
     def get_triggers(self):
         """
         Get triggers from alignak_backend
@@ -691,13 +628,10 @@ class AlignakBackendArbit(BaseModule):
         self.get_hosts()
         self.get_servicegroups()
         self.get_services()
-        self.get_escalations()
         self.get_hostdependencies()
         self.get_hostescalations()
-        self.get_hostextinfos()
         self.get_servicedependencies()
         self.get_serviceescalations()
-        self.get_serviceextinfos()
         self.get_triggers()
 
         self.time_loaded_conf = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
@@ -718,10 +652,11 @@ class AlignakBackendArbit(BaseModule):
         """
         if int(time.time()) > self.next_check:
             logger.debug('Check if config in backend has changed')
-            resources = ['realm', 'command', 'timeperiod', 'contactgroup', 'contact', 'hostgroup',
-                         'host', 'servicegroup', 'service', 'escalation', 'hostdependency',
-                         'hostescalation', 'hostextinfo', 'servicedependency', 'serviceescalation',
-                         'serviceextinfo', 'trigger']
+            resources = ['realm', 'command', 'timeperiod', 'usergroup', 'user', 'hostgroup',
+                         'host', 'servicegroup', 'service', 'hostdependency',
+                         'host', 'servicegroup', 'service', 'hostdependency',
+                         'hostescalation', 'servicedependency', 'serviceescalation',
+                         'trigger']
             reload_conf = False
             for resource in resources:
                 ret = self.backend.get(resource, {'where': '{"_updated":{"$gte": "' +

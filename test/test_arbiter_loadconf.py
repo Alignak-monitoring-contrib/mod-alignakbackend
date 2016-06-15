@@ -72,6 +72,23 @@ class TestArbiterLoadconf(unittest2.TestCase):
         data['_realm'] = cls.realm_all
         cls.data_srv_http = cls.backend.post("service", data)
 
+        # Add some realms
+        data = {
+            'name': 'All.A',
+            '_parent': cls.realm_all
+        }
+        realm_a = cls.backend.post("realm", data)
+        data = {
+            'name': 'All.B',
+            '_parent': cls.realm_all
+        }
+        cls.backend.post("realm", data)
+        data = {
+            'name': 'All.A.1',
+            '_parent': realm_a['_id']
+        }
+        cls.backend.post("realm", data)
+
         # Start broker module
         modconf = Module()
         modconf.module_alias = "alignakbackendarbit"
@@ -289,11 +306,29 @@ class TestArbiterLoadconf(unittest2.TestCase):
     def test_realms(self):
         reference = [
             {
+                'default': False,
+                'realm_name': 'All.A',
+                'realm_members': [],
+                'imported_from': 'alignakbackend'
+            },
+            {
                 'default': True,
                 'realm_name': 'All',
                 'realm_members': [],
                 'imported_from': 'alignakbackend'
-            }
+            },
+            {
+                'default': False,
+                'realm_name': 'All.B',
+                'realm_members': [],
+                'imported_from': 'alignakbackend'
+            },
+            {
+                'default': False,
+                'realm_name': 'All.A.1',
+                'realm_members': [],
+                'imported_from': 'alignakbackend'
+            },
         ]
         self.assertEqual(reference, self.objects['realms'])
         for realm in self.objects['realms']:

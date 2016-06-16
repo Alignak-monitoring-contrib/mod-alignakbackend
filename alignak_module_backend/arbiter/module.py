@@ -396,7 +396,7 @@ class AlignakBackendArbit(BaseModule):
             self.multiple_relation(host, 'contact_groups', 'contactgroups')
             # escalations
             # ## self.multiple_relation(host, 'escalations', 'escalation_name')
-            del host['escalation']
+            del host['escalations']
             if 'alias' in host and host['alias'] == '':
                 del host['alias']
             if 'realm' in host:

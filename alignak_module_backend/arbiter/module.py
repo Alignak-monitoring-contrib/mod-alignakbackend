@@ -169,10 +169,13 @@ class AlignakBackendArbit(BaseModule):
         """
         fields = ['_links', '_updated', '_created', '_etag', '_id', 'name', 'ui', '_realm',
                   '_sub_realm', '_users_read', '_users_update', '_users_delete', '_parent',
-                  '_tree_parents', '_tree_children', '_level', 'customs', 'host', 'service',
+                  '_tree_parents', '_all_children', '_level', 'customs', 'host', 'service',
                   'back_role_super_admin', 'token', '_templates', '_template_fields', 'note',
                   '_is_template', '_templates_with_services', '_templates_from_host_template',
-                  'merge_host_users']
+                  'merge_host_users', 'hosts_critical_threshold', 'hosts_warning_threshold',
+                  'services_critical_threshold', 'services_warning_threshold',
+                  'global_critical_threshold', 'global_warning_threshold', '_children',
+                  'hostgroups', 'hosts', 'location']
         for field in fields:
             if field in resource:
                 del resource[field]
@@ -206,7 +209,10 @@ class AlignakBackendArbit(BaseModule):
             self.configraw['realms'][realm['_id']] = realm['name']
             realm['imported_from'] = 'alignakbackend'
             realm['realm_name'] = realm['name']
+            realm['realm_members'] = []
             self.clean_unusable_keys(realm)
+            del realm['notes']
+            del realm['alias']
             # self.convert_lists(realm)
             self.config['realms'].append(realm)
 
@@ -224,6 +230,8 @@ class AlignakBackendArbit(BaseModule):
             command['imported_from'] = 'alignakbackend'
             command['command_name'] = command['name']
             self.clean_unusable_keys(command)
+            del command['alias']
+            del command['notes']
             self.convert_lists(command)
             self.config['commands'].append(command)
 
@@ -245,6 +253,7 @@ class AlignakBackendArbit(BaseModule):
                 timeperiod.update(daterange)
             del timeperiod['dateranges']
             self.clean_unusable_keys(timeperiod)
+            del timeperiod['notes']
             self.convert_lists(timeperiod)
             self.config['timeperiods'].append(timeperiod)
 
@@ -305,6 +314,7 @@ class AlignakBackendArbit(BaseModule):
             for key, value in contact['customs'].iteritems():
                 contact[key] = value
             self.clean_unusable_keys(contact)
+            del contact['notes']
             self.convert_lists(contact)
             self.config['contacts'].append(contact)
 
@@ -321,11 +331,11 @@ class AlignakBackendArbit(BaseModule):
             self.configraw['hostgroups'][hostgroup['_id']] = hostgroup['name']
             hostgroup['imported_from'] = 'alignakbackend'
             hostgroup['hostgroup_name'] = hostgroup['name']
+            hostgroup['members'] = hostgroup['hosts']
             # realm
             self.single_relation(hostgroup, 'realm', 'realms')
             # members
-            # ## self.multiple_relation(hostgroup, 'members', 'host_name')
-            hostgroup['members'] = ''
+            self.multiple_relation(hostgroup, 'members', 'hosts')
             # hostgroup_members
             # ## self.multiple_relation(hostgroup, 'hostgroup_members', 'hostgroup_name')
             hostgroup['hostgroup_members'] = ''
@@ -379,7 +389,7 @@ class AlignakBackendArbit(BaseModule):
             # ## self.multiple_relation(host, 'parents', 'host_name')
             host['parents'] = ''
             # hostgroups
-            self.multiple_relation(host, 'hostgroups', 'hostgroups')
+            self.multiple_relation(host, 'hostgroup_name', 'hostgroups')
             # contacts
             self.multiple_relation(host, 'contacts', 'contacts')
             # contact_groups
@@ -439,6 +449,7 @@ class AlignakBackendArbit(BaseModule):
             service['service_description'] = service['name']
             service['host_name'] = service['host']
             service['merge_host_contacts'] = service['merge_host_users']
+            service['hostgroup_name'] = service['hostgroups']
             # check_command
             if 'check_command' in service:
                 if service['check_command'] is None:
@@ -626,8 +637,8 @@ class AlignakBackendArbit(BaseModule):
         self.get_timeperiods()
         self.get_contactgroups()
         self.get_contact()
-        self.get_hostgroups()
         self.get_hosts()
+        self.get_hostgroups()
         self.get_servicegroups()
         self.get_services()
         self.get_hostdependencies()

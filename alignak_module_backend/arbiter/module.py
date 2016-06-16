@@ -396,8 +396,7 @@ class AlignakBackendArbit(BaseModule):
             self.multiple_relation(host, 'contact_groups', 'contactgroups')
             # escalations
             # ## self.multiple_relation(host, 'escalations', 'escalation_name')
-            if 'escalation' in host and host['escalation'] == '':
-                del host['escalation']
+            del host['escalation']
             if 'alias' in host and host['alias'] == '':
                 del host['alias']
             if 'realm' in host:
@@ -753,6 +752,7 @@ class AlignakBackendArbit(BaseModule):
                                          {'where': '{"processed": false}',
                                           'embedded': '{"host": 1, "service": 1, "trigger": 1, '
                                                       '"user": 1}'})
+        # pylint: disable=too-many-format-args
         for downt in all_downt['_items']:
             if downt['action'] == 'add':
                 if downt['service']:

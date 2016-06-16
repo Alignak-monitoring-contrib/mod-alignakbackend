@@ -509,7 +509,7 @@ class AlignakBackendArbit(BaseModule):
             self.configraw['hostdependencies'][hostdependency['_id']] = hostdependency['name']
             hostdependency['imported_from'] = u'alignakbackend'
             hostdependency['hostdependency_name'] = hostdependency['name']
-            hostdependency['host_name'] = hostdependency['host']
+            hostdependency['host_name'] = hostdependency['hosts']
 
             # dependent_host_name
             self.multiple_relation(hostdependency, 'dependent_host_name', 'hosts')

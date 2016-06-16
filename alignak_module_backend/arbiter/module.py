@@ -676,6 +676,7 @@ class AlignakBackendArbit(BaseModule):
         if int(time.time()) > self.next_action_check:
             self.get_acknowledge(arbiter)
             self.get_downtime(arbiter)
+            self.get_forcecheck(arbiter)
             self.next_action_check = int(time.time()) + self.action_check
 
     def convert_date_timestamp(self, mydate):
@@ -760,6 +761,32 @@ class AlignakBackendArbit(BaseModule):
             headers = {'Content-Type': 'application/json', 'If-Match': downt['_etag']}
             data = {'processed': True}
             self.backend.patch('actiondowntime/' + downt['_id'], data, headers)
+
+            logger.debug("[backend arbiter] command: %s", str(command))
+            ext = ExternalCommand(command)
+            arbiter.external_commands.append(ext)
+
+    def get_forcecheck(self, arbiter):
+        """
+        Get forcecheck from backend
+
+        :return: None
+        """
+        all_fcheck = self.backend.get_all('actionforcecheck',
+                                         {'where': '{"processed": false}',
+                                          'embedded': '{"host": 1, "service": 1}'})
+        for fcheck in all_fcheck['_items']:
+            timestamp = self.convert_date_timestamp(fcheck['_created'])
+            if fcheck['service']:
+                command = '[{}] SCHEDULE_FORCED_SVC_CHECK;{};{};{}\n'.\
+                    format(timestamp, fcheck['host']['name'], fcheck['service']['name'], timestamp)
+            else:
+                command = '[{}] SCHEDULE_FORCED_HOST_CHECK;{};{}\n'.\
+                    format(timestamp, fcheck['host']['name'], timestamp)
+
+            headers = {'Content-Type': 'application/json', 'If-Match': fcheck['_etag']}
+            data = {'processed': True}
+            self.backend.patch('actionforcecheck/' + fcheck['_id'], data, headers)
 
             logger.debug("[backend arbiter] command: %s", str(command))
             ext = ExternalCommand(command)

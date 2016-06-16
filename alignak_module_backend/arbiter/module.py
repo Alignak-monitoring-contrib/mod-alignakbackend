@@ -70,7 +70,9 @@ class AlignakBackendArbit(BaseModule):
             self.getToken(getattr(modconf, 'username', ''), getattr(modconf, 'password', ''),
                           getattr(modconf, 'allowgeneratetoken', False))
         self.verify_modification = int(getattr(modconf, 'verify_modification', 5))
+        self.action_check = int(getattr(modconf, 'action_check', 15))
         self.next_check = 0
+        self.next_action_check = 0
         self.time_loaded_conf = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
         self.configraw = {}
         self.config = {'commands': [],
@@ -639,6 +641,7 @@ class AlignakBackendArbit(BaseModule):
         logger.info("[backend arbiter] loaded in --- %s seconds ---", (time.time() - start_time))
         # Planify next execution in 10 minutes (need time to finish load config)
         self.next_check = int(time.time()) + (180 * self.verify_modification)
+        self.next_action_check = int(time.time()) + self.action_check
         return self.config
 
     def hook_tick(self, arbiter):
@@ -670,69 +673,94 @@ class AlignakBackendArbit(BaseModule):
                 os.kill(int(arbiterpid), signal.SIGHUP)
             self.next_check = int(time.time()) + (60 * self.verify_modification)
 
-    def get_acknowledge(self):
+        if int(time.time()) > self.next_action_check:
+            self.get_acknowledge(arbiter)
+            self.get_downtime(arbiter)
+            self.next_action_check = int(time.time()) + self.action_check
+
+    def convert_date_timestamp(self, mydate):
+        return int(time.mktime(datetime.strptime(mydate, "%a, %d %b %Y %H:%M:%S %Z").
+                               timetuple()))
+
+    def get_acknowledge(self, arbiter):
         """
         Get acknowledge from backend
 
         :return: None
         """
         all_ack = self.backend.get_all('actionacknowledge',
-                                       {'where': '{"processed": "False"}',
+                                       {'where': '{"processed": false}',
                                         'embedded': '{"host": 1, "service": 1, "user": 1}'})
         for ack in all_ack['_items']:
             if ack['action'] == 'add':
                 if ack['service']:
                     command = '[{}] ACKNOWLEDGE_SVC_PROBLEM;{};{};{};{};{};{};{}\n'.\
-                        format(ack['_created'], ack['host']['name'], ack['service']['name'],
-                               ack['sticky'], ack['notify'], ack['persistent'], ack['user']['_id'],
-                               ack['comment'])
+                        format(self.convert_date_timestamp(ack['_created']), ack['host']['name'],
+                               ack['service']['name'], int(ack['sticky']), int(ack['notify']),
+                               int(ack['persistent']), ack['user']['name'], ack['comment'])
                 else:
+                    logger.warning(time.time())
+                    logger.warning(self.convert_date_timestamp(ack['_created']))
                     command = '[{}] ACKNOWLEDGE_HOST_PROBLEM;{};{};{};{};{};{}\n'. \
-                        format(ack['_created'], ack['host']['name'], ack['sticky'], ack['notify'],
-                               ack['persistent'], ack['user']['_id'], ack['comment'])
+                        format(self.convert_date_timestamp(ack['_created']), ack['host']['name'],
+                               int(ack['sticky']), int(ack['notify']), int(ack['persistent']),
+                               ack['user']['name'], ack['comment'])
             elif ack['action'] == 'delete':
                 if ack['service']:
                     command = '[{}] REMOVE_SVC_ACKNOWLEDGEMENT;{};{}\n'.\
-                        format(ack['_created'], ack['host']['name'], ack['service']['name'])
+                        format(self.convert_date_timestamp(ack['_created']), ack['host']['name'],
+                               ack['service']['name'])
                 else:
                     command = '[{}] REMOVE_HOST_ACKNOWLEDGEMENT;{}\n'. \
-                        format(ack['_created'], ack['host']['name'])
+                        format(self.convert_date_timestamp(ack['_created']), ack['host']['name'])
 
-        logger.debug("[backend arbiter] command: %s", str(command))
-        ext = ExternalCommand(command)
-        self.from_q.put(ext)
+            headers = {'Content-Type': 'application/json', 'If-Match': ack['_etag']}
+            data = {'processed': True}
+            self.backend.patch('actionacknowledge/' + ack['_id'], data, headers)
 
-    def get_downtime(self):
+            logger.warning("[backend arbiter] command: %s", str(command))
+            ext = ExternalCommand(command)
+            arbiter.external_commands.append(ext)
+
+    def get_downtime(self, arbiter):
         """
         Get downtime from backend
 
         :return: None
         """
         all_downt = self.backend.get_all('actiondowntime',
-                                         {'where': '{"processed": "False"}',
+                                         {'where': '{"processed": false}',
                                           'embedded': '{"host": 1, "service": 1, "trigger": 1, '
                                                       '"user": 1}'})
         for downt in all_downt['_items']:
             if downt['action'] == 'add':
                 if downt['service']:
                     command = '[{}] SCHEDULE_SVC_DOWNTIME;{};{};{};{};{};{};{};{}\n'.\
-                        format(downt['_created'], downt['host']['name'], downt['service']['name'],
-                               downt['start_time'], downt['end_time'], downt['fixed'],
-                               downt['trigger']['_id'], downt['duration'], downt['user']['_id'],
+                        format(self.convert_date_timestamp(downt['_created']),
+                               downt['host']['name'], downt['service']['name'],
+                               downt['start_time'], downt['end_time'], int(downt['fixed']),
+                               downt['trigger']['_id'], downt['duration'], downt['user']['name'],
                                downt['comment'])
                 else:
                     command = '[{}] SCHEDULE_HOST_DOWNTIME;{};{};{};{};{};{};{}\n'.\
-                        format(downt['_created'], downt['host']['name'], downt['start_time'],
-                               downt['end_time'], downt['fixed'], downt['trigger']['_id'],
-                               downt['duration'], downt['user']['_id'], downt['comment'])
+                        format(self.convert_date_timestamp(downt['_created']),
+                               downt['host']['name'], downt['start_time'], downt['end_time'],
+                               int(downt['fixed']), downt['trigger']['_id'], downt['duration'],
+                               downt['user']['name'], downt['comment'])
             elif downt['action'] == 'delete':
                 if downt['service']:
                     command = '[{}] DEL_ALL_SVC_DOWNTIMES;{};{}\n'.\
-                        format(downt['_created'], downt['host']['name'], downt['service']['name'])
+                        format(self.convert_date_timestamp(downt['_created']),
+                               downt['host']['name'], downt['service']['name'])
                 else:
                     command = '[{}] DEL_ALL_HOST_DOWNTIMES;{}\n'. \
-                        format(downt['_created'], downt['host']['name'])
+                        format(self.convert_date_timestamp(downt['_created']),
+                               downt['host']['name'])
 
-        logger.debug("[backend arbiter] command: %s", str(command))
-        ext = ExternalCommand(command)
-        self.from_q.put(ext)
+            headers = {'Content-Type': 'application/json', 'If-Match': downt['_etag']}
+            data = {'processed': True}
+            self.backend.patch('actiondowntime/' + downt['_id'], data, headers)
+
+            logger.debug("[backend arbiter] command: %s", str(command))
+            ext = ExternalCommand(command)
+            arbiter.external_commands.append(ext)

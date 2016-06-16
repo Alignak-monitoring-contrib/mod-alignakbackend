@@ -125,7 +125,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'command_line': u'check_ping -H $HOSTADDRESS$',
                 u'reactionner_tag': u'None',
                 u'module_type': u'fork',
-                u'imported_from': 'alignakbackend',
+                u'imported_from': u'alignakbackend',
                 u'timeout': -1,
                 u'enable_environment_macros': False,
                 'command_name': u'ping'
@@ -136,7 +136,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'command_line': u'check_http -H $HOSTADDRESS$',
                 u'reactionner_tag': u'None',
                 u'module_type': u'fork',
-                u'imported_from': 'alignakbackend',
+                u'imported_from': u'alignakbackend',
                 u'timeout': -1,
                 u'enable_environment_macros': False,
                 'command_name': u'check_http'
@@ -171,7 +171,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'is_admin': False,
                 u'password':  self.objects['contacts'][0]['password'],
                 u'pager': u'',
-                u'imported_from': 'alignakbackend',
+                u'imported_from': u'alignakbackend',
                 u'notificationways': '',
                 u'host_notification_period': u'24x7',
                 u'host_notifications_enabled': True,
@@ -200,7 +200,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 'saturday': '00:00-24:00',
                 'alias': 'All time default 24x7',
                 'sunday': '00:00-24:00',
-                'imported_from': 'alignakbackend',
+                'imported_from': u'alignakbackend',
                 'exclude': '',
                 'monday': '00:00-24:00',
                 'timeperiod_name': '24x7'
@@ -221,7 +221,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'definition_order': 100,
                 'hostgroup_members': '',
                 'hostgroup_name': u'allmyhosts',
-                u'imported_from': 'alignakbackend',
+                u'imported_from': u'alignakbackend',
                 u'members': 'srv001',
                 u'notes': u'',
                 u'notes_url': u'',
@@ -286,7 +286,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'address': u'192.168.0.2',
                 u'display_name': u'',
                 u'service_excludes': '',
-                u'imported_from': 'alignakbackend',
+                u'imported_from': u'alignakbackend',
                 u'3d_coords': u'',
                 u'time_to_orphanage': 300,
                 u'initial_state': u'u',
@@ -319,28 +319,28 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 'realm_name': u'All.A',
                 'realm_members': [],
                 u'definition_order': 100,
-                u'imported_from': 'alignakbackend'
+                u'imported_from': u'alignakbackend'
             },
             {
                 u'default': True,
                 'realm_name': u'All',
                 'realm_members': [],
                 u'definition_order': 100,
-                u'imported_from': 'alignakbackend'
+                u'imported_from': u'alignakbackend'
             },
             {
                 u'default': False,
                 'realm_name': u'All.B',
                 'realm_members': [],
                 u'definition_order': 100,
-                u'imported_from': 'alignakbackend'
+                u'imported_from': u'alignakbackend'
             },
             {
                 u'default': False,
                 'realm_name': u'All.A.1',
                 'realm_members': [],
                 u'definition_order': 100,
-                u'imported_from': 'alignakbackend'
+                u'imported_from': u'alignakbackend'
             },
         ]
         self.assertEqual(reference, self.objects['realms'])
@@ -394,7 +394,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 'host_name': u'srv001',
                 u'reactionner_tag': u'None',
                 'service_description': u'ping',
-                u'imported_from': 'alignakbackend',
+                u'imported_from': u'alignakbackend',
                 'service_dependencies': '',
                 u'time_to_orphanage': 300,
                 u'trigger_broker_raise_enabled': False,
@@ -457,7 +457,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 'host_name': u'srv001',
                 u'reactionner_tag': u'None',
                 'service_description': u'http toto.com',
-                u'imported_from': 'alignakbackend',
+                u'imported_from': u'alignakbackend',
                 'service_dependencies': '',
                 u'time_to_orphanage': 300,
                 u'trigger_broker_raise_enabled': False,

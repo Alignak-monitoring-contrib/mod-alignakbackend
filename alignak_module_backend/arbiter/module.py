@@ -207,7 +207,7 @@ class AlignakBackendArbit(BaseModule):
         logger.warning("[Alignak Backend Arbit] Got %d realms", len(all_realms['_items']))
         for realm in all_realms['_items']:
             self.configraw['realms'][realm['_id']] = realm['name']
-            realm['imported_from'] = 'alignakbackend'
+            realm['imported_from'] = u'alignakbackend'
             realm['realm_name'] = realm['name']
             realm['realm_members'] = []
             self.clean_unusable_keys(realm)
@@ -227,7 +227,7 @@ class AlignakBackendArbit(BaseModule):
         logger.warning("[Alignak Backend Arbit] Got %d commands", len(all_commands['_items']))
         for command in all_commands['_items']:
             self.configraw['commands'][command['_id']] = command['name']
-            command['imported_from'] = 'alignakbackend'
+            command['imported_from'] = u'alignakbackend'
             command['command_name'] = command['name']
             self.clean_unusable_keys(command)
             del command['alias']
@@ -247,7 +247,7 @@ class AlignakBackendArbit(BaseModule):
                        len(all_timeperiods['_items']))
         for timeperiod in all_timeperiods['_items']:
             self.configraw['timeperiods'][timeperiod['_id']] = timeperiod['name']
-            timeperiod['imported_from'] = 'alignakbackend'
+            timeperiod['imported_from'] = u'alignakbackend'
             timeperiod['timeperiod_name'] = timeperiod['name']
             for daterange in timeperiod['dateranges']:
                 timeperiod.update(daterange)
@@ -269,7 +269,7 @@ class AlignakBackendArbit(BaseModule):
                        len(all_contactgroups['_items']))
         for contactgroup in all_contactgroups['_items']:
             self.configraw['contactgroups'][contactgroup['_id']] = contactgroup['name']
-            contactgroup['imported_from'] = 'alignakbackend'
+            contactgroup['imported_from'] = u'alignakbackend'
             contactgroup['contactgroup_name'] = contactgroup['name']
             self.clean_unusable_keys(contactgroup)
             self.convert_lists(contactgroup)
@@ -285,7 +285,7 @@ class AlignakBackendArbit(BaseModule):
         all_contacts = self.backend.get_all('user')
         for contact in all_contacts['_items']:
             self.configraw['contacts'][contact['_id']] = contact['name']
-            contact['imported_from'] = 'alignakbackend'
+            contact['imported_from'] = u'alignakbackend'
             contact['contact_name'] = contact['name']
 
             # host_notification_period
@@ -329,7 +329,7 @@ class AlignakBackendArbit(BaseModule):
         logger.warning("[Alignak Backend Arbit] Got %d hostgroups", len(all_hostgroups['_items']))
         for hostgroup in all_hostgroups['_items']:
             self.configraw['hostgroups'][hostgroup['_id']] = hostgroup['name']
-            hostgroup['imported_from'] = 'alignakbackend'
+            hostgroup['imported_from'] = u'alignakbackend'
             hostgroup['hostgroup_name'] = hostgroup['name']
             hostgroup['members'] = hostgroup['hosts']
             # realm
@@ -359,7 +359,7 @@ class AlignakBackendArbit(BaseModule):
         for host in all_hosts['_items']:
             self.configraw['hosts'][host['_id']] = host['name']
             host['host_name'] = host['name']
-            host['imported_from'] = 'alignakbackend'
+            host['imported_from'] = u'alignakbackend'
             # check_command
             if 'check_command' in host:
                 if host['check_command'] is None:
@@ -421,7 +421,7 @@ class AlignakBackendArbit(BaseModule):
                        len(all_servicegroups['_items']))
         for servicegroup in all_servicegroups['_items']:
             self.configraw['servicegroups'][servicegroup['_id']] = servicegroup['name']
-            servicegroup['imported_from'] = 'alignakbackend'
+            servicegroup['imported_from'] = u'alignakbackend'
             servicegroup['servicegroup_name'] = servicegroup['name']
             # members
             # ## self.multiple_relation(servicegroup, 'members', 'service_description')
@@ -445,7 +445,7 @@ class AlignakBackendArbit(BaseModule):
         all_services = self.backend.get_all('service', params)
         logger.warning("[Alignak Backend Arbit] Got %d services", len(all_services['_items']))
         for service in all_services['_items']:
-            service['imported_from'] = 'alignakbackend'
+            service['imported_from'] = u'alignakbackend'
             service['service_description'] = service['name']
             service['host_name'] = service['host']
             service['merge_host_contacts'] = service['merge_host_users']
@@ -508,7 +508,7 @@ class AlignakBackendArbit(BaseModule):
                        len(all_hostdependencies['_items']))
         for hostdependency in all_hostdependencies['_items']:
             self.configraw['hostdependencies'][hostdependency['_id']] = hostdependency['name']
-            hostdependency['imported_from'] = 'alignakbackend'
+            hostdependency['imported_from'] = u'alignakbackend'
             hostdependency['hostdependency_name'] = hostdependency['name']
             hostdependency['host_name'] = hostdependency['host']
 
@@ -538,7 +538,7 @@ class AlignakBackendArbit(BaseModule):
         for hostescalation in all_hostescalations['_items']:
             self.configraw['hostescalations'][hostescalation['_id']] = hostescalation['name']
             hostescalation['hostescalation_name'] = hostescalation['name']
-            hostescalation['imported_from'] = 'alignakbackend'
+            hostescalation['imported_from'] = u'alignakbackend'
             # host_name
             self.single_relation(hostescalation, 'host_name', 'hosts')
             # hostgroup_name
@@ -564,7 +564,7 @@ class AlignakBackendArbit(BaseModule):
         for servicedependency in all_servicedependencies['_items']:
             self.configraw['servicedependencies'][servicedependency['_id']] = \
                 servicedependency['name']
-            servicedependency['imported_from'] = 'alignakbackend'
+            servicedependency['imported_from'] = u'alignakbackend'
             servicedependency['servicedependency_name'] = servicedependency['name']
             # dependent_host_name
             self.multiple_relation(servicedependency, 'dependent_host_name', 'hosts')
@@ -594,7 +594,7 @@ class AlignakBackendArbit(BaseModule):
             self.configraw['serviceescalations'][serviceescalation['_id']] = \
                 serviceescalation['name']
             serviceescalation['serviceescalation_name'] = serviceescalation['name']
-            serviceescalation['imported_from'] = 'alignakbackend'
+            serviceescalation['imported_from'] = u'alignakbackend'
             # host_name
             self.single_relation(serviceescalation, 'host_name', 'hosts')
             # hostgroup_name
@@ -619,7 +619,7 @@ class AlignakBackendArbit(BaseModule):
         logger.warning("[Alignak Backend Arbit] Got %d triggers", len(all_triggers['_items']))
         for trigger in all_triggers['_items']:
             trigger['trigger_name'] = trigger['name']
-            trigger['imported_from'] = 'alignakbackend'
+            trigger['imported_from'] = u'alignakbackend'
             self.clean_unusable_keys(trigger)
             self.convert_lists(trigger)
             self.config['triggers'].append(trigger)
@@ -690,7 +690,16 @@ class AlignakBackendArbit(BaseModule):
             self.get_forcecheck(arbiter)
             self.next_action_check = int(time.time()) + self.action_check
 
-    def convert_date_timestamp(self, mydate):
+    @staticmethod
+    def convert_date_timestamp(mydate):
+        """
+        Convert date/time of backend into timestamp
+
+        :param mydate: the date
+        :type mydate: str
+        :return: the timestamp
+        :rtype: int
+        """
         return int(time.mktime(datetime.strptime(mydate, "%a, %d %b %Y %H:%M:%S %Z").
                                timetuple()))
 
@@ -784,8 +793,8 @@ class AlignakBackendArbit(BaseModule):
         :return: None
         """
         all_fcheck = self.backend.get_all('actionforcecheck',
-                                         {'where': '{"processed": false}',
-                                          'embedded': '{"host": 1, "service": 1}'})
+                                          {'where': '{"processed": false}',
+                                           'embedded': '{"host": 1, "service": 1}'})
         for fcheck in all_fcheck['_items']:
             timestamp = self.convert_date_timestamp(fcheck['_created'])
             if fcheck['service']:

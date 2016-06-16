@@ -268,7 +268,6 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'notes': u'',
                 u'macromodulations': '',
                 'host_name': u'srv001',
-                u'escalations': '',
                 u'trigger_broker_raise_enabled': False,
                 u'first_notification_delay': 0,
                 u'flap_detection_enabled': True,

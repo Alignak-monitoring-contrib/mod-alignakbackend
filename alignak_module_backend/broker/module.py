@@ -205,6 +205,7 @@ class AlignakBackendBrok(BaseModule):
                 # Add log
                 del data_to_update['last_state_type']
                 data_to_update['host'] = self.mapping['host'][data['host_name']]
+                data_to_update['service'] = None
                 ret = self.send_to_backend('loghost', data['host_name'], data_to_update)
                 if ret:
                     counters['loghost'] += 1

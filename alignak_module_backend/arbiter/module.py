@@ -516,7 +516,7 @@ class AlignakBackendArbit(BaseModule):
             self.clean_unusable_keys(service)
             self.convert_lists(service)
             self.config['services'].append(service)
-            
+
     def get_hostdependencies(self):
         """
         Get hostdependencies from alignak_backend

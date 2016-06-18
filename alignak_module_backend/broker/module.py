@@ -204,6 +204,7 @@ class AlignakBackendBrok(BaseModule):
                     counters['livehost'] += 1
                 # Add log
                 del data_to_update['last_state_type']
+                data_to_update['host'] = self.mapping['host'][data['host_name']]
                 ret = self.send_to_backend('loghost', data['host_name'], data_to_update)
                 if ret:
                     counters['loghost'] += 1
@@ -240,6 +241,8 @@ class AlignakBackendBrok(BaseModule):
                     counters['liveservice'] += 1
                 # Add log
                 del data_to_update['last_state_type']
+                data_to_update['host'] = self.mapping['host'][data['host_name']]
+                data_to_update['service'] = self.mapping['service'][service_name]
                 self.send_to_backend('logservice', service_name, data_to_update)
                 if ret:
                     counters['logservice'] += 1
@@ -296,19 +299,18 @@ class AlignakBackendBrok(BaseModule):
                 logger.error('Patch livestate service %s has error: %s',
                              self.mapping['service'][name], str(e))
         elif type_data == 'loghost':
-            data['host'] = self.mapping['host'][name]
             try:
-                response = self.backend.post('loghost', data)
+                response = self.backend.post('logcheckresult', data)
             except BackendException as e:
-                logger.error('Post loghost %s has error: %s', self.mapping['host'][name], str(e))
+                logger.error('Post logcheckresult of host %s has error: %s',
+                             self.mapping['host'][name], str(e))
                 ret = False
         elif type_data == 'logservice':
-            data['service'] = self.mapping['service'][name]
             try:
-                response = self.backend.post('logservice', data)
+                response = self.backend.post('logcheckresult', data)
             except BackendException as e:
-                logger.error('Post logservice %s has error: %s', self.mapping['service'][name],
-                             str(e))
+                logger.error('Post logcheckresult of service %s has error: %s',
+                             self.mapping['service'][name], str(e))
                 ret = False
         return ret
 

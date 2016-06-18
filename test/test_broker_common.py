@@ -19,12 +19,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 
-import ujson
 import shlex
-import unittest2
 import time
 import subprocess
 import json
+import unittest2
 from alignak_module_backend.broker.module import AlignakBackendBrok
 from alignak.objects.module import Module
 from alignak.brok import Brok
@@ -43,7 +42,8 @@ class TestBrokerCommon(unittest2.TestCase):
         )
         assert exit_code == 0
 
-        cls.p = subprocess.Popen(['uwsgi', '-w', 'alignakbackend:app', '--socket', '0.0.0.0:5000', '--protocol=http', '--enable-threads'])
+        cls.p = subprocess.Popen(['uwsgi', '-w', 'alignakbackend:app', '--socket', '0.0.0.0:5000',
+                                  '--protocol=http', '--enable-threads'])
         time.sleep(3)
         cls.backend = Backend('http://127.0.0.1:5000')
         cls.backend.login("admin", "admin", "force")
@@ -92,8 +92,10 @@ class TestBrokerCommon(unittest2.TestCase):
         self.brokmodule.get_refs('livehost')
 
         self.assertEqual(len(self.brokmodule.ref_live['host']), 1)
-        self.assertEqual(self.brokmodule.ref_live['host'][self.data_host['_id']]['initial_state'], 'UNREACHABLE')
-        self.assertEqual(self.brokmodule.ref_live['host'][self.data_host['_id']]['initial_state_type'], 'HARD')
+        self.assertEqual(self.brokmodule.ref_live['host'][self.data_host['_id']]['initial_state'],
+                         'UNREACHABLE')
+        self.assertEqual(
+            self.brokmodule.ref_live['host'][self.data_host['_id']]['initial_state_type'], 'HARD')
 
         ref = {'srv001': self.data_host['_id']}
         self.assertEqual(self.brokmodule.mapping['host'], ref)
@@ -105,13 +107,20 @@ class TestBrokerCommon(unittest2.TestCase):
         self.brokmodule.get_refs('liveservice')
 
         self.assertEqual(len(self.brokmodule.ref_live['service']), 2)
-        self.assertEqual(self.brokmodule.ref_live['service'][self.data_srv_ping['_id']]['initial_state'], 'OK')
-        self.assertEqual(self.brokmodule.ref_live['service'][self.data_srv_ping['_id']]['initial_state_type'], 'HARD')
+        self.assertEqual(
+            self.brokmodule.ref_live['service'][self.data_srv_ping['_id']]['initial_state'], 'OK')
+        self.assertEqual(
+            self.brokmodule.ref_live['service'][self.data_srv_ping['_id']]['initial_state_type'],
+            'HARD')
 
-        self.assertEqual(self.brokmodule.ref_live['service'][self.data_srv_http['_id']]['initial_state'], 'OK')
-        self.assertEqual(self.brokmodule.ref_live['service'][self.data_srv_http['_id']]['initial_state_type'], 'HARD')
+        self.assertEqual(
+            self.brokmodule.ref_live['service'][self.data_srv_http['_id']]['initial_state'], 'OK')
+        self.assertEqual(
+            self.brokmodule.ref_live['service'][self.data_srv_http['_id']]['initial_state_type'],
+            'HARD')
 
-        ref = {'srv001ping': self.data_srv_ping['_id'], 'srv001http toto.com': self.data_srv_http['_id']}
+        ref = {'srv001ping': self.data_srv_ping['_id'],
+               'srv001http toto.com': self.data_srv_http['_id']}
         self.assertEqual(self.brokmodule.mapping['service'], ref)
 
     def test_03_manage_brok_host(self):
@@ -124,13 +133,14 @@ class TestBrokerCommon(unittest2.TestCase):
         items = self.backend.get('livestate')
         number = 0
         for index, item in enumerate(items['_items']):
-            if item['service'] == None:
+            if item['service'] is None:
                 self.assertEqual(item['last_state'], 'UNREACHABLE')
                 self.assertEqual(item['state'], 'UP')
                 self.assertEqual(item['last_state_type'], 'HARD')
                 self.assertEqual(item['state_type'], 'HARD')
                 self.assertEqual(item['output'], 'PING OK - Packet loss = 0%, RTA = 0.05 ms')
-                self.assertEqual(item['perf_data'], 'rta=0.049000ms;2.000000;3.000000;0.000000 pl=0%;50;80;0')
+                self.assertEqual(item['perf_data'],
+                                 'rta=0.049000ms;2.000000;3.000000;0.000000 pl=0%;50;80;0')
                 number += 1
         self.assertEqual(1, number)
 
@@ -166,7 +176,7 @@ class TestBrokerCommon(unittest2.TestCase):
         items = self.backend.get('livestate')
         number = 0
         for index, item in enumerate(items['_items']):
-            if item['service'] == None:
+            if item['service'] is None:
                 self.assertEqual(item['last_state'], 'UP')
                 self.assertEqual(item['state'], 'DOWN')
                 self.assertEqual(item['last_state_type'], 'HARD')

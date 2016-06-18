@@ -175,7 +175,7 @@ class AlignakBackendArbit(BaseModule):
                   'merge_host_users', 'hosts_critical_threshold', 'hosts_warning_threshold',
                   'services_critical_threshold', 'services_warning_threshold',
                   'global_critical_threshold', 'global_warning_threshold', '_children',
-                  'hostgroups', 'hosts', 'location']
+                  'hostgroups', 'hosts', 'location', 'usergroups', 'users', 'duplicate_foreach']
         for field in fields:
             if field in resource:
                 del resource[field]
@@ -191,7 +191,7 @@ class AlignakBackendArbit(BaseModule):
         """
         for prop in resource:
             if isinstance(resource[prop], list):
-                resource[prop] = ','.join(str(e) for e in resource[prop])
+                resource[prop] = u','.join(str(e) for e in resource[prop])
             elif isinstance(resource[prop], dict):
                 logger.warning("=====> %s", prop)
                 logger.warning(resource[prop])
@@ -269,8 +269,18 @@ class AlignakBackendArbit(BaseModule):
                        len(all_contactgroups['_items']))
         for contactgroup in all_contactgroups['_items']:
             self.configraw['contactgroups'][contactgroup['_id']] = contactgroup['name']
-            contactgroup['imported_from'] = u'alignakbackend'
-            contactgroup['contactgroup_name'] = contactgroup['name']
+            contactgroup[u'imported_from'] = u'alignakbackend'
+            contactgroup[u'contactgroup_name'] = contactgroup['name']
+            contactgroup[u'members'] = []
+            if 'users' in contactgroup:
+                contactgroup[u'members'] = contactgroup['users']
+            contactgroup[u'contactgroup_members'] = []
+            if 'usergroups' in contactgroup:
+                contactgroup[u'contactgroup_members'] = contactgroup['usergroups']
+            # members
+            self.multiple_relation(contactgroup, 'members', 'contacts')
+            # contactgroup_members
+            ##self.multiple_relation(contactgroup, 'contactgroup_members', 'contactgroups')
             self.clean_unusable_keys(contactgroup)
             self.convert_lists(contactgroup)
             self.config['contactgroups'].append(contactgroup)
@@ -358,8 +368,8 @@ class AlignakBackendArbit(BaseModule):
         logger.warning("[Alignak Backend Arbit] Got %d hosts", len(all_hosts['_items']))
         for host in all_hosts['_items']:
             self.configraw['hosts'][host['_id']] = host['name']
-            host['host_name'] = host['name']
-            host['imported_from'] = u'alignakbackend'
+            host[u'host_name'] = host['name']
+            host[u'imported_from'] = u'alignakbackend'
             # check_command
             if 'check_command' in host:
                 if host['check_command'] is None:
@@ -375,6 +385,12 @@ class AlignakBackendArbit(BaseModule):
                     host['check_command'] += '!'
                     host['check_command'] += host['check_command_args']
                 del host['check_command_args']
+            host[u'contacts'] = []
+            if 'users' in host:
+                host[u'contacts'] = host['users']
+            host[u'contact_groups'] = []
+            if 'usergroups' in host:
+                host[u'contact_groups'] = host['usergroups']
             # check_period
             self.single_relation(host, 'check_period', 'timeperiods')
             # realm
@@ -387,7 +403,7 @@ class AlignakBackendArbit(BaseModule):
             self.single_relation(host, 'snapshot_period', 'timeperiods')
             # parents
             # ## self.multiple_relation(host, 'parents', 'host_name')
-            host['parents'] = ''
+            host[u'parents'] = ''
             # hostgroups
             self.multiple_relation(host, 'hostgroup_name', 'hostgroups')
             # contacts
@@ -449,6 +465,12 @@ class AlignakBackendArbit(BaseModule):
             service['host_name'] = service['host']
             service['merge_host_contacts'] = service['merge_host_users']
             service['hostgroup_name'] = service['hostgroups']
+            service[u'contacts'] = []
+            if 'users' in service:
+                service[u'contacts'] = service['users']
+            service[u'contact_groups'] = []
+            if 'usergroups' in service:
+                service[u'contact_groups'] = service['usergroups']
             # check_command
             if 'check_command' in service:
                 if service['check_command'] is None:
@@ -494,7 +516,8 @@ class AlignakBackendArbit(BaseModule):
             self.clean_unusable_keys(service)
             self.convert_lists(service)
             self.config['services'].append(service)
-
+            if service['host_name'] == 'webui':
+                logger.warning(service)
     def get_hostdependencies(self):
         """
         Get hostdependencies from alignak_backend
@@ -634,8 +657,8 @@ class AlignakBackendArbit(BaseModule):
         self.get_realms()
         self.get_commands()
         self.get_timeperiods()
-        self.get_contactgroups()
         self.get_contact()
+        self.get_contactgroups()
         self.get_hosts()
         self.get_hostgroups()
         self.get_servicegroups()

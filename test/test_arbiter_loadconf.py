@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import ujson
-import unittest2
 import time
 import shlex
 import subprocess
 import json
+import unittest2
 from alignak_module_backend.arbiter.module import AlignakBackendArbit
 from alignak.objects.module import Module
 from alignak.objects.command import Command
@@ -42,6 +41,10 @@ class TestArbiterLoadconf(unittest2.TestCase):
         for cont in realms['_items']:
             cls.realm_all = cont['_id']
 
+        timeperiods = cls.backend.get_all('timeperiod')
+        for cont in timeperiods['_items']:
+            timeperiods_id = cont['_id']
+
         # add commands
         data = json.loads(open('cfg/command_ping.json').read())
         data['_realm'] = cls.realm_all
@@ -49,6 +52,16 @@ class TestArbiterLoadconf(unittest2.TestCase):
         data = json.loads(open('cfg/command_http.json').read())
         data['_realm'] = cls.realm_all
         data_cmd_http = cls.backend.post("command", data)
+
+        # add user
+        data = {'name': 'jeronimo', 'host_notification_period': timeperiods_id,
+                'service_notification_period': timeperiods_id, '_realm': cls.realm_all}
+        data_user_jeronimo = cls.backend.post("user", data)
+
+        # add usergroup
+        data = {'name': 'admins', '_realm': cls.realm_all, 'users': [data_user_jeronimo['_id']]}
+        data_usergroup = cls.backend.post("usergroup", data)
+
         # add host template
         data = json.loads(open('cfg/host_srvtemplate.json').read())
         data['check_command'] = data_cmd_ping['_id']
@@ -59,22 +72,30 @@ class TestArbiterLoadconf(unittest2.TestCase):
         data = json.loads(open('cfg/host_srv001.json').read())
         data['check_command'] = data_cmd_ping['_id']
         data['realm'] = cls.realm_all
+        data['users'] = [data_user_jeronimo['_id']]
+        data['usergroups'] = [data_usergroup['_id']]
         cls.data_host = cls.backend.post("host", data)
-        # add 2 services
+
+        # add service ping
         data = json.loads(open('cfg/service_srv001_ping.json').read())
         data['host'] = cls.data_host['_id']
         data['check_command'] = data_cmd_ping['_id']
         data['_realm'] = cls.realm_all
+        data['users'] = [data_user_jeronimo['_id']]
+        data['usergroups'] = [data_usergroup['_id']]
         cls.data_srv_ping = cls.backend.post("service", data)
 
         # Add hostgroup
         data = {'name': 'allmyhosts', 'realm': cls.realm_all, 'hosts': [cls.data_host['_id']]}
         cls.backend.post("hostgroup", data)
 
+        # add service http
         data = json.loads(open('cfg/service_srv001_http.json').read())
         data['host'] = cls.data_host['_id']
         data['check_command'] = data_cmd_http['_id']
         data['_realm'] = cls.realm_all
+        data['users'] = [data_user_jeronimo['_id']]
+        data['usergroups'] = [data_usergroup['_id']]
         cls.data_srv_http = cls.backend.post("service", data)
 
         # Add some realms
@@ -169,7 +190,36 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'address5': u'',
                 u'address6': u'',
                 u'is_admin': False,
-                u'password':  self.objects['contacts'][0]['password'],
+                u'password': self.objects['contacts'][0]['password'],
+                u'pager': u'',
+                u'imported_from': u'alignakbackend',
+                u'notificationways': '',
+                u'host_notification_period': u'24x7',
+                u'host_notifications_enabled': True,
+                'host_notification_commands': '',
+                u'service_notification_period': u'24x7',
+                u'min_business_impact': 0,
+                u'email': u'',
+                u'alias': u'',
+                u'host_notification_options': 'd,u,r,f,s'
+            },
+            {
+                u'definition_order': 100,
+                u'service_notifications_enabled': True,
+                u'can_submit_commands': False,
+                'contact_name': u'jeronimo',
+                'service_notification_commands': '',
+                u'expert': False,
+                u'service_notification_options': 'w,u,c,r,f,s',
+                u'definition_order': 100,
+                u'address1': u'',
+                u'address2': u'',
+                u'address3': u'',
+                u'address4': u'',
+                u'address5': u'',
+                u'address6': u'',
+                u'is_admin': False,
+                u'password': self.objects['contacts'][1]['password'],
                 u'pager': u'',
                 u'imported_from': u'alignakbackend',
                 u'notificationways': '',
@@ -183,7 +233,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'host_notification_options': 'd,u,r,f,s'
             }
         ]
-        self.assertEqual(reference, self.objects['contacts'])
+        self.assertItemsEqual(reference, self.objects['contacts'])
         for cont in self.objects['contacts']:
             for key, value in cont.iteritems():
                 self.assertTrue(Contact.properties[key])
@@ -236,18 +286,28 @@ class TestArbiterLoadconf(unittest2.TestCase):
                     self.assertTrue(Hostgroup.properties[key])
 
     def test_contactgroups(self):
-        reference = []
-        self.assertEqual(reference, self.objects['contactgroups'])
+        reference = [
+            {
+                u'contactgroup_name': u'admins',
+                u'imported_from': u'alignakbackend',
+                u'definition_order': 100,
+                u'alias': u'',
+                u'notes': u'',
+                u'contactgroup_members': u'',
+                u'members': u'jeronimo'
+            }
+        ]
+        self.assertItemsEqual(reference, self.objects['contactgroups'])
 
     def test_hosts(self):
         reference = [
             {
                 u'active_checks_enabled': True,
                 u'icon_image_alt': u'',
-                u'business_impact_modulations': '',
+                u'business_impact_modulations': u'',
                 u'retry_interval': 0,
                 u'reactionner_tag': u'None',
-                'parents': '',
+                u'parents': u'',
                 u'action_url': u'',
                 u'notes_url': u'',
                 u'snapshot_enabled': False,
@@ -260,23 +320,23 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'notification_interval': 60,
                 u'trending_policies': '',
                 u'failure_prediction_enabled': False,
-                u'flap_detection_options': 'o,d,u',
+                u'flap_detection_options': u'o,d,u',
                 u'resultmodulations': '',
                 u'business_rule_downtime_as_ack': False,
                 u'stalking_options': '',
                 u'event_handler_enabled': False,
                 u'notes': u'',
                 u'macromodulations': '',
-                'host_name': u'srv001',
+                u'host_name': u'srv001',
                 u'trigger_broker_raise_enabled': False,
                 u'first_notification_delay': 0,
                 u'flap_detection_enabled': True,
-                u'business_rule_host_notification_options': 'd,u,r,f,s',
+                u'business_rule_host_notification_options': u'd,u,r,f,s',
                 u'passive_checks_enabled': True,
                 u'service_includes': '',
                 u'icon_set': u'',
                 u'definition_order': 100,
-                u'snapshot_criteria': 'd,u',
+                u'snapshot_criteria': u'd,u',
                 u'notifications_enabled': True,
                 u'business_rule_smart_notifications': False,
                 u'vrml_image': u'',
@@ -293,7 +353,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'2d_coords': u'',
                 u'check_command': u'ping',
                 u'checkmodulations': '',
-                u'notification_options': 'd,u,r,f,s',
+                u'notification_options': u'd,u,r,f,s',
                 u'labels': '',
                 u'poller_tag': u'None',
                 u'obsess_over_host': False,
@@ -302,8 +362,10 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'business_impact': 2,
                 u'max_check_attempts': 1,
                 u'business_rule_output_template': u'',
-                u'business_rule_service_notification_options': 'w,u,c,r,f,s',
-                u'check_freshness': False
+                u'business_rule_service_notification_options': u'w,u,c,r,f,s',
+                u'check_freshness': False,
+                u'contacts': u'jeronimo',
+                u'contact_groups': u'admins'
             }
         ]
         self.assertEqual(reference, self.objects['hosts'])
@@ -399,7 +461,6 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'trigger_broker_raise_enabled': False,
                 u'custom_views': '',
                 u'check_command': u'ping!',
-                u'duplicate_foreach': u'',
                 u'notification_options': 'w,u,c,r,f,s',
                 u'notes_url': u'',
                 u'poller_tag': u'None',
@@ -410,7 +471,9 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'max_check_attempts': 1,
                 u'notes': u'',
                 u'freshness_threshold': 0,
-                u'check_freshness': False
+                u'check_freshness': False,
+                u'contacts': u'jeronimo',
+                u'contact_groups': u'admins'
             },
             {
                 u'hostgroup_name': '',
@@ -462,7 +525,6 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'trigger_broker_raise_enabled': False,
                 u'custom_views': '',
                 u'check_command': u'check_http!',
-                u'duplicate_foreach': u'',
                 u'notification_options': 'w,u,c,r,f,s',
                 u'notes_url': u'',
                 u'poller_tag': u'None',
@@ -473,7 +535,9 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'max_check_attempts': 1,
                 u'notes': u'',
                 u'freshness_threshold': 0,
-                u'check_freshness': False
+                u'check_freshness': False,
+                u'contacts': u'jeronimo',
+                u'contact_groups': u'admins'
             }
         ]
         self.assertEqual(reference, self.objects['services'])

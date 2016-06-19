@@ -269,13 +269,12 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'action_url': u'',
                 u'alias': u'',
                 u'definition_order': 100,
-                'hostgroup_members': '',
-                'hostgroup_name': u'allmyhosts',
+                u'hostgroup_members': '',
+                u'hostgroup_name': u'allmyhosts',
                 u'imported_from': u'alignakbackend',
-                u'members': 'srv001',
+                u'members': u'srv001',
                 u'notes': u'',
-                u'notes_url': u'',
-                u'realm': u'All'
+                u'notes_url': u''
             }
         ]
         self.assertEqual(reference, self.objects['hostgroups'])

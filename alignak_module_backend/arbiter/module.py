@@ -339,20 +339,14 @@ class AlignakBackendArbit(BaseModule):
         logger.warning("[Alignak Backend Arbit] Got %d hostgroups", len(all_hostgroups['_items']))
         for hostgroup in all_hostgroups['_items']:
             self.configraw['hostgroups'][hostgroup['_id']] = hostgroup['name']
-            hostgroup['imported_from'] = u'alignakbackend'
-            hostgroup['hostgroup_name'] = hostgroup['name']
-            hostgroup['members'] = hostgroup['hosts']
-            # realm
-            self.single_relation(hostgroup, 'realm', 'realms')
+            hostgroup[u'imported_from'] = u'alignakbackend'
+            hostgroup[u'hostgroup_name'] = hostgroup['name']
+            hostgroup[u'members'] = hostgroup['hosts']
             # members
             self.multiple_relation(hostgroup, 'members', 'hosts')
             # hostgroup_members
             # ## self.multiple_relation(hostgroup, 'hostgroup_members', 'hostgroup_name')
-            hostgroup['hostgroup_members'] = ''
-            # realm
-            if hostgroup['realm'] is None:
-                del hostgroup['realm']
-
+            hostgroup[u'hostgroup_members'] = []
             self.clean_unusable_keys(hostgroup)
             self.convert_lists(hostgroup)
             self.config['hostgroups'].append(hostgroup)

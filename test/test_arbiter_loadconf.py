@@ -86,7 +86,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
         cls.data_srv_ping = cls.backend.post("service", data)
 
         # Add hostgroup
-        data = {'name': 'allmyhosts', 'realm': cls.realm_all, 'hosts': [cls.data_host['_id']]}
+        data = {'name': 'allmyhosts', '_realm': cls.realm_all, 'hosts': [cls.data_host['_id']]}
         cls.backend.post("hostgroup", data)
 
         # add service http

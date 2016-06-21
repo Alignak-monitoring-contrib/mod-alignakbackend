@@ -4,14 +4,11 @@
 
 ## Build status (stable release)
 
-.. image:: https://travis-ci.org/Alignak-monitoring-contrib/alignak-module-backend.svg?branch=master
-    :target: https://travis-ci.org/Alignak-monitoring-contrib/alignak-module-backend
-
+  [![Build Status](https://travis-ci.org/Alignak-monitoring-contrib/alignak-module-backend.svg?branch=master)](https://travis-ci.org/Alignak-monitoring-contrib/alignak-module-backend)
 
 ## Build status (development release)
 
-.. image:: https://travis-ci.org/Alignak-monitoring-contrib/alignak-module-backend.svg?branch=develop
-    :target: https://travis-ci.org/Alignak-monitoring-contrib/alignak-module-backend
+  [![Build Status](https://travis-ci.org/Alignak-monitoring-contrib/alignak-module-backend.svg?branch=develop)](https://travis-ci.org/Alignak-monitoring-contrib/alignak-module-backend)
 
 
 ## Short description

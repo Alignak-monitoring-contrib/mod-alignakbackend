@@ -283,6 +283,7 @@ class AlignakBackendBrok(BaseModule):
             except BackendException as e:
                 logger.error('Patch livestate host %s has error: %s', self.mapping['host'][name],
                              str(e))
+                logger.error('Response: %s', e.response)
         elif type_data == 'liveservice':
             headers['If-Match'] = self.ref_live['service'][self.mapping['service'][name]]['_etag']
             try:
@@ -299,12 +300,14 @@ class AlignakBackendBrok(BaseModule):
             except BackendException as e:
                 logger.error('Patch livestate service %s has error: %s',
                              self.mapping['service'][name], str(e))
+                logger.error('Response: %s', e.response)
         elif type_data == 'loghost':
             try:
                 response = self.backend.post('logcheckresult', data)
             except BackendException as e:
                 logger.error('Post logcheckresult of host %s has error: %s',
                              self.mapping['host'][name], str(e))
+                logger.error('Response: %s', e.response)
                 ret = False
         elif type_data == 'logservice':
             try:
@@ -312,6 +315,7 @@ class AlignakBackendBrok(BaseModule):
             except BackendException as e:
                 logger.error('Post logcheckresult of service %s has error: %s',
                              self.mapping['service'][name], str(e))
+                logger.error('Response: %s', e.response)
                 ret = False
         return ret
 

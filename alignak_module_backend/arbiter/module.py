@@ -27,9 +27,8 @@ from datetime import datetime
 import os
 import signal
 from alignak_backend_client.client import Backend
-# pylint: disable=F0401
+# pylint: disable=wrong-import-order
 from alignak.basemodule import BaseModule
-# pylint: disable=F0401
 from alignak.log import logger
 from alignak.external_command import ExternalCommand
 
@@ -40,7 +39,7 @@ properties = {
     'type': 'alignakbackendarbit',
     'external': False,
     'phases': ['configuration'],
-    }
+}
 
 
 def get_instance(mod_conf):
@@ -58,6 +57,7 @@ def get_instance(mod_conf):
 
 
 class AlignakBackendArbit(BaseModule):
+    # pylint: disable=too-many-public-methods
     """ This class is used to get configuration from alignak-backend
     """
 
@@ -280,7 +280,7 @@ class AlignakBackendArbit(BaseModule):
             # members
             self.multiple_relation(contactgroup, 'members', 'contacts')
             # contactgroup_members
-            ##self.multiple_relation(contactgroup, 'contactgroup_members', 'contactgroups')
+            # self.multiple_relation(contactgroup, 'contactgroup_members', 'contactgroups')
             self.clean_unusable_keys(contactgroup)
             self.convert_lists(contactgroup)
             self.config['contactgroups'].append(contactgroup)

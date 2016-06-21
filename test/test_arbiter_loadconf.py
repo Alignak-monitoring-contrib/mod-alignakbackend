@@ -426,7 +426,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'imported_from': u'alignakbackend'
             },
         ]
-        self.assertEqual(reference, self.objects['realms'])
+        self.assertItemsEqual(reference, self.objects['realms'])
         for realm in self.objects['realms']:
             for key, value in realm.iteritems():
                 self.assertTrue(Realm.properties[key])

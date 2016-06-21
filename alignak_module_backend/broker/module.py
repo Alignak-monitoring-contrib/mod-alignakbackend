@@ -172,6 +172,8 @@ class AlignakBackendBrok(BaseModule):
             'logservice': 0
         }
 
+        # Brok data: {u'last_time_unreachable': 0, u'last_problem_id': 0, u'check_type': 0, u'retry_interval': 0, u'last_event_id': 0, u'problem_has_been_acknowledged': False, u'command_name': u'check_host_alive', u'last_state': u'UP', u'latency': 1.2419290543, u'last_state_type': u'HARD', u'last_hard_state_change': 0.0, u'last_time_up': 1466494491, u'percent_state_change': 0.0, u'state': u'UP', u'last_chk': 1466494491, u'last_state_id': 0, u'end_time': 0, u'timeout': 0, u'current_event_id': 0, u'execution_time': 0.0063450336, u'start_time': 0, u'return_code': 0, u'state_type': u'HARD', u'state_id': 0, u'in_checking': False, u'early_timeout': 0, u'in_scheduled_downtime': False, u'attempt': 1, u'state_type_id': 1, u'acknowledgement_type': 1, u'last_state_change': 0.0, u'last_time_down': 0, 'instance_id': u'852468e120e74de0a9f3d1332acec32f', u'long_output': u'', u'current_problem_id': 0, u'host_name': u'sim-vm2', u'check_interval': 5, u'output': u'PING OK - Packet loss = 0%, RTA = 1.76 ms', u'has_been_checked': 1, u'perf_data': u'rta=1.758000ms;1000.000000;3000.000000;0.000000 pl=0%;100;100;0'}
+
         if obj_type == 'host':
             if data['host_name'] in self.mapping['host']:
                 data_to_update = {
@@ -202,10 +204,15 @@ class AlignakBackendBrok(BaseModule):
                 ret = self.send_to_backend('livehost', data['host_name'], data_to_update)
                 if ret:
                     counters['livehost'] += 1
+
                 # Add log
-                del data_to_update['last_state_type']
+                # del data_to_update['last_state_type']
+                data_to_update['state_changed'] = (
+                    data_to_update['state'] == data_to_update['last_state']
+                )
                 data_to_update['host'] = self.mapping['host'][data['host_name']]
                 data_to_update['service'] = None
+                logger.debug("[Backend Broker] loghost data: %s", data_to_update)
                 ret = self.send_to_backend('loghost', data['host_name'], data_to_update)
                 if ret:
                     counters['loghost'] += 1
@@ -240,10 +247,15 @@ class AlignakBackendBrok(BaseModule):
                 ret = self.send_to_backend('liveservice', service_name, data_to_update)
                 if ret:
                     counters['liveservice'] += 1
+
                 # Add log
-                del data_to_update['last_state_type']
+                # del data_to_update['last_state_type']
+                data_to_update['state_changed'] = (
+                    data_to_update['state'] == data_to_update['last_state']
+                )
                 data_to_update['host'] = self.mapping['host'][data['host_name']]
                 data_to_update['service'] = self.mapping['service'][service_name]
+                logger.debug("[Backend Broker] logservice data: %s", data_to_update)
                 self.send_to_backend('logservice', service_name, data_to_update)
                 if ret:
                     counters['logservice'] += 1

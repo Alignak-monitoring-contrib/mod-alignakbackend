@@ -42,8 +42,9 @@ class TestArbiterLoadconf(unittest2.TestCase):
             cls.realm_all = cont['_id']
 
         timeperiods = cls.backend.get_all('timeperiod')
-        for cont in timeperiods['_items']:
-            timeperiods_id = cont['_id']
+        for tp in timeperiods['_items']:
+            if tp['name'] == '24x7':
+                timeperiods_id = tp['_id']
 
         # add commands
         data = json.loads(open('cfg/command_ping.json').read())
@@ -65,13 +66,15 @@ class TestArbiterLoadconf(unittest2.TestCase):
         # add host template
         data = json.loads(open('cfg/host_srvtemplate.json').read())
         data['check_command'] = data_cmd_ping['_id']
-        data['realm'] = cls.realm_all
+        del data['realm']
+        data['_realm'] = cls.realm_all
         cls.data_host = cls.backend.post("host", data)
 
         # add host
         data = json.loads(open('cfg/host_srv001.json').read())
         data['check_command'] = data_cmd_ping['_id']
-        data['realm'] = cls.realm_all
+        del data['realm']
+        data['_realm'] = cls.realm_all
         data['users'] = [data_user_jeronimo['_id']]
         data['usergroups'] = [data_usergroup['_id']]
         cls.data_host = cls.backend.post("host", data)
@@ -181,7 +184,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 'contact_name': u'admin',
                 'service_notification_commands': '',
                 u'expert': False,
-                u'service_notification_options': 'w,u,c,r,f,s',
+                u'service_notification_options': u'w,u,c,r,f,s',
                 u'definition_order': 100,
                 u'address1': u'',
                 u'address2': u'',
@@ -193,7 +196,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'password': self.objects['contacts'][0]['password'],
                 u'pager': u'',
                 u'imported_from': u'alignakbackend',
-                u'notificationways': '',
+                u'notificationways': u'',
                 u'host_notification_period': u'24x7',
                 u'host_notifications_enabled': True,
                 'host_notification_commands': '',
@@ -201,7 +204,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'min_business_impact': 0,
                 u'email': u'',
                 u'alias': u'',
-                u'host_notification_options': 'd,u,r,f,s'
+                u'host_notification_options': u'd,u,r,f,s'
             },
             {
                 u'definition_order': 100,
@@ -210,7 +213,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 'contact_name': u'jeronimo',
                 'service_notification_commands': '',
                 u'expert': False,
-                u'service_notification_options': 'w,u,c,r,f,s',
+                u'service_notification_options': u'w,u,c,r,f,s',
                 u'definition_order': 100,
                 u'address1': u'',
                 u'address2': u'',
@@ -222,7 +225,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'password': self.objects['contacts'][1]['password'],
                 u'pager': u'',
                 u'imported_from': u'alignakbackend',
-                u'notificationways': '',
+                u'notificationways': u'',
                 u'host_notification_period': u'24x7',
                 u'host_notifications_enabled': True,
                 'host_notification_commands': '',
@@ -230,7 +233,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'min_business_impact': 0,
                 u'email': u'',
                 u'alias': u'',
-                u'host_notification_options': 'd,u,r,f,s'
+                u'host_notification_options': u'd,u,r,f,s'
             }
         ]
         self.assertItemsEqual(reference, self.objects['contacts'])
@@ -255,6 +258,15 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 'monday': '00:00-24:00',
                 'timeperiod_name': '24x7'
 
+            },
+            {
+                'definition_order': 100,
+                'is_active': True,
+                'alias': 'No time is a good time',
+                'imported_from': u'alignakbackend',
+                'exclude': '',
+                'timeperiod_name': 'Never'
+
             }
         ]
         self.assertEqual(reference, self.objects['timeperiods'])
@@ -267,9 +279,20 @@ class TestArbiterLoadconf(unittest2.TestCase):
         reference = [
             {
                 u'action_url': u'',
+                u'alias': u'All hosts',
+                u'definition_order': 100,
+                u'hostgroup_members': u'',
+                u'hostgroup_name': u'All',
+                u'imported_from': u'alignakbackend',
+                u'members': u'',
+                u'notes': u'',
+                u'notes_url': u''
+            },
+            {
+                u'action_url': u'',
                 u'alias': u'',
                 u'definition_order': 100,
-                u'hostgroup_members': '',
+                u'hostgroup_members': u'',
                 u'hostgroup_name': u'allmyhosts',
                 u'imported_from': u'alignakbackend',
                 u'members': u'srv001',
@@ -315,7 +338,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'icon_image': u'',
                 u'service_overrides': '',
                 u'snapshot_interval': 5,
-                u'realm': u'All',
+                # u'_realm': u'All',
                 u'notification_interval': 60,
                 u'trending_policies': '',
                 u'failure_prediction_enabled': False,
@@ -375,15 +398,15 @@ class TestArbiterLoadconf(unittest2.TestCase):
     def test_realms(self):
         reference = [
             {
-                u'default': False,
-                'realm_name': u'All.A',
+                u'default': True,
+                'realm_name': u'All',
                 'realm_members': [],
                 u'definition_order': 100,
                 u'imported_from': u'alignakbackend'
             },
             {
-                u'default': True,
-                'realm_name': u'All',
+                u'default': False,
+                'realm_name': u'All.A',
                 'realm_members': [],
                 u'definition_order': 100,
                 u'imported_from': u'alignakbackend'
@@ -545,7 +568,19 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 self.assertTrue(Service.properties[key])
 
     def test_servicegroups(self):
-        reference = []
+        reference = [
+            {
+                u'action_url': u'',
+                u'alias': u'All services',
+                u'definition_order': 100,
+                u'servicegroup_members': u'',
+                u'servicegroup_name': u'All',
+                u'imported_from': u'alignakbackend',
+                u'members': u'',
+                u'notes': u'',
+                u'notes_url': u''
+            },
+        ]
         self.assertEqual(reference, self.objects['servicegroups'])
 
     def test_triggers(self):

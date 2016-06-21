@@ -61,7 +61,8 @@ class TestBrokerCommon(unittest2.TestCase):
         # add host
         data = json.loads(open('cfg/host_srv001.json').read())
         data['check_command'] = data_cmd_ping['_id']
-        data['realm'] = cls.realm_all
+        del data['realm']
+        data['_realm'] = cls.realm_all
         cls.data_host = cls.backend.post("host", data)
         # add 2 services
         data = json.loads(open('cfg/service_srv001_ping.json').read())

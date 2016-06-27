@@ -395,6 +395,8 @@ class AlignakBackendArbit(BaseModule):
             self.single_relation(host, 'maintenance_period', 'timeperiods')
             # snapshot_period
             self.single_relation(host, 'snapshot_period', 'timeperiods')
+            # event_handler
+            self.single_relation(host, 'event_handler', 'commands')
             # parents
             # ## self.multiple_relation(host, 'parents', 'host_name')
             host[u'parents'] = ''
@@ -490,6 +492,8 @@ class AlignakBackendArbit(BaseModule):
             self.single_relation(service, 'maintenance_period', 'timeperiods')
             # snapshot_period
             self.single_relation(service, 'snapshot_period', 'timeperiods')
+            # event_handler
+            self.single_relation(service, 'event_handler', 'commands')
             # servicegroups
             self.multiple_relation(service, 'servicegroups', 'servicegroups')
             # contacts

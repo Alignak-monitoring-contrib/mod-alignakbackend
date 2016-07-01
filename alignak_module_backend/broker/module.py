@@ -205,7 +205,7 @@ class AlignakBackendBrok(BaseModule):
                 # Add log
                 # del data_to_update['last_state_type']
                 data_to_update['state_changed'] = (
-                    data_to_update['state'] == data_to_update['last_state']
+                    data_to_update['state'] != data_to_update['last_state']
                 )
                 data_to_update['host'] = self.mapping['host'][data['host_name']]
                 data_to_update['service'] = None
@@ -248,7 +248,7 @@ class AlignakBackendBrok(BaseModule):
                 # Add log
                 # del data_to_update['last_state_type']
                 data_to_update['state_changed'] = (
-                    data_to_update['state'] == data_to_update['last_state']
+                    data_to_update['state'] != data_to_update['last_state']
                 )
                 data_to_update['host'] = self.mapping['host'][data['host_name']]
                 data_to_update['service'] = self.mapping['service'][service_name]

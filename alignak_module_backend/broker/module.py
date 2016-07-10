@@ -110,7 +110,8 @@ class AlignakBackendBrok(BaseModule):
         :return: None
         """
         if type_data == 'livehost':
-            params = {'projection': '{"name":1}'}
+            params = {'projection': '{"name":1}',
+                      'where': '{"_is_template":false}'}
             content = self.backend.get_all('host', params)
             for item in content['_items']:
                 self.mapping['host'][item['name']] = item['_id']
@@ -128,12 +129,14 @@ class AlignakBackendBrok(BaseModule):
                 }
             self.loaded_hosts = True
         elif type_data == 'liveservice':
-            params = {'projection': '{"name":1}'}
+            params = {'projection': '{"name":1}',
+                      'where': '{"_is_template":false}'}
             contenth = self.backend.get_all('host', params)
             hosts = {}
             for item in contenth['_items']:
                 hosts[item['_id']] = item['name']
-            params = {'projection': '{"name":1,"host":1}'}
+            params = {'projection': '{"name":1,"host":1}',
+                      'where': '{"_is_template":false}'}
             content = self.backend.get_all('service', params)
             for item in content['_items']:
                 self.mapping['service'][''.join([hosts[item['host']],

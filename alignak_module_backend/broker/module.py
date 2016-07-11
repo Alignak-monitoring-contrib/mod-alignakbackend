@@ -285,8 +285,7 @@ class AlignakBackendBrok(BaseModule):
             try:
                 response = self.backend.patch(
                     'livestate/%s' % self.ref_live['host'][self.mapping['host'][name]]['_id'],
-                    data,
-                    headers)
+                    data, headers, True)
                 if response['_status'] == 'ERR':
                     logger.error(response['_issues'])
                     ret = False
@@ -301,8 +300,7 @@ class AlignakBackendBrok(BaseModule):
             try:
                 response = self.backend.patch(
                     'livestate/%s' % self.ref_live['service'][self.mapping['service'][name]]['_id'],
-                    data,
-                    headers)
+                    data, headers, True)
                 if response['_status'] == 'ERR':
                     logger.error(response['_issues'])
                     ret = False

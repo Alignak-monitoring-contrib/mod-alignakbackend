@@ -732,18 +732,21 @@ class AlignakBackendArbit(BaseModule):
                                        {'where': '{"processed": false}',
                                         'embedded': '{"host": 1, "service": 1, "user": 1}'})
         for ack in all_ack['_items']:
+            sticky = 1
+            if ack['sticky']:
+                sticky = 2
             if ack['action'] == 'add':
                 if ack['service']:
                     command = '[{}] ACKNOWLEDGE_SVC_PROBLEM;{};{};{};{};{};{};{}\n'.\
                         format(self.convert_date_timestamp(ack['_created']), ack['host']['name'],
-                               ack['service']['name'], int(ack['sticky']), int(ack['notify']),
+                               ack['service']['name'], sticky, int(ack['notify']),
                                int(ack['persistent']), ack['user']['name'], ack['comment'])
                 else:
                     logger.warning(time.time())
                     logger.warning(self.convert_date_timestamp(ack['_created']))
                     command = '[{}] ACKNOWLEDGE_HOST_PROBLEM;{};{};{};{};{};{}\n'. \
                         format(self.convert_date_timestamp(ack['_created']), ack['host']['name'],
-                               int(ack['sticky']), int(ack['notify']), int(ack['persistent']),
+                               sticky, int(ack['notify']), int(ack['persistent']),
                                ack['user']['name'], ack['comment'])
             elif ack['action'] == 'delete':
                 if ack['service']:

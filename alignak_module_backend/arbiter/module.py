@@ -779,14 +779,14 @@ class AlignakBackendArbit(BaseModule):
         for downt in all_downt['_items']:
             if downt['action'] == 'add':
                 if downt['service']:
-                    command = '[{}] SCHEDULE_SVC_DOWNTIME;{};{};{};{};{};{};{};{}\n'.\
+                    command = '[{}] SCHEDULE_SVC_DOWNTIME;{};{};{};{};{};{};{};{};{}\n'.\
                         format(self.convert_date_timestamp(downt['_created']),
                                downt['host']['name'], downt['service']['name'],
                                downt['start_time'], downt['end_time'], int(downt['fixed']),
                                downt['trigger']['_id'], downt['duration'], downt['user']['name'],
                                downt['comment'])
                 else:
-                    command = '[{}] SCHEDULE_HOST_DOWNTIME;{};{};{};{};{};{};{}\n'.\
+                    command = '[{}] SCHEDULE_HOST_DOWNTIME;{};{};{};{};{};{};{};{}\n'.\
                         format(self.convert_date_timestamp(downt['_created']),
                                downt['host']['name'], downt['start_time'], downt['end_time'],
                                int(downt['fixed']), downt['trigger']['_id'], downt['duration'],

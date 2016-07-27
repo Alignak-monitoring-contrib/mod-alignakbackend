@@ -687,7 +687,6 @@ class AlignakBackendArbit(BaseModule):
             logger.debug('Check if config in backend has changed')
             resources = ['realm', 'command', 'timeperiod', 'usergroup', 'user', 'hostgroup',
                          'host', 'servicegroup', 'service', 'hostdependency',
-                         'host', 'servicegroup', 'service', 'hostdependency',
                          'hostescalation', 'servicedependency', 'serviceescalation',
                          'trigger']
             reload_conf = False
@@ -773,7 +772,7 @@ class AlignakBackendArbit(BaseModule):
         """
         all_downt = self.backend.get_all('actiondowntime',
                                          {'where': '{"processed": false}',
-                                          'embedded': '{"host": 1, "service": 1, "trigger": 1, '
+                                          'embedded': '{"host": 1, "service": 1, '
                                                       '"user": 1}'})
         # pylint: disable=too-many-format-args
         for downt in all_downt['_items']:
@@ -783,13 +782,13 @@ class AlignakBackendArbit(BaseModule):
                         format(self.convert_date_timestamp(downt['_created']),
                                downt['host']['name'], downt['service']['name'],
                                downt['start_time'], downt['end_time'], int(downt['fixed']),
-                               downt['trigger']['_id'], downt['duration'], downt['user']['name'],
+                               0, downt['duration'], downt['user']['name'],
                                downt['comment'])
-                else:
+                elif downt['host'] and 'name' in downt['host']:
                     command = '[{}] SCHEDULE_HOST_DOWNTIME;{};{};{};{};{};{};{};{}\n'.\
                         format(self.convert_date_timestamp(downt['_created']),
                                downt['host']['name'], downt['start_time'], downt['end_time'],
-                               int(downt['fixed']), downt['trigger']['_id'], downt['duration'],
+                               int(downt['fixed']), 0, downt['duration'],
                                downt['user']['name'], downt['comment'])
             elif downt['action'] == 'delete':
                 if downt['service']:

@@ -541,7 +541,9 @@ class AlignakBackendArbit(BaseModule):
             self.multiple_relation(hostdependency, 'hostgroup_name', 'hostgroups')
             self.clean_unusable_keys(hostdependency)
             self.convert_lists(hostdependency)
-            if hostdependency['host_name'] != '' and hostdependency['dependent_host_name'] != '':
+            if 'host_name' in hostdependency and hostdependency['host_name'] != '' and \
+                            'dependent_host_name' in hostdependency and \
+                            hostdependency['dependent_host_name'] != '':
                 self.config['hostdependencies'].append(hostdependency)
 
     def get_hostescalations(self):

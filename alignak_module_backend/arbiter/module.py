@@ -23,6 +23,7 @@ This module is used to get configuration from alignak-backend with arbiter
 """
 
 import time
+import traceback
 from datetime import datetime
 import os
 import signal
@@ -325,6 +326,7 @@ class AlignakBackendArbit(BaseModule):
                 contact[key] = value
             self.clean_unusable_keys(contact)
             del contact['notes']
+            del contact['ui_preferences']
             self.convert_lists(contact)
             self.config['contacts'].append(contact)
 
@@ -685,30 +687,40 @@ class AlignakBackendArbit(BaseModule):
         :type arbiter: object
         :return: None
         """
-        if int(time.time()) > self.next_check:
-            logger.debug('Check if config in backend has changed')
-            resources = ['realm', 'command', 'timeperiod', 'usergroup', 'user', 'hostgroup',
-                         'host', 'servicegroup', 'service', 'hostdependency',
-                         'hostescalation', 'servicedependency', 'serviceescalation',
-                         'trigger']
-            reload_conf = False
-            for resource in resources:
-                ret = self.backend.get(resource, {'where': '{"_updated":{"$gte": "' +
-                                                           self.time_loaded_conf + '"}}'})
-                if ret['_meta']['total'] > -1:
-                    reload_conf = True
-            if reload_conf:
-                logger.warning('Hey, we must reload conf from backend !!!!')
-                with open(arbiter.pidfile, 'r') as f:
-                    arbiterpid = f.readline()
-                os.kill(int(arbiterpid), signal.SIGHUP)
-            self.next_check = int(time.time()) + (60 * self.verify_modification)
+        try:
+            if int(time.time()) > self.next_check:
+                logger.info('Check if configuration in backend has changed...')
+                resources = [
+                    'realm', 'command', 'timeperiod',
+                    'usergroup', 'user',
+                    'hostgroup', 'host', 'hostdependency', 'hostescalation',
+                    'servicegroup', 'service', 'servicedependency', 'serviceescalation',
+                    'trigger'
+                ]
+                reload_conf = False
+                for resource in resources:
+                    ret = self.backend.get(resource, {'where': '{"_updated":{"$gte": "' +
+                                                               self.time_loaded_conf + '"}}'})
+                    if ret['_meta']['total'] > -1:
+                        reload_conf = True
+                if reload_conf:
+                    logger.warning('Hey, we must reload conf from backend !!!!')
+                    with open(arbiter.pidfile, 'r') as f:
+                        arbiterpid = f.readline()
+                    os.kill(int(arbiterpid), signal.SIGHUP)
+                self.next_check = int(time.time()) + (60 * self.verify_modification)
 
-        if int(time.time()) > self.next_action_check:
-            self.get_acknowledge(arbiter)
-            self.get_downtime(arbiter)
-            self.get_forcecheck(arbiter)
-            self.next_action_check = int(time.time()) + self.action_check
+            if int(time.time()) > self.next_action_check:
+                logger.debug('Check if acknowledgements are required...')
+                self.get_acknowledge(arbiter)
+                logger.debug('Check if downtime scheduling are required...')
+                self.get_downtime(arbiter)
+                logger.debug('Check if re-checks are required...')
+                self.get_forcecheck(arbiter)
+                self.next_action_check = int(time.time()) + self.action_check
+        except Exception as exp:
+            logger.warning('hook_tick exception: %s', str(exp))
+            logger.warning('Traceback', traceback.format_exc())
 
     @staticmethod
     def convert_date_timestamp(mydate):

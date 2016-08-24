@@ -685,24 +685,25 @@ class AlignakBackendArbit(BaseModule):
         :type arbiter: object
         :return: None
         """
-        if int(time.time()) > self.next_check:
-            logger.debug('Check if config in backend has changed')
-            resources = ['realm', 'command', 'timeperiod', 'usergroup', 'user', 'hostgroup',
-                         'host', 'servicegroup', 'service', 'hostdependency',
-                         'hostescalation', 'servicedependency', 'serviceescalation',
-                         'trigger']
-            reload_conf = False
-            for resource in resources:
-                ret = self.backend.get(resource, {'where': '{"_updated":{"$gte": "' +
-                                                           self.time_loaded_conf + '"}}'})
-                if ret['_meta']['total'] > -1:
-                    reload_conf = True
-            if reload_conf:
-                logger.warning('Hey, we must reload conf from backend !!!!')
-                with open(arbiter.pidfile, 'r') as f:
-                    arbiterpid = f.readline()
-                os.kill(int(arbiterpid), signal.SIGHUP)
-            self.next_check = int(time.time()) + (60 * self.verify_modification)
+        # Disabled for the moment, because wait reload branch merged in alignak
+        # if int(time.time()) > self.next_check:
+        #     logger.debug('Check if config in backend has changed')
+        #     resources = ['realm', 'command', 'timeperiod', 'usergroup', 'user', 'hostgroup',
+        #                  'host', 'servicegroup', 'service', 'hostdependency',
+        #                  'hostescalation', 'servicedependency', 'serviceescalation',
+        #                  'trigger']
+        #     reload_conf = False
+        #     for resource in resources:
+        #         ret = self.backend.get(resource, {'where': '{"_updated":{"$gte": "' +
+        #                                                    self.time_loaded_conf + '"}}'})
+        #         if ret['_meta']['total'] > -1:
+        #             reload_conf = True
+        #     if reload_conf:
+        #         logger.warning('Hey, we must reload conf from backend !!!!')
+        #         with open(arbiter.pidfile, 'r') as f:
+        #             arbiterpid = f.readline()
+        #         os.kill(int(arbiterpid), signal.SIGHUP)
+        #     self.next_check = int(time.time()) + (60 * self.verify_modification)
 
         if int(time.time()) > self.next_action_check:
             self.get_acknowledge(arbiter)

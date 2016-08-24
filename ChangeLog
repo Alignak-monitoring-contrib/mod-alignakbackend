@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* Clean and log hook_tick function
 * Fix url and make by default username and password
 * Fix arbiter start error
 * Fix errors in get downtimes

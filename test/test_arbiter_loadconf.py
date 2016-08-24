@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
 import time
 import shlex
 import subprocess
@@ -23,15 +24,20 @@ class TestArbiterLoadconf(unittest2.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        # Set test mode for alignak backend
+        os.environ['TEST_ALIGNAK_BACKEND'] = '1'
+        os.environ['ALIGNAK_BACKEND_MONGO_DBNAME'] = 'alignak-module-backend-test'
 
         # Delete used mongo DBs
+        print ("Deleting Alignak backend DB...")
         exit_code = subprocess.call(
             shlex.split(
-                'mongo %s --eval "db.dropDatabase()"' % 'alignak-backend')
+                'mongo %s --eval "db.dropDatabase()"' % os.environ['ALIGNAK_BACKEND_MONGO_DBNAME'])
         )
         assert exit_code == 0
 
-        cls.p = subprocess.Popen(['uwsgi', '-w', 'alignakbackend:app', '--socket', '0.0.0.0:5000',
+        cls.p = subprocess.Popen(['uwsgi', '--plugin', 'python', '-w', 'alignakbackend:app',
+                                  '--socket', '0.0.0.0:5000',
                                   '--protocol=http', '--enable-threads', '--pidfile',
                                   '/tmp/uwsgi.pid'])
         time.sleep(3)
@@ -317,7 +323,16 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'notes': u'',
                 u'contactgroup_members': u'',
                 u'members': u'jeronimo'
-            }
+            },
+            {
+                u'contactgroup_name': u'All',
+                u'imported_from': u'alignakbackend',
+                u'definition_order': 100,
+                u'alias': u'All users',
+                u'notes': u'',
+                u'contactgroup_members': u'',
+                u'members': u''
+            },
         ]
         self.assertItemsEqual(reference, self.objects['contactgroups'])
 
@@ -336,19 +351,19 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'low_flap_threshold': 25,
                 u'process_perf_data': True,
                 u'icon_image': u'',
-                u'service_overrides': '',
+                u'service_overrides': u'',
                 u'snapshot_interval': 5,
                 # u'_realm': u'All',
                 u'notification_interval': 60,
-                u'trending_policies': '',
+                u'trending_policies': u'',
                 u'failure_prediction_enabled': False,
                 u'flap_detection_options': u'o,d,u',
-                u'resultmodulations': '',
+                u'resultmodulations': u'',
                 u'business_rule_downtime_as_ack': False,
-                u'stalking_options': '',
+                u'stalking_options': u'',
                 u'event_handler_enabled': False,
                 u'notes': u'',
-                u'macromodulations': '',
+                u'macromodulations': u'',
                 u'host_name': u'srv001',
                 u'trigger_broker_raise_enabled': False,
                 u'first_notification_delay': 0,
@@ -362,8 +377,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'notifications_enabled': True,
                 u'business_rule_smart_notifications': False,
                 u'vrml_image': u'',
-                u'freshness_threshold': 0,
-                u'custom_views': '',
+                u'custom_views': u'',
                 u'address': u'192.168.0.2',
                 u'display_name': u'',
                 u'service_excludes': '',
@@ -374,9 +388,9 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'statusmap_image': u'',
                 u'2d_coords': u'',
                 u'check_command': u'ping',
-                u'checkmodulations': '',
+                u'checkmodulations': u'',
                 u'notification_options': u'd,u,r,f,s',
-                u'labels': '',
+                u'labels': u'',
                 u'poller_tag': u'None',
                 u'obsess_over_host': False,
                 u'high_flap_threshold': 50,
@@ -386,10 +400,13 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'business_rule_output_template': u'',
                 u'business_rule_service_notification_options': u'w,u,c,r,f,s',
                 u'check_freshness': False,
+                u'freshness_threshold': 0,
+                u'freshness_state': u'u',
                 u'contacts': u'jeronimo',
                 u'contact_groups': u'admins'
             }
         ]
+        print("Hosts: " % self.objects['hosts'])
         self.assertEqual(reference, self.objects['hosts'])
         for host in self.objects['hosts']:
             for key, value in host.iteritems():
@@ -434,12 +451,12 @@ class TestArbiterLoadconf(unittest2.TestCase):
     def test_services(self):
         reference = [
             {
-                u'hostgroup_name': '',
+                u'hostgroup_name': u'',
                 u'active_checks_enabled': True,
                 u'icon_image_alt': u'',
-                u'business_impact_modulations': '',
+                u'business_impact_modulations': u'',
                 u'retry_interval': 0,
-                u'checkmodulations': '',
+                u'checkmodulations': u'',
                 u'obsess_over_service': False,
                 u'action_url': u'',
                 u'is_volatile': False,
@@ -449,28 +466,28 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'icon_image': u'',
                 u'snapshot_interval': 5,
                 u'default_value': u'',
-                u'business_rule_service_notification_options': '',
+                u'business_rule_service_notification_options': u'',
                 u'display_name': u'',
                 u'notification_interval': 60,
-                u'trending_policies': '',
+                u'trending_policies': u'',
                 u'failure_prediction_enabled': False,
-                u'flap_detection_options': 'o,w,c,u',
-                u'resultmodulations': '',
+                u'flap_detection_options': u'o,w,c,u',
+                u'resultmodulations': u'',
                 u'business_rule_downtime_as_ack': False,
-                u'stalking_options': '',
+                u'stalking_options': u'',
                 u'event_handler_enabled': False,
-                u'macromodulations': '',
+                u'macromodulations': u'',
                 u'initial_state': u'o',
                 u'first_notification_delay': 0,
                 u'flap_detection_enabled': True,
-                u'business_rule_host_notification_options': '',
+                u'business_rule_host_notification_options': u'',
                 u'passive_checks_enabled': True,
                 u'host_dependency_enabled': True,
-                u'labels': '',
+                u'labels': u'',
                 u'icon_set': u'',
                 u'definition_order': 100,
                 u'parallelize_check': True,
-                u'snapshot_criteria': 'w,c,u',
+                u'snapshot_criteria': u'w,c,u',
                 u'notifications_enabled': True,
                 u'aggregation': u'',
                 u'business_rule_smart_notifications': False,
@@ -478,12 +495,12 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'reactionner_tag': u'None',
                 'service_description': u'ping',
                 u'imported_from': u'alignakbackend',
-                'service_dependencies': '',
+                'service_dependencies': u'',
                 u'time_to_orphanage': 300,
                 u'trigger_broker_raise_enabled': False,
-                u'custom_views': '',
+                u'custom_views': u'',
                 u'check_command': u'ping!',
-                u'notification_options': 'w,u,c,r,f,s',
+                u'notification_options': u'w,u,c,r,f,s',
                 u'notes_url': u'',
                 u'poller_tag': u'None',
                 'merge_host_contacts': False,
@@ -494,16 +511,18 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'notes': u'',
                 u'freshness_threshold': 0,
                 u'check_freshness': False,
+                u'freshness_state': u'o',
                 u'contacts': u'jeronimo',
-                u'contact_groups': u'admins'
+                u'contact_groups': u'admins',
+                u'escalations': u''
             },
             {
-                u'hostgroup_name': '',
+                u'hostgroup_name': u'',
                 u'active_checks_enabled': True,
                 u'icon_image_alt': u'',
-                u'business_impact_modulations': '',
+                u'business_impact_modulations': u'',
                 u'retry_interval': 0,
-                u'checkmodulations': '',
+                u'checkmodulations': u'',
                 u'obsess_over_service': False,
                 u'action_url': u'',
                 u'is_volatile': False,
@@ -513,28 +532,28 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'icon_image': u'',
                 u'snapshot_interval': 5,
                 u'default_value': u'',
-                u'business_rule_service_notification_options': '',
+                u'business_rule_service_notification_options': u'',
                 u'display_name': u'',
                 u'notification_interval': 60,
-                u'trending_policies': '',
+                u'trending_policies': u'',
                 u'failure_prediction_enabled': False,
-                u'flap_detection_options': 'o,w,c,u',
-                u'resultmodulations': '',
+                u'flap_detection_options': u'o,w,c,u',
+                u'resultmodulations': u'',
                 u'business_rule_downtime_as_ack': False,
-                u'stalking_options': '',
+                u'stalking_options': u'',
                 u'event_handler_enabled': False,
-                u'macromodulations': '',
+                u'macromodulations': u'',
                 u'initial_state': u'o',
                 u'first_notification_delay': 0,
                 u'flap_detection_enabled': True,
-                u'business_rule_host_notification_options': '',
+                u'business_rule_host_notification_options': u'',
                 u'passive_checks_enabled': True,
                 u'host_dependency_enabled': True,
-                u'labels': '',
+                u'labels': u'',
                 u'icon_set': u'',
                 u'definition_order': 100,
                 u'parallelize_check': True,
-                u'snapshot_criteria': 'w,c,u',
+                u'snapshot_criteria': u'w,c,u',
                 u'notifications_enabled': True,
                 u'aggregation': u'',
                 u'business_rule_smart_notifications': False,
@@ -542,12 +561,12 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'reactionner_tag': u'None',
                 'service_description': u'http toto.com',
                 u'imported_from': u'alignakbackend',
-                'service_dependencies': '',
+                'service_dependencies': u'',
                 u'time_to_orphanage': 300,
                 u'trigger_broker_raise_enabled': False,
-                u'custom_views': '',
+                u'custom_views': u'',
                 u'check_command': u'check_http!',
-                u'notification_options': 'w,u,c,r,f,s',
+                u'notification_options': u'w,u,c,r,f,s',
                 u'notes_url': u'',
                 u'poller_tag': u'None',
                 'merge_host_contacts': False,
@@ -558,9 +577,11 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'notes': u'',
                 u'freshness_threshold': 0,
                 u'check_freshness': False,
+                u'freshness_state': u'o',
                 u'contacts': u'jeronimo',
-                u'contact_groups': u'admins'
-            }
+                u'contact_groups': u'admins',
+                u'escalations': u''
+        }
         ]
         self.assertEqual(reference, self.objects['services'])
         for serv in self.objects['services']:
@@ -573,6 +594,8 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'action_url': u'',
                 u'alias': u'All services',
                 u'definition_order': 100,
+                u'servicegroups': u'',
+                u'services': u'',
                 u'servicegroup_members': u'',
                 u'servicegroup_name': u'All',
                 u'imported_from': u'alignakbackend',

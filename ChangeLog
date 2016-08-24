@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* Several cleanings: - added logs for module configuration - added logs for loaded configuration - include `tags` in the unused fields - fix resource load count to > 0
 * Clean and log hook_tick function
 * Fix url and make by default username and password
 * Fix arbiter start error

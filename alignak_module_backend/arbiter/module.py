@@ -727,13 +727,15 @@ class AlignakBackendArbit(BaseModule):
         :return: None
         """
         try:
-            if int(time.time()) > self.next_check:
+            now = int(time.time())
+            if now > self.next_check:
                 logger.info(
                     "[Backend Arbiter] Check if system configuration changed in the backend..."
                 )
                 resources = [
                     'realm', 'command', 'timeperiod',
-                    'usergroup', 'user',
+                    'usergroup',
+                    # 'user',
                     'hostgroup', 'host', 'hostdependency', 'hostescalation',
                     'servicegroup', 'service', 'servicedependency', 'serviceescalation',
                     'trigger'
@@ -742,7 +744,10 @@ class AlignakBackendArbit(BaseModule):
                 for resource in resources:
                     ret = self.backend.get(resource, {'where': '{"_updated":{"$gte": "' +
                                                                self.time_loaded_conf + '"}}'})
-                    logger.info(" - resource: %s, count: %d", resource, ret['_meta']['total'])
+                    logger.info(
+                        " - backend updated resource: %s, count: %d",
+                        resource, ret['_meta']['total']
+                    )
                     if ret['_meta']['total'] > 0:
                         reload_conf = True
                 if reload_conf:
@@ -752,16 +757,25 @@ class AlignakBackendArbit(BaseModule):
                     with open(arbiter.pidfile, 'r') as f:
                         arbiterpid = f.readline()
                     os.kill(int(arbiterpid), signal.SIGHUP)
-                self.next_check = int(time.time()) + (60 * self.verify_modification)
+                self.next_check = now + (60 * self.verify_modification)
+                logger.debug(
+                    "[Backend Arbiter] next configuration reload check in %s seconds ---",
+                    (self.next_check - now)
+                )
 
-            if int(time.time()) > self.next_action_check:
+            if now > self.next_action_check:
                 logger.debug("Check if acknowledgements are required...")
                 self.get_acknowledge(arbiter)
                 logger.debug("Check if downtime scheduling are required...")
                 self.get_downtime(arbiter)
                 logger.debug("Check if re-checks are required...")
                 self.get_forcecheck(arbiter)
-                self.next_action_check = int(time.time()) + self.action_check
+
+                self.next_action_check = now + self.action_check
+                logger.debug(
+                    "[Backend Arbiter] next actions check in %s seconds ---",
+                    (self.next_action_check - int(now))
+                )
         except Exception as exp:
             logger.warning("[Backend Arbiter] hook_tick exception: %s", str(exp))
             logger.warning("[Backend Arbiter] traceback", traceback.format_exc())

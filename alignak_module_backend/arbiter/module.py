@@ -734,8 +734,7 @@ class AlignakBackendArbit(BaseModule):
                 )
                 resources = [
                     'realm', 'command', 'timeperiod',
-                    'usergroup',
-                    # 'user',
+                    'usergroup', 'user',
                     'hostgroup', 'host', 'hostdependency', 'hostescalation',
                     'servicegroup', 'service', 'servicedependency', 'serviceescalation',
                     'trigger'

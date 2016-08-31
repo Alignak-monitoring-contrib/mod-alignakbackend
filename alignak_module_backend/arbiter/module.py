@@ -772,7 +772,7 @@ class AlignakBackendArbit(BaseModule):
                 )
         except Exception as exp:
             logger.warning("[Backend Arbiter] hook_tick exception: %s", str(exp))
-            logger.warning("[Backend Arbiter] traceback", traceback.format_exc())
+            logger.warning("[Backend Arbiter] traceback: %s", traceback.format_exc())
 
     @staticmethod
     def convert_date_timestamp(mydate):

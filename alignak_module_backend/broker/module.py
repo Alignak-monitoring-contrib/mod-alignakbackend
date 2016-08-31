@@ -63,6 +63,9 @@ class AlignakBackendBrok(BaseModule):
         if self.backend.token == '':
             self.getToken(getattr(modconf, 'username', ''), getattr(modconf, 'password', ''),
                           getattr(modconf, 'allowgeneratetoken', False))
+
+        self.logged_in = self.backendConnection()
+
         self.ref_live = {
             'host': {},
             'service': {}
@@ -99,65 +102,83 @@ class AlignakBackendBrok(BaseModule):
         generate = 'enabled'
         if not generatetoken:
             generate = 'disabled'
-        self.backend.login(username, password, generate)
+        result = self.backend.login(username, password, generate)
+        if not result:
+            logger.error(
+                "[Backend Broker] Configured user account is not allowed to log-in: %s", username
+            )
+        return result
+
+    def backendConnection(self):
+        """
+        Backend connection to check live state update is allowed
+
+        :return: True/False
+        """
+        params = {'where': '{"token":"%s"}' % self.backend.token}
+        users = self.backend.get('user', params)
+        for item in users['_items']:
+            return item['can_update_livestate']
+
+        logger.error("[Backend Broker] Configured user account is not allowed for this module")
+        return False
 
     def get_refs(self, type_data):
         """
         Get the _id in the backend for hosts and services
 
-        :param type_data: livestate type to get: livehost or liveservice
+        :param type_data: livestate type to get: livestate_host or livestate_service
         :type type_data: str
         :return: None
         """
-        if type_data == 'livehost':
-            params = {'projection': '{"name":1}',
-                      'where': '{"_is_template":false}'}
+        if type_data == 'livestate_host':
+            params = {
+                'projection': '{"name":1,"ls_state":1,"ls_state_type":1,"_realm":1}',
+                'where': '{"_is_template":false}'
+            }
             content = self.backend.get_all('host', params)
             for item in content['_items']:
                 self.mapping['host'][item['name']] = item['_id']
-            # get all livehost
-            params = {'projection': '{"host":1,"state":1,"state_type":1,"_realm":1}',
-                      'where': '{"type":"host"}'}
-            contentlh = self.backend.get_all('livestate', params)
-            for item in contentlh['_items']:
-                self.ref_live['host'][item['host']] = {
+
+                self.ref_live['host'][item['_id']] = {
                     '_id': item['_id'],
                     '_etag': item['_etag'],
                     '_realm': item['_realm'],
-                    'initial_state': item['state'],
-                    'initial_state_type': item['state_type']
+                    'initial_state': item['ls_state'],
+                    'initial_state_type': item['ls_state_type']
                 }
             self.loaded_hosts = True
-        elif type_data == 'liveservice':
-            params = {'projection': '{"name":1}',
-                      'where': '{"_is_template":false}'}
+        elif type_data == 'livestate_service':
+            params = {
+                'projection': '{"name":1}',
+                'where': '{"_is_template":false}'
+            }
             contenth = self.backend.get_all('host', params)
             hosts = {}
             for item in contenth['_items']:
                 hosts[item['_id']] = item['name']
-            params = {'projection': '{"name":1,"host":1}',
-                      'where': '{"_is_template":false}'}
+
+            params = {
+                'projection': '{"host":1,"name":1,"ls_state":1,"ls_state_type":1,"_realm":1}',
+                'where': '{"_is_template":false}'
+            }
             content = self.backend.get_all('service', params)
             for item in content['_items']:
                 self.mapping['service'][''.join([hosts[item['host']],
                                                  item['name']])] = item['_id']
-            # get all liveservice
-            params = {'projection': '{"service":1,"state":1,"state_type":1,"_realm":1}',
-                      'where': '{"type":"service"}'}
-            contentls = self.backend.get_all('livestate', params)
-            for item in contentls['_items']:
-                self.ref_live['service'][item['service']] = {
+
+                self.ref_live['service'][item['_id']] = {
                     '_id': item['_id'],
                     '_etag': item['_etag'],
                     '_realm': item['_realm'],
-                    'initial_state': item['state'],
-                    'initial_state_type': item['state_type']
+                    'initial_state': item['ls_state'],
+                    'initial_state_type': item['ls_state_type']
                 }
             self.loaded_services = True
 
     def update(self, data, obj_type):
         """
-        Update livehost and liveservice
+        Update livestate_host and livestate_service
 
         :param data: dictionary of data from scheduler
         :type data: dict
@@ -168,106 +189,108 @@ class AlignakBackendBrok(BaseModule):
         """
         start_time = time.time()
         counters = {
-            'livehost': 0,
-            'liveservice': 0,
-            'loghost': 0,
-            'logservice': 0
+            'livestate_host': 0,
+            'livestate_service': 0,
+            'log_host': 0,
+            'log_service': 0
         }
 
         if obj_type == 'host':
             if data['host_name'] in self.mapping['host']:
                 data_to_update = {
-                    'state': data['state'],
-                    'state_id': data['state_id'],
-                    'state_type': data['state_type'],
-                    'last_check': data['last_chk'],
-                    'last_state': data['last_state'],
-                    'last_state_type': data['last_state_type'],
-                    'output': data['output'],
-                    'long_output': data['long_output'],
-                    'perf_data': data['perf_data'],
-                    'acknowledged': data['problem_has_been_acknowledged'],
-                    'execution_time': data['execution_time'],
-                    'latency': data['latency']
+                    'ls_state': data['state'],
+                    'ls_state_id': data['state_id'],
+                    'ls_state_type': data['state_type'],
+                    'ls_last_check': data['last_chk'],
+                    'ls_last_state': data['last_state'],
+                    'ls_last_state_type': data['last_state_type'],
+                    'ls_output': data['output'],
+                    'ls_long_output': data['long_output'],
+                    'ls_perf_data': data['perf_data'],
+                    'ls_acknowledged': data['problem_has_been_acknowledged'],
+                    'ls_execution_time': data['execution_time'],
+                    'ls_latency': data['latency']
                 }
+
                 h_id = self.mapping['host'][data['host_name']]
                 if 'initial_state' in self.ref_live['host'][h_id]:
-                    data_to_update['last_state'] = self.ref_live['host'][h_id]['initial_state']
-                    data_to_update['last_state_type'] = \
+                    data_to_update['ls_last_state'] = self.ref_live['host'][h_id]['initial_state']
+                    data_to_update['ls_last_state_type'] = \
                         self.ref_live['host'][h_id]['initial_state_type']
                     del self.ref_live['host'][h_id]['initial_state']
                     del self.ref_live['host'][h_id]['initial_state_type']
 
                 data_to_update['_realm'] = self.ref_live['host'][h_id]['_realm']
+                logger.debug("[Backend Broker] host live state data: %s", data_to_update)
 
                 # Update live state
-                ret = self.send_to_backend('livehost', data['host_name'], data_to_update)
+                ret = self.send_to_backend('livestate_host', data['host_name'], data_to_update)
                 if ret:
-                    counters['livehost'] += 1
+                    counters['livestate_host'] += 1
 
-                # Add log
-                # del data_to_update['last_state_type']
-                data_to_update['state_changed'] = (
-                    data_to_update['state'] != data_to_update['last_state']
+                # Add an host log
+                data_to_update['ls_state_changed'] = (
+                    data_to_update['ls_state'] != data_to_update['ls_last_state']
                 )
                 data_to_update['host'] = self.mapping['host'][data['host_name']]
                 data_to_update['service'] = None
-                logger.debug("[Backend Broker] loghost data: %s", data_to_update)
-                ret = self.send_to_backend('loghost', data['host_name'], data_to_update)
+
+                ret = self.send_to_backend('log_host', data['host_name'], data_to_update)
                 if ret:
-                    counters['loghost'] += 1
+                    counters['log_host'] += 1
         elif obj_type == 'service':
             service_name = ''.join([data['host_name'], data['service_description']])
             if service_name in self.mapping['service']:
                 data_to_update = {
-                    'state': data['state'],
-                    'state_id': data['state_id'],
-                    'state_type': data['state_type'],
-                    'last_check': data['last_chk'],
-                    'last_state': data['last_state'],
-                    'last_state_type': data['last_state_type'],
-                    'output': data['output'],
-                    'long_output': data['long_output'],
-                    'perf_data': data['perf_data'],
-                    'acknowledged': data['problem_has_been_acknowledged'],
-                    'execution_time': data['execution_time'],
-                    'latency': data['latency']
+                    'ls_state': data['state'],
+                    'ls_state_id': data['state_id'],
+                    'ls_state_type': data['state_type'],
+                    'ls_last_check': data['last_chk'],
+                    'ls_last_state': data['last_state'],
+                    'ls_last_state_type': data['last_state_type'],
+                    'ls_output': data['output'],
+                    'ls_long_output': data['long_output'],
+                    'ls_perf_data': data['perf_data'],
+                    'ls_acknowledged': data['problem_has_been_acknowledged'],
+                    'ls_execution_time': data['execution_time'],
+                    'ls_latency': data['latency']
                 }
                 s_id = self.mapping['service'][service_name]
                 if 'initial_state' in self.ref_live['service'][s_id]:
-                    data_to_update['last_state'] = self.ref_live['service'][s_id]['initial_state']
-                    data_to_update['last_state_type'] = \
+                    data_to_update['ls_last_state'] = self.ref_live['service'][s_id]['initial_state']
+                    data_to_update['ls_last_state_type'] = \
                         self.ref_live['service'][s_id]['initial_state_type']
                     del self.ref_live['service'][s_id]['initial_state']
                     del self.ref_live['service'][s_id]['initial_state_type']
 
                 data_to_update['_realm'] = self.ref_live['service'][s_id]['_realm']
+                logger.debug("[Backend Broker] service live state data: %s", data_to_update)
 
                 # Update live state
-                ret = self.send_to_backend('liveservice', service_name, data_to_update)
+                ret = self.send_to_backend('livestate_service', service_name, data_to_update)
                 if ret:
-                    counters['liveservice'] += 1
+                    counters['livestate_service'] += 1
 
-                # Add log
-                # del data_to_update['last_state_type']
-                data_to_update['state_changed'] = (
-                    data_to_update['state'] != data_to_update['last_state']
+                # Add a service log
+                data_to_update['ls_state_changed'] = (
+                    data_to_update['ls_state'] != data_to_update['ls_last_state']
                 )
                 data_to_update['host'] = self.mapping['host'][data['host_name']]
                 data_to_update['service'] = self.mapping['service'][service_name]
-                logger.debug("[Backend Broker] logservice data: %s", data_to_update)
-                self.send_to_backend('logservice', service_name, data_to_update)
+
+                self.send_to_backend('log_service', service_name, data_to_update)
                 if ret:
-                    counters['logservice'] += 1
-        if (counters['livehost'] + counters['liveservice']) > 0:
+                    counters['log_service'] += 1
+                    
+        if (counters['livestate_host'] + counters['livestate_service']) > 0:
             logger.debug("--- %s seconds ---", (time.time() - start_time))
         return counters
 
     def send_to_backend(self, type_data, name, data):
         """
-        Send data to alignak backend livehost or liveservice
+        Send data to alignak backend
 
-        :param type_data: one of ['livehost', 'liveservice', 'loghost', 'logservice']
+        :param type_data: one of ['livestate_host', 'livestate_service', 'log_host', 'log_service']
         :type type_data: str
         :param name: name of host or service
         :type name: str
@@ -280,52 +303,53 @@ class AlignakBackendBrok(BaseModule):
             'Content-Type': 'application/json',
         }
         ret = True
-        if type_data == 'livehost':
+        if type_data == 'livestate_host':
             headers['If-Match'] = self.ref_live['host'][self.mapping['host'][name]]['_etag']
             try:
                 response = self.backend.patch(
-                    'livestate/%s' % self.ref_live['host'][self.mapping['host'][name]]['_id'],
+                    'host/%s' % self.ref_live['host'][self.mapping['host'][name]]['_id'],
                     data, headers, True)
                 if response['_status'] == 'ERR':
-                    logger.error(response['_issues'])
+                    logger.error('[Backend Broker] ', response['_issues'])
                     ret = False
                 else:
                     self.ref_live['host'][self.mapping['host'][name]]['_etag'] = response['_etag']
             except BackendException as e:
-                logger.error('Patch livestate host %s has error: %s', self.mapping['host'][name],
+                logger.error('[Backend Broker] Patch livestate host %s has error: %s',
+                             self.mapping['host'][name],
                              str(e))
-                logger.error('Response: %s', e.response)
-        elif type_data == 'liveservice':
+                logger.error('[Backend Broker] Response: %s', e.response)
+        elif type_data == 'livestate_service':
             headers['If-Match'] = self.ref_live['service'][self.mapping['service'][name]]['_etag']
             try:
                 response = self.backend.patch(
-                    'livestate/%s' % self.ref_live['service'][self.mapping['service'][name]]['_id'],
+                    'service/%s' % self.ref_live['service'][self.mapping['service'][name]]['_id'],
                     data, headers, True)
                 if response['_status'] == 'ERR':
-                    logger.error(response['_issues'])
+                    logger.error('[Backend Broker] ', response['_issues'])
                     ret = False
                 else:
                     self.ref_live['service'][self.mapping['service'][name]]['_etag'] = response[
                         '_etag']
             except BackendException as e:
-                logger.error('Patch livestate service %s has error: %s',
+                logger.error('[Backend Broker] Patch livestate service %s has error: %s',
                              self.mapping['service'][name], str(e))
-                logger.error('Response: %s', e.response)
-        elif type_data == 'loghost':
+                logger.error('[Backend Broker] Response: %s', e.response)
+        elif type_data == 'log_host':
             try:
                 response = self.backend.post('logcheckresult', data)
             except BackendException as e:
-                logger.error('Post logcheckresult of host %s has error: %s',
+                logger.error('[Backend Broker] Post logcheckresult of host %s has error: %s',
                              self.mapping['host'][name], str(e))
-                logger.error('Response: %s', e.response)
+                logger.error('[Backend Broker] Response: %s', e.response)
                 ret = False
-        elif type_data == 'logservice':
+        elif type_data == 'log_service':
             try:
                 response = self.backend.post('logcheckresult', data)
             except BackendException as e:
-                logger.error('Post logcheckresult of service %s has error: %s',
+                logger.error('[Backend Broker] Post logcheckresult of service %s has error: %s',
                              self.mapping['service'][name], str(e))
-                logger.error('Response: %s', e.response)
+                logger.error('[Backend Broker] Response: %s', e.response)
                 ret = False
         return ret
 
@@ -337,11 +361,14 @@ class AlignakBackendBrok(BaseModule):
         :type queue: object
         :return: None
         """
+        if not self.logged_in:
+            logger.debug("[Backend Broker] Not logged-in, ignoring broks...")
+            return
 
         if not self.loaded_hosts:
-            self.get_refs('livehost')
+            self.get_refs('livestate_host')
         if not self.loaded_services:
-            self.get_refs('liveservice')
+            self.get_refs('livestate_service')
 
         if queue.type == 'host_check_result':
             self.update(queue.data, 'host')

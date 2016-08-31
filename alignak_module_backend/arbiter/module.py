@@ -656,22 +656,6 @@ class AlignakBackendArbit(BaseModule):
             self.convert_lists(serviceescalation)
             self.config['serviceescalations'].append(serviceescalation)
 
-    def get_triggers(self):
-        """
-        Get triggers from alignak_backend
-
-        :return: None
-        """
-        all_triggers = self.backend.get_all('trigger')
-        logger.info("[Backend Arbiter] Got %d triggers", len(all_triggers['_items']))
-        for trigger in all_triggers['_items']:
-            logger.info("[Backend Arbiter] - %s", trigger['name'])
-            trigger['trigger_name'] = trigger['name']
-            trigger['imported_from'] = u'alignakbackend'
-            self.clean_unusable_keys(trigger)
-            self.convert_lists(trigger)
-            self.config['triggers'].append(trigger)
-
     def get_objects(self):
         """
         Get objects from alignak-backend
@@ -693,7 +677,6 @@ class AlignakBackendArbit(BaseModule):
         self.get_hostescalations()
         self.get_servicedependencies()
         self.get_serviceescalations()
-        self.get_triggers()
 
         self.time_loaded_conf = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
 

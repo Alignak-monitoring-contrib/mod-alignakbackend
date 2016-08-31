@@ -357,12 +357,12 @@ class AlignakBackendBrok(BaseModule):
         self.set_proctitle(self.name)
         self.set_exit_handler()
         while not self.interrupted:
-            logger.debug("[Alignak Backend Brok] queue length: %s", self.to_q.qsize())
+            logger.debug("[Backend Broker] queue length: %s", self.to_q.qsize())
             start = time.time()
             l = self.to_q.get()
             for b in l:
                 b.prepare()
                 self.manage_brok(b)
 
-            logger.debug("[Alignak Backend Brok] time to manage %s broks (%d secs)", len(l),
+            logger.debug("[Backend Broker] time to manage %s broks (%d secs)", len(l),
                          time.time() - start)

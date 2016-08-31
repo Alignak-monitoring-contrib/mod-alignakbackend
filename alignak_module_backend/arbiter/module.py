@@ -175,21 +175,22 @@ class AlignakBackendArbit(BaseModule):
         :type resource: dict
         :return:
         """
-        fields = ['_links', '_updated', '_created', '_etag', '_id', 'name', 'ui', '_realm',
-                  '_sub_realm', '_users_read', '_users_update', '_users_delete', '_parent',
-                  '_tree_parents', '_all_children', '_level', 'customs', 'host', 'service',
-                  'back_role_super_admin', 'token', '_templates', '_template_fields', 'note',
-                  '_is_template', '_templates_with_services', '_templates_from_host_template',
-                  'merge_host_users', 'hosts_critical_threshold', 'hosts_warning_threshold',
-                  'services_critical_threshold', 'services_warning_threshold',
-                  'global_critical_threshold', 'global_warning_threshold', '_children',
-                  'hostgroups', 'hosts', 'location', 'usergroups', 'users', 'duplicate_foreach',
-                  'tags',
-                  'ls_acknowledged', 'ls_current_attempt', 'ls_downtimed', 'ls_execution_time',
-                  'ls_grafana', 'ls_grafana_panelid', 'ls_impact', 'ls_last_check', 'ls_last_state',
-                  'ls_last_state_changed', 'ls_last_state_type', 'ls_latency', 'ls_long_output',
-                  'ls_max_attempts', 'ls_next_check', 'ls_output', 'ls_perf_data',
-                  'ls_state', 'ls_state_id','ls_state_type'
+        fields = [
+            '_links', '_updated', '_created', '_etag', '_id', 'name', 'ui', '_realm',
+            '_sub_realm', '_users_read', '_users_update', '_users_delete', '_parent',
+            '_tree_parents', '_all_children', '_level', 'customs', 'host', 'service',
+            'back_role_super_admin', 'token', '_templates', '_template_fields', 'note',
+            '_is_template', '_templates_with_services', '_templates_from_host_template',
+            'merge_host_users', 'hosts_critical_threshold', 'hosts_warning_threshold',
+            'services_critical_threshold', 'services_warning_threshold',
+            'global_critical_threshold', 'global_warning_threshold', '_children',
+            'hostgroups', 'hosts', 'location', 'usergroups', 'users', 'duplicate_foreach',
+            'tags',
+            'ls_acknowledged', 'ls_current_attempt', 'ls_downtimed', 'ls_execution_time',
+            'ls_grafana', 'ls_grafana_panelid', 'ls_impact', 'ls_last_check', 'ls_last_state',
+            'ls_last_state_changed', 'ls_last_state_type', 'ls_latency', 'ls_long_output',
+            'ls_max_attempts', 'ls_next_check', 'ls_output', 'ls_perf_data',
+            'ls_state', 'ls_state_id', 'ls_state_type'
         ]
         for field in fields:
             if field in resource:

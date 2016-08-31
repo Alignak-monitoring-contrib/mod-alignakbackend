@@ -257,7 +257,8 @@ class AlignakBackendBrok(BaseModule):
                 }
                 s_id = self.mapping['service'][service_name]
                 if 'initial_state' in self.ref_live['service'][s_id]:
-                    data_to_update['ls_last_state'] = self.ref_live['service'][s_id]['initial_state']
+                    data_to_update['ls_last_state'] = \
+                        self.ref_live['service'][s_id]['initial_state']
                     data_to_update['ls_last_state_type'] = \
                         self.ref_live['service'][s_id]['initial_state_type']
                     del self.ref_live['service'][s_id]['initial_state']
@@ -281,7 +282,7 @@ class AlignakBackendBrok(BaseModule):
                 self.send_to_backend('log_service', service_name, data_to_update)
                 if ret:
                     counters['log_service'] += 1
-                    
+
         if (counters['livestate_host'] + counters['livestate_service']) > 0:
             logger.debug("--- %s seconds ---", (time.time() - start_time))
         return counters
@@ -310,7 +311,7 @@ class AlignakBackendBrok(BaseModule):
                     'host/%s' % self.ref_live['host'][self.mapping['host'][name]]['_id'],
                     data, headers, True)
                 if response['_status'] == 'ERR':
-                    logger.error('[Backend Broker] ', response['_issues'])
+                    logger.error('[Backend Broker] %s', response['_issues'])
                     ret = False
                 else:
                     self.ref_live['host'][self.mapping['host'][name]]['_etag'] = response['_etag']
@@ -326,7 +327,7 @@ class AlignakBackendBrok(BaseModule):
                     'service/%s' % self.ref_live['service'][self.mapping['service'][name]]['_id'],
                     data, headers, True)
                 if response['_status'] == 'ERR':
-                    logger.error('[Backend Broker] ', response['_issues'])
+                    logger.error('[Backend Broker] %s', response['_issues'])
                     ret = False
                 else:
                     self.ref_live['service'][self.mapping['service'][name]]['_etag'] = response[

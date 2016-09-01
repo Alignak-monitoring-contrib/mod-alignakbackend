@@ -596,7 +596,8 @@ class AlignakBackendArbit(BaseModule):
             logger.info("[Backend Arbiter] - %s", hostdependency['name'])
             self.configraw['hostdependencies'][hostdependency['_id']] = hostdependency['name']
             hostdependency['imported_from'] = u'alignakbackend'
-            hostdependency['hostdependency_name'] = hostdependency['name']
+            # Do not exist in Alignak
+            # hostdependency['hostdependency_name'] = hostdependency['name']
 
             hostdependency['dependent_hostgroup_name'] = hostdependency['dependent_hostgroups']
             hostdependency['dependent_host_name'] = hostdependency['dependent_hosts']
@@ -661,7 +662,8 @@ class AlignakBackendArbit(BaseModule):
             self.configraw['servicedependencies'][servicedependency['_id']] = \
                 servicedependency['name']
             servicedependency['imported_from'] = u'alignakbackend'
-            servicedependency['servicedependency_name'] = servicedependency['name']
+            # Do not exist in Alignak
+            # servicedependency['servicedependency_name'] = servicedependency['name']
 
             servicedependency['dependent_hostgroup_name'] = \
                     servicedependency['dependent_hostgroups']

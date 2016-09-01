@@ -666,11 +666,11 @@ class AlignakBackendArbit(BaseModule):
             # servicedependency['servicedependency_name'] = servicedependency['name']
 
             servicedependency['dependent_hostgroup_name'] = \
-                    servicedependency['dependent_hostgroups']
+                servicedependency['dependent_hostgroups']
             servicedependency['dependent_host_name'] = \
-                    servicedependency['dependent_hosts']
+                servicedependency['dependent_hosts']
             servicedependency['dependent_service_description'] = \
-                    servicedependency['dependent_services']
+                servicedependency['dependent_services']
             servicedependency['hostgroup_name'] = servicedependency['hostgroups']
             servicedependency['host_name'] = servicedependency['hosts']
             servicedependency['service_description'] = servicedependency['services']

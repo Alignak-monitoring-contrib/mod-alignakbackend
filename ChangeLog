@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* Fix error when inserting logs in the backend
 * Update readme
 * Update requirements (test)
 * Fix pep8

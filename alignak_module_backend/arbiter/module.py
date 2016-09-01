@@ -793,8 +793,7 @@ class AlignakBackendArbit(BaseModule):
                     'realm', 'command', 'timeperiod',
                     'usergroup', 'user',
                     'hostgroup', 'host', 'hostdependency', 'hostescalation',
-                    'servicegroup', 'service', 'servicedependency', 'serviceescalation',
-                    'trigger'
+                    'servicegroup', 'service', 'servicedependency', 'serviceescalation'
                 ]
                 reload_conf = False
                 for resource in resources:

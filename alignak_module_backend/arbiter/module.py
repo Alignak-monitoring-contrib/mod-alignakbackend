@@ -301,22 +301,20 @@ class AlignakBackendArbit(BaseModule):
         for contactgroup in all_contactgroups['_items']:
             logger.info("[Backend Arbiter] - %s", contactgroup['name'])
             self.configraw['contactgroups'][contactgroup['_id']] = contactgroup['name']
+
+        for contactgroup in all_contactgroups['_items']:
             contactgroup[u'imported_from'] = u'alignakbackend'
             contactgroup[u'contactgroup_name'] = contactgroup['name']
-            contactgroup[u'members'] = []
-            if 'users' in contactgroup:
-                contactgroup[u'members'] = contactgroup['users']
-            contactgroup[u'contactgroup_members'] = []
-            if 'usergroups' in contactgroup:
-                contactgroup[u'contactgroup_members'] = contactgroup['usergroups']
+            contactgroup[u'contactgroup_members'] = contactgroup['usergroups']
+            contactgroup[u'members'] = contactgroup['users']
             # members
             self.multiple_relation(contactgroup, 'members', 'contacts')
             # contactgroup_members
-            # self.multiple_relation(contactgroup, 'contactgroup_members', 'contactgroups')
+            self.multiple_relation(contactgroup, 'contactgroup_members', 'contactgroups')
             self.clean_unusable_keys(contactgroup)
             self.convert_lists(contactgroup)
 
-            logger.debug("[Backend Arbiter] - contacts group: %s", contactgroup)
+            logger.info("[Backend Arbiter] - contacts group: %s", contactgroup)
             self.config['contactgroups'].append(contactgroup)
 
     def get_contacts(self):
@@ -381,14 +379,17 @@ class AlignakBackendArbit(BaseModule):
         for hostgroup in all_hostgroups['_items']:
             logger.info("[Backend Arbiter] - %s", hostgroup['name'])
             self.configraw['hostgroups'][hostgroup['_id']] = hostgroup['name']
+
+        for hostgroup in all_hostgroups['_items']:
+            self.configraw['hostgroups'][hostgroup['_id']] = hostgroup['name']
             hostgroup[u'imported_from'] = u'alignakbackend'
             hostgroup[u'hostgroup_name'] = hostgroup['name']
+            hostgroup[u'hostgroup_members'] = hostgroup['hostgroups']
             hostgroup[u'members'] = hostgroup['hosts']
             # members
             self.multiple_relation(hostgroup, 'members', 'hosts')
             # hostgroup_members
-            # ## self.multiple_relation(hostgroup, 'hostgroup_members', 'hostgroup_name')
-            hostgroup[u'hostgroup_members'] = []
+            self.multiple_relation(hostgroup, 'hostgroup_members', 'hostgroups')
             self.clean_unusable_keys(hostgroup)
             self.convert_lists(hostgroup)
 
@@ -407,7 +408,6 @@ class AlignakBackendArbit(BaseModule):
                     len(all_hosts['_items']))
         for host in all_hosts['_items']:
             logger.info("[Backend Arbiter] - %s", host['name'])
-            logger.info("[Backend Arbiter] - %s", host)
             self.configraw['hosts'][host['_id']] = host['name']
             host[u'host_name'] = host['name']
             host[u'imported_from'] = u'alignakbackend'
@@ -483,15 +483,23 @@ class AlignakBackendArbit(BaseModule):
         for servicegroup in all_servicegroups['_items']:
             logger.info("[Backend Arbiter] - %s", servicegroup['name'])
             self.configraw['servicegroups'][servicegroup['_id']] = servicegroup['name']
+
+        for servicegroup in all_servicegroups['_items']:
+            self.configraw['servicegroups'][servicegroup['_id']] = servicegroup['name']
             servicegroup['imported_from'] = u'alignakbackend'
             servicegroup['servicegroup_name'] = servicegroup['name']
+            servicegroup[u'servicegroup_members'] = servicegroup['servicegroups']
             # members
-            # ## self.multiple_relation(servicegroup, 'members', 'service_description')
-            servicegroup['members'] = ''
+            members = []
+            for service in servicegroup['services']:
+                if service not in self.configraw['services']:
+                    continue
+                for svc in self.config['services']:
+                    if self.configraw['services'][service] == svc['service_description']:
+                        members.append("%s,%s" % (svc['host_name'], svc['service_description']))
+            servicegroup['members'] = ','.join(members)
             # servicegroup_members
-            # ## self.multiple_relation(servicegroup, 'servicegroup_members', 'servicegroup_name')
-            servicegroup['servicegroup_members'] = ''
-
+            self.multiple_relation(servicegroup, 'servicegroup_members', 'servicegroups')
             self.clean_unusable_keys(servicegroup)
             self.convert_lists(servicegroup)
 
@@ -735,8 +743,8 @@ class AlignakBackendArbit(BaseModule):
         self.get_contactgroups()
         self.get_hosts()
         self.get_hostgroups()
-        self.get_servicegroups()
         self.get_services()
+        self.get_servicegroups()
         self.get_hostdependencies()
         self.get_hostescalations()
         self.get_servicedependencies()

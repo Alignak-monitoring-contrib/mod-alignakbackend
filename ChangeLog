@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* Fix several configuration problems: - host realm - hosts and services dependencies - missing raw config for services
 * Fix pylint
 * Fix pylint
 * Fix pylint

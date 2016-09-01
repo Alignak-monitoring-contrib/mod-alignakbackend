@@ -235,6 +235,11 @@ class AlignakBackendBrok(BaseModule):
                 data_to_update['host'] = self.mapping['host'][data['host_name']]
                 data_to_update['service'] = None
 
+                # Rename ls_ keys...
+                for key in data_to_update:
+                    if key.startswith('ls_'):
+                        data_to_update[key[3:]] = data_to_update[key]
+                        del data_to_update[key]
                 ret = self.send_to_backend('log_host', data['host_name'], data_to_update)
                 if ret:
                     counters['log_host'] += 1
@@ -278,6 +283,12 @@ class AlignakBackendBrok(BaseModule):
                 )
                 data_to_update['host'] = self.mapping['host'][data['host_name']]
                 data_to_update['service'] = self.mapping['service'][service_name]
+
+                # Rename ls_ keys...
+                for key in data_to_update:
+                    if key.startswith('ls_'):
+                        data_to_update[key[3:]] = data_to_update[key]
+                        del data_to_update[key]
 
                 self.send_to_backend('log_service', service_name, data_to_update)
                 if ret:

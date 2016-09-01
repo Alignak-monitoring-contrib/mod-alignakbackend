@@ -1,6 +1,12 @@
 CHANGES
 =======
 
+* Fix pylint
+* Fix pylint
+* Fix pylint
+* Add the live state fields to the excluded fields
+* Fix pep8
+* Update arbiter module for the new backend model
 * Update version to 0.5.0
 * New livestate management
 * Clean logs

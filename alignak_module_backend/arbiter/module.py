@@ -184,8 +184,11 @@ class AlignakBackendArbit(BaseModule):
             'merge_host_users', 'hosts_critical_threshold', 'hosts_warning_threshold',
             'services_critical_threshold', 'services_warning_threshold',
             'global_critical_threshold', 'global_warning_threshold', '_children',
-            'hostgroups', 'hosts', 'location', 'usergroups', 'users', 'duplicate_foreach',
-            'tags',
+            'hostgroups', 'hosts', 'dependent_hostgroups', 'dependent_hosts',
+            'servicegroups', 'services', 'dependent_servicegroups', 'dependent_services',
+            'usergroups', 'users',
+            'location',
+            'duplicate_foreach', 'tags',
             'ls_acknowledged', 'ls_current_attempt', 'ls_downtimed', 'ls_execution_time',
             'ls_grafana', 'ls_grafana_panelid', 'ls_impact', 'ls_last_check', 'ls_last_state',
             'ls_last_state_changed', 'ls_last_state_type', 'ls_latency', 'ls_long_output',
@@ -233,6 +236,8 @@ class AlignakBackendArbit(BaseModule):
             del realm['notes']
             del realm['alias']
             # self.convert_lists(realm)
+
+            logger.debug("[Backend Arbiter] - realm: %s", realm)
             self.config['realms'].append(realm)
 
     def get_commands(self):
@@ -254,6 +259,8 @@ class AlignakBackendArbit(BaseModule):
             del command['alias']
             del command['notes']
             self.convert_lists(command)
+
+            logger.debug("[Backend Arbiter] - command: %s", command)
             self.config['commands'].append(command)
 
     def get_timeperiods(self):
@@ -277,6 +284,8 @@ class AlignakBackendArbit(BaseModule):
             self.clean_unusable_keys(timeperiod)
             del timeperiod['notes']
             self.convert_lists(timeperiod)
+
+            logger.debug("[Backend Arbiter] - timeperiod: %s", timeperiod)
             self.config['timeperiods'].append(timeperiod)
 
     def get_contactgroups(self):
@@ -306,6 +315,8 @@ class AlignakBackendArbit(BaseModule):
             # self.multiple_relation(contactgroup, 'contactgroup_members', 'contactgroups')
             self.clean_unusable_keys(contactgroup)
             self.convert_lists(contactgroup)
+
+            logger.debug("[Backend Arbiter] - contacts group: %s", contactgroup)
             self.config['contactgroups'].append(contactgroup)
 
     def get_contacts(self):
@@ -353,6 +364,8 @@ class AlignakBackendArbit(BaseModule):
             del contact['notes']
             del contact['ui_preferences']
             self.convert_lists(contact)
+
+            logger.debug("[Backend Arbiter] - contact: %s", contact)
             self.config['contacts'].append(contact)
 
     def get_hostgroups(self):
@@ -378,6 +391,8 @@ class AlignakBackendArbit(BaseModule):
             hostgroup[u'hostgroup_members'] = []
             self.clean_unusable_keys(hostgroup)
             self.convert_lists(hostgroup)
+
+            logger.debug("[Backend Arbiter] - hosts group: %s", hostgroup)
             self.config['hostgroups'].append(hostgroup)
 
     def get_hosts(self):
@@ -392,6 +407,7 @@ class AlignakBackendArbit(BaseModule):
                     len(all_hosts['_items']))
         for host in all_hosts['_items']:
             logger.info("[Backend Arbiter] - %s", host['name'])
+            logger.info("[Backend Arbiter] - %s", host)
             self.configraw['hosts'][host['_id']] = host['name']
             host[u'host_name'] = host['name']
             host[u'imported_from'] = u'alignakbackend'
@@ -419,7 +435,8 @@ class AlignakBackendArbit(BaseModule):
             # check_period
             self.single_relation(host, 'check_period', 'timeperiods')
             # realm
-            self.single_relation(host, 'realm', 'realms')
+            self.single_relation(host, '_realm', 'realms')
+            host['realm'] = host['_realm']
             # notification_period
             self.single_relation(host, 'notification_period', 'timeperiods')
             # maintenance_period
@@ -449,6 +466,8 @@ class AlignakBackendArbit(BaseModule):
                 host[key] = value
             self.clean_unusable_keys(host)
             self.convert_lists(host)
+
+            logger.debug("[Backend Arbiter] - host: %s", host)
             self.config['hosts'].append(host)
 
     def get_servicegroups(self):
@@ -475,6 +494,8 @@ class AlignakBackendArbit(BaseModule):
 
             self.clean_unusable_keys(servicegroup)
             self.convert_lists(servicegroup)
+
+            logger.debug("[Backend Arbiter] - services group: %s", servicegroup)
             self.config['servicegroups'].append(servicegroup)
 
     def get_services(self):
@@ -483,6 +504,7 @@ class AlignakBackendArbit(BaseModule):
 
         :return: None
         """
+        self.configraw['services'] = {}
         params = {'embedded': '{"escalations":1,"service_dependencies":1}',
                   "where": '{"_is_template": false}'}
         all_services = self.backend.get_all('service', params)
@@ -490,6 +512,7 @@ class AlignakBackendArbit(BaseModule):
                     len(all_services['_items']))
         for service in all_services['_items']:
             logger.info("[Backend Arbiter] - %s", service['name'])
+            self.configraw['services'][service['_id']] = service['name']
             service['imported_from'] = u'alignakbackend'
             service['service_description'] = service['name']
             service['host_name'] = service['host']
@@ -547,6 +570,8 @@ class AlignakBackendArbit(BaseModule):
                 service[key] = value
             self.clean_unusable_keys(service)
             self.convert_lists(service)
+
+            logger.debug("[Backend Arbiter] - service: %s", service)
             self.config['services'].append(service)
 
     def get_hostdependencies(self):
@@ -564,6 +589,10 @@ class AlignakBackendArbit(BaseModule):
             self.configraw['hostdependencies'][hostdependency['_id']] = hostdependency['name']
             hostdependency['imported_from'] = u'alignakbackend'
             hostdependency['hostdependency_name'] = hostdependency['name']
+
+            hostdependency['dependent_hostgroup_name'] = hostdependency['dependent_hostgroups']
+            hostdependency['dependent_host_name'] = hostdependency['dependent_hosts']
+            hostdependency['hostgroup_name'] = hostdependency['hostgroups']
             hostdependency['host_name'] = hostdependency['hosts']
 
             # dependent_host_name
@@ -576,10 +605,9 @@ class AlignakBackendArbit(BaseModule):
             self.multiple_relation(hostdependency, 'hostgroup_name', 'hostgroups')
             self.clean_unusable_keys(hostdependency)
             self.convert_lists(hostdependency)
-            if 'host_name' in hostdependency and hostdependency['host_name'] != '' \
-                    and 'dependent_host_name' in hostdependency \
-                    and hostdependency['dependent_host_name'] != '':
-                self.config['hostdependencies'].append(hostdependency)
+
+            logger.debug("[Backend Arbiter] - hosts dependency: %s", hostdependency)
+            self.config['hostdependencies'].append(hostdependency)
 
     def get_hostescalations(self):
         """
@@ -606,6 +634,8 @@ class AlignakBackendArbit(BaseModule):
             self.multiple_relation(hostescalation, 'contact_groups', 'contactgroups')
             self.clean_unusable_keys(hostescalation)
             self.convert_lists(hostescalation)
+
+            logger.debug("[Backend Arbiter] - host escalation: %s", hostescalation)
             self.config['hostescalations'].append(hostescalation)
 
     def get_servicedependencies(self):
@@ -624,10 +654,23 @@ class AlignakBackendArbit(BaseModule):
                 servicedependency['name']
             servicedependency['imported_from'] = u'alignakbackend'
             servicedependency['servicedependency_name'] = servicedependency['name']
+
+            servicedependency['dependent_hostgroup_name'] = \
+                    servicedependency['dependent_hostgroups']
+            servicedependency['dependent_host_name'] = \
+                    servicedependency['dependent_hosts']
+            servicedependency['dependent_service_description'] = \
+                    servicedependency['dependent_services']
+            servicedependency['hostgroup_name'] = servicedependency['hostgroups']
+            servicedependency['host_name'] = servicedependency['hosts']
+            servicedependency['service_description'] = servicedependency['services']
+
             # dependent_host_name
             self.multiple_relation(servicedependency, 'dependent_host_name', 'hosts')
             # dependent_hostgroup_name
             self.multiple_relation(servicedependency, 'dependent_hostgroup_name', 'hostgroups')
+            # service_description
+            self.multiple_relation(servicedependency, 'service_description', 'services')
             # dependent_service_description
             self.multiple_relation(servicedependency, 'dependent_service_description', 'services')
             # host_name
@@ -636,6 +679,13 @@ class AlignakBackendArbit(BaseModule):
             self.multiple_relation(servicedependency, 'hostgroup_name', 'hostgroups')
             self.clean_unusable_keys(servicedependency)
             self.convert_lists(servicedependency)
+
+            if not servicedependency['hostgroup_name']:
+                del servicedependency['hostgroup_name']
+            if not servicedependency['dependent_hostgroup_name']:
+                del servicedependency['dependent_hostgroup_name']
+
+            logger.debug("[Backend Arbiter] - services dependency: %s", servicedependency)
             self.config['servicedependencies'].append(servicedependency)
 
     def get_serviceescalations(self):
@@ -666,6 +716,8 @@ class AlignakBackendArbit(BaseModule):
             self.multiple_relation(serviceescalation, 'contact_groups', 'contactgroups')
             self.clean_unusable_keys(serviceescalation)
             self.convert_lists(serviceescalation)
+
+            logger.debug("[Backend Arbiter] - service escalation: %s", serviceescalation)
             self.config['serviceescalations'].append(serviceescalation)
 
     def get_objects(self):

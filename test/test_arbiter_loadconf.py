@@ -143,10 +143,6 @@ class TestArbiterLoadconf(unittest2.TestCase):
         subprocess.call(['uwsgi', '--stop', '/tmp/uwsgi.pid'])
         time.sleep(2)
 
-    def test_servicedependencies(self):
-        reference = []
-        self.assertEqual(reference, self.objects['servicedependencies'])
-
     def test_commands(self):
         reference = [
             {
@@ -406,26 +402,26 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'freshness_state': u'u',
                 u'contacts': u'jeronimo',
                 u'contact_groups': u'admins',
-                u'ls_acknowledged': False,
-                u'ls_current_attempt': 0,
-                u'ls_downtimed': False,
-                u'ls_execution_time': 0.0,
-                u'ls_grafana': False,
-                u'ls_grafana_panelid': 0,
-                u'ls_impact': False,
-                u'ls_last_check': 0,
-                u'ls_last_state': u'OK',
-                u'ls_last_state_changed': 0,
-                u'ls_last_state_type': u'HARD',
-                u'ls_latency': 0.0,
-                u'ls_long_output': u'',
-                u'ls_max_attempts': 0,
-                u'ls_next_check': 0,
-                u'ls_output': u'',
-                u'ls_perf_data': u'',
-                u'ls_state': u'UNREACHABLE',
-                u'ls_state_id': 0,
-                u'ls_state_type': u'HARD',
+                # u'ls_acknowledged': False,
+                # u'ls_current_attempt': 0,
+                # u'ls_downtimed': False,
+                # u'ls_execution_time': 0.0,
+                # u'ls_grafana': False,
+                # u'ls_grafana_panelid': 0,
+                # u'ls_impact': False,
+                # u'ls_last_check': 0,
+                # u'ls_last_state': u'OK',
+                # u'ls_last_state_changed': 0,
+                # u'ls_last_state_type': u'HARD',
+                # u'ls_latency': 0.0,
+                # u'ls_long_output': u'',
+                # u'ls_max_attempts': 0,
+                # u'ls_next_check': 0,
+                # u'ls_output': u'',
+                # u'ls_perf_data': u'',
+                # u'ls_state': u'UNREACHABLE',
+                # u'ls_state_id': 0,
+                # u'ls_state_type': u'HARD',
             }
         ]
         self.assertEqual(len(self.objects['hosts']), 1)
@@ -540,26 +536,26 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'contacts': u'jeronimo',
                 u'contact_groups': u'admins',
                 u'escalations': u'',
-                u'ls_acknowledged': False,
-                u'ls_current_attempt': 0,
-                u'ls_downtimed': False,
-                u'ls_execution_time': 0.0,
-                u'ls_grafana': False,
-                u'ls_grafana_panelid': 0,
-                u'ls_impact': False,
-                u'ls_last_check': 0,
-                u'ls_last_state': u'OK',
-                u'ls_last_state_changed': 0,
-                u'ls_last_state_type': u'HARD',
-                u'ls_latency': 0.0,
-                u'ls_long_output': u'',
-                u'ls_max_attempts': 0,
-                u'ls_next_check': 0,
-                u'ls_output': u'',
-                u'ls_perf_data': u'',
-                u'ls_state': u'UNKNOWN',
-                u'ls_state_id': 0,
-                u'ls_state_type': u'HARD',
+                # u'ls_acknowledged': False,
+                # u'ls_current_attempt': 0,
+                # u'ls_downtimed': False,
+                # u'ls_execution_time': 0.0,
+                # u'ls_grafana': False,
+                # u'ls_grafana_panelid': 0,
+                # u'ls_impact': False,
+                # u'ls_last_check': 0,
+                # u'ls_last_state': u'OK',
+                # u'ls_last_state_changed': 0,
+                # u'ls_last_state_type': u'HARD',
+                # u'ls_latency': 0.0,
+                # u'ls_long_output': u'',
+                # u'ls_max_attempts': 0,
+                # u'ls_next_check': 0,
+                # u'ls_output': u'',
+                # u'ls_perf_data': u'',
+                # u'ls_state': u'UNKNOWN',
+                # u'ls_state_id': 0,
+                # u'ls_state_type': u'HARD',
             },
             {
                 'hostgroup_name': u'',
@@ -627,26 +623,26 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'contacts': u'jeronimo',
                 u'contact_groups': u'admins',
                 u'escalations': u'',
-                u'ls_acknowledged': False,
-                u'ls_current_attempt': 0,
-                u'ls_downtimed': False,
-                u'ls_execution_time': 0.0,
-                u'ls_grafana': False,
-                u'ls_grafana_panelid': 0,
-                u'ls_impact': False,
-                u'ls_last_check': 0,
-                u'ls_last_state': u'OK',
-                u'ls_last_state_changed': 0,
-                u'ls_last_state_type': u'HARD',
-                u'ls_latency': 0.0,
-                u'ls_long_output': u'',
-                u'ls_max_attempts': 0,
-                u'ls_next_check': 0,
-                u'ls_output': u'',
-                u'ls_perf_data': u'',
-                u'ls_state': u'UNKNOWN',
-                u'ls_state_id': 0,
-                u'ls_state_type': u'HARD',
+                # u'ls_acknowledged': False,
+                # u'ls_current_attempt': 0,
+                # u'ls_downtimed': False,
+                # u'ls_execution_time': 0.0,
+                # u'ls_grafana': False,
+                # u'ls_grafana_panelid': 0,
+                # u'ls_impact': False,
+                # u'ls_last_check': 0,
+                # u'ls_last_state': u'OK',
+                # u'ls_last_state_changed': 0,
+                # u'ls_last_state_type': u'HARD',
+                # u'ls_latency': 0.0,
+                # u'ls_long_output': u'',
+                # u'ls_max_attempts': 0,
+                # u'ls_next_check': 0,
+                # u'ls_output': u'',
+                # u'ls_perf_data': u'',
+                # u'ls_state': u'UNKNOWN',
+                # u'ls_state_id': 0,
+                # u'ls_state_type': u'HARD',
             }
         ]
         self.assertEqual(len(self.objects['services']), 2)
@@ -680,4 +676,10 @@ class TestArbiterLoadconf(unittest2.TestCase):
 
     def test_hostdependencies(self):
         reference = []
+        print("Host dependencies: %s" % self.objects['hostdependencies'])
+        assert False
         self.assertEqual(reference, self.objects['hostdependencies'])
+
+    def test_servicedependencies(self):
+        reference = []
+        self.assertEqual(reference, self.objects['servicedependencies'])

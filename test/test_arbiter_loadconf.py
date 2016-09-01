@@ -337,6 +337,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
     def test_hosts(self):
         reference = [
             {
+                'realm': 'All',
                 u'active_checks_enabled': True,
                 u'icon_image_alt': u'',
                 u'business_impact_modulations': u'',
@@ -658,8 +659,6 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'action_url': u'',
                 u'alias': u'All services',
                 u'definition_order': 100,
-                u'servicegroups': u'',
-                u'services': u'',
                 u'servicegroup_members': u'',
                 u'servicegroup_name': u'All',
                 u'imported_from': u'alignakbackend',
@@ -677,7 +676,6 @@ class TestArbiterLoadconf(unittest2.TestCase):
     def test_hostdependencies(self):
         reference = []
         print("Host dependencies: %s" % self.objects['hostdependencies'])
-        assert False
         self.assertEqual(reference, self.objects['hostdependencies'])
 
     def test_servicedependencies(self):

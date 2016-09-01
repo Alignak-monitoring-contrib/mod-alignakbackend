@@ -17,7 +17,8 @@ This meta-module for Alignak contains 3 modules:
 
 * Arbiter module, which features are:
 
-    * get configuration from alignak-backend
+    * get configuration from Alignak backend
+    * manages acknowledgements, downtimes schedule and re-checks
 
 * Scheduler module, which features are:
 
@@ -25,8 +26,8 @@ This meta-module for Alignak contains 3 modules:
 
 * Broker module, which features are:
 
-    * update livestate for hosts and services in the alignak-backend
-    * send log for hosts and services checks to alignak-backend
+    * update live state of hosts and services in the Alignak backend
+    * update log for hosts and services checks in the Alignak backend
 
 ## Bugs, issues and contributing
 

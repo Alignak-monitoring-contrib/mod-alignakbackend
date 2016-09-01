@@ -143,17 +143,13 @@ class TestArbiterLoadconf(unittest2.TestCase):
         subprocess.call(['uwsgi', '--stop', '/tmp/uwsgi.pid'])
         time.sleep(2)
 
-    def test_servicedependencies(self):
-        reference = []
-        self.assertEqual(reference, self.objects['servicedependencies'])
-
     def test_commands(self):
         reference = [
             {
                 u'definition_order': 100,
-                u'poller_tag': u'None',
+                u'poller_tag': u'',
                 u'command_line': u'check_ping -H $HOSTADDRESS$',
-                u'reactionner_tag': u'None',
+                u'reactionner_tag': u'',
                 u'module_type': u'fork',
                 u'imported_from': u'alignakbackend',
                 u'timeout': -1,
@@ -162,9 +158,9 @@ class TestArbiterLoadconf(unittest2.TestCase):
             },
             {
                 u'definition_order': 100,
-                u'poller_tag': u'None',
+                u'poller_tag': u'',
                 u'command_line': u'check_http -H $HOSTADDRESS$',
-                u'reactionner_tag': u'None',
+                u'reactionner_tag': u'',
                 u'module_type': u'fork',
                 u'imported_from': u'alignakbackend',
                 u'timeout': -1,
@@ -187,9 +183,9 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'definition_order': 100,
                 u'service_notifications_enabled': True,
                 u'can_submit_commands': False,
+                u'can_update_livestate': True,
                 'contact_name': u'admin',
                 'service_notification_commands': '',
-                u'expert': False,
                 u'service_notification_options': u'w,u,c,r,f,s',
                 u'definition_order': 100,
                 u'address1': u'',
@@ -209,16 +205,16 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'service_notification_period': u'24x7',
                 u'min_business_impact': 0,
                 u'email': u'',
-                u'alias': u'',
+                u'alias': u'Administrator',
                 u'host_notification_options': u'd,u,r,f,s'
             },
             {
                 u'definition_order': 100,
                 u'service_notifications_enabled': True,
                 u'can_submit_commands': False,
+                u'can_update_livestate': False,
                 'contact_name': u'jeronimo',
                 'service_notification_commands': '',
-                u'expert': False,
                 u'service_notification_options': u'w,u,c,r,f,s',
                 u'definition_order': 100,
                 u'address1': u'',
@@ -245,7 +241,9 @@ class TestArbiterLoadconf(unittest2.TestCase):
         self.assertItemsEqual(reference, self.objects['contacts'])
         for cont in self.objects['contacts']:
             for key, value in cont.iteritems():
-                self.assertTrue(Contact.properties[key])
+                # problem in alignak because not defined
+                if key not in ['can_update_livestate']:
+                    self.assertTrue(Contact.properties[key])
 
     def test_timeperiods(self):
         reference = [
@@ -339,12 +337,13 @@ class TestArbiterLoadconf(unittest2.TestCase):
     def test_hosts(self):
         reference = [
             {
+                'realm': 'All',
                 u'active_checks_enabled': True,
                 u'icon_image_alt': u'',
                 u'business_impact_modulations': u'',
                 u'retry_interval': 0,
-                u'reactionner_tag': u'None',
-                u'parents': u'',
+                u'reactionner_tag': u'',
+                u'parents': '',
                 u'action_url': u'',
                 u'notes_url': u'',
                 u'snapshot_enabled': False,
@@ -353,7 +352,6 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'icon_image': u'',
                 u'service_overrides': u'',
                 u'snapshot_interval': 5,
-                # u'_realm': u'All',
                 u'notification_interval': 60,
                 u'trending_policies': u'',
                 u'failure_prediction_enabled': False,
@@ -365,12 +363,13 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'notes': u'',
                 u'macromodulations': u'',
                 u'host_name': u'srv001',
+                u'trigger': u'',
                 u'trigger_broker_raise_enabled': False,
                 u'first_notification_delay': 0,
                 u'flap_detection_enabled': True,
                 u'business_rule_host_notification_options': u'd,u,r,f,s',
                 u'passive_checks_enabled': True,
-                u'service_includes': '',
+                u'service_includes': u'',
                 u'icon_set': u'',
                 u'definition_order': 100,
                 u'snapshot_criteria': u'd,u',
@@ -380,7 +379,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'custom_views': u'',
                 u'address': u'192.168.0.2',
                 u'display_name': u'',
-                u'service_excludes': '',
+                u'service_excludes': u'',
                 u'imported_from': u'alignakbackend',
                 u'3d_coords': u'',
                 u'time_to_orphanage': 300,
@@ -391,7 +390,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'checkmodulations': u'',
                 u'notification_options': u'd,u,r,f,s',
                 u'labels': u'',
-                u'poller_tag': u'None',
+                u'poller_tag': u'',
                 u'obsess_over_host': False,
                 u'high_flap_threshold': 50,
                 u'check_interval': 5,
@@ -403,14 +402,36 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'freshness_threshold': 0,
                 u'freshness_state': u'u',
                 u'contacts': u'jeronimo',
-                u'contact_groups': u'admins'
+                u'contact_groups': u'admins',
+                # u'ls_acknowledged': False,
+                # u'ls_current_attempt': 0,
+                # u'ls_downtimed': False,
+                # u'ls_execution_time': 0.0,
+                # u'ls_grafana': False,
+                # u'ls_grafana_panelid': 0,
+                # u'ls_impact': False,
+                # u'ls_last_check': 0,
+                # u'ls_last_state': u'OK',
+                # u'ls_last_state_changed': 0,
+                # u'ls_last_state_type': u'HARD',
+                # u'ls_latency': 0.0,
+                # u'ls_long_output': u'',
+                # u'ls_max_attempts': 0,
+                # u'ls_next_check': 0,
+                # u'ls_output': u'',
+                # u'ls_perf_data': u'',
+                # u'ls_state': u'UNREACHABLE',
+                # u'ls_state_id': 0,
+                # u'ls_state_type': u'HARD',
             }
         ]
-        print("Hosts: " % self.objects['hosts'])
-        self.assertEqual(reference, self.objects['hosts'])
+        self.assertEqual(len(self.objects['hosts']), 1)
         for host in self.objects['hosts']:
             for key, value in host.iteritems():
-                self.assertTrue(Host.properties[key])
+                if not key.startswith('ls_'):
+                    self.assertTrue(Host.properties[key])
+
+        self.assertEqual(reference, self.objects['hosts'])
 
     def test_realms(self):
         reference = [
@@ -451,7 +472,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
     def test_services(self):
         reference = [
             {
-                u'hostgroup_name': u'',
+                'hostgroup_name': u'',
                 u'active_checks_enabled': True,
                 u'icon_image_alt': u'',
                 u'business_impact_modulations': u'',
@@ -477,7 +498,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'stalking_options': u'',
                 u'event_handler_enabled': False,
                 u'macromodulations': u'',
-                u'initial_state': u'o',
+                u'initial_state': u'u',
                 u'first_notification_delay': 0,
                 u'flap_detection_enabled': True,
                 u'business_rule_host_notification_options': u'',
@@ -492,17 +513,18 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'aggregation': u'',
                 u'business_rule_smart_notifications': False,
                 'host_name': u'srv001',
-                u'reactionner_tag': u'None',
+                u'reactionner_tag': u'',
                 'service_description': u'ping',
                 u'imported_from': u'alignakbackend',
                 'service_dependencies': u'',
                 u'time_to_orphanage': 300,
+                u'trigger': u'',
                 u'trigger_broker_raise_enabled': False,
                 u'custom_views': u'',
                 u'check_command': u'ping!',
                 u'notification_options': u'w,u,c,r,f,s',
                 u'notes_url': u'',
-                u'poller_tag': u'None',
+                u'poller_tag': u'',
                 'merge_host_contacts': False,
                 u'high_flap_threshold': -1,
                 u'check_interval': 5,
@@ -514,10 +536,30 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'freshness_state': u'o',
                 u'contacts': u'jeronimo',
                 u'contact_groups': u'admins',
-                u'escalations': u''
+                u'escalations': u'',
+                # u'ls_acknowledged': False,
+                # u'ls_current_attempt': 0,
+                # u'ls_downtimed': False,
+                # u'ls_execution_time': 0.0,
+                # u'ls_grafana': False,
+                # u'ls_grafana_panelid': 0,
+                # u'ls_impact': False,
+                # u'ls_last_check': 0,
+                # u'ls_last_state': u'OK',
+                # u'ls_last_state_changed': 0,
+                # u'ls_last_state_type': u'HARD',
+                # u'ls_latency': 0.0,
+                # u'ls_long_output': u'',
+                # u'ls_max_attempts': 0,
+                # u'ls_next_check': 0,
+                # u'ls_output': u'',
+                # u'ls_perf_data': u'',
+                # u'ls_state': u'UNKNOWN',
+                # u'ls_state_id': 0,
+                # u'ls_state_type': u'HARD',
             },
             {
-                u'hostgroup_name': u'',
+                'hostgroup_name': u'',
                 u'active_checks_enabled': True,
                 u'icon_image_alt': u'',
                 u'business_impact_modulations': u'',
@@ -543,7 +585,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'stalking_options': u'',
                 u'event_handler_enabled': False,
                 u'macromodulations': u'',
-                u'initial_state': u'o',
+                u'initial_state': u'u',
                 u'first_notification_delay': 0,
                 u'flap_detection_enabled': True,
                 u'business_rule_host_notification_options': u'',
@@ -558,17 +600,18 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'aggregation': u'',
                 u'business_rule_smart_notifications': False,
                 'host_name': u'srv001',
-                u'reactionner_tag': u'None',
+                u'reactionner_tag': u'',
                 'service_description': u'http toto.com',
                 u'imported_from': u'alignakbackend',
                 'service_dependencies': u'',
                 u'time_to_orphanage': 300,
+                u'trigger': u'',
                 u'trigger_broker_raise_enabled': False,
                 u'custom_views': u'',
                 u'check_command': u'check_http!',
                 u'notification_options': u'w,u,c,r,f,s',
                 u'notes_url': u'',
-                u'poller_tag': u'None',
+                u'poller_tag': u'',
                 'merge_host_contacts': False,
                 u'high_flap_threshold': -1,
                 u'check_interval': 5,
@@ -580,13 +623,35 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'freshness_state': u'o',
                 u'contacts': u'jeronimo',
                 u'contact_groups': u'admins',
-                u'escalations': u''
-        }
+                u'escalations': u'',
+                # u'ls_acknowledged': False,
+                # u'ls_current_attempt': 0,
+                # u'ls_downtimed': False,
+                # u'ls_execution_time': 0.0,
+                # u'ls_grafana': False,
+                # u'ls_grafana_panelid': 0,
+                # u'ls_impact': False,
+                # u'ls_last_check': 0,
+                # u'ls_last_state': u'OK',
+                # u'ls_last_state_changed': 0,
+                # u'ls_last_state_type': u'HARD',
+                # u'ls_latency': 0.0,
+                # u'ls_long_output': u'',
+                # u'ls_max_attempts': 0,
+                # u'ls_next_check': 0,
+                # u'ls_output': u'',
+                # u'ls_perf_data': u'',
+                # u'ls_state': u'UNKNOWN',
+                # u'ls_state_id': 0,
+                # u'ls_state_type': u'HARD',
+            }
         ]
+        self.assertEqual(len(self.objects['services']), 2)
         self.assertEqual(reference, self.objects['services'])
         for serv in self.objects['services']:
             for key, value in serv.iteritems():
-                self.assertTrue(Service.properties[key])
+                if not key.startswith('ls_'):
+                    self.assertTrue(Service.properties[key])
 
     def test_servicegroups(self):
         reference = [
@@ -594,8 +659,6 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'action_url': u'',
                 u'alias': u'All services',
                 u'definition_order': 100,
-                u'servicegroups': u'',
-                u'services': u'',
                 u'servicegroup_members': u'',
                 u'servicegroup_name': u'All',
                 u'imported_from': u'alignakbackend',
@@ -612,4 +675,9 @@ class TestArbiterLoadconf(unittest2.TestCase):
 
     def test_hostdependencies(self):
         reference = []
+        print("Host dependencies: %s" % self.objects['hostdependencies'])
         self.assertEqual(reference, self.objects['hostdependencies'])
+
+    def test_servicedependencies(self):
+        reference = []
+        self.assertEqual(reference, self.objects['servicedependencies'])

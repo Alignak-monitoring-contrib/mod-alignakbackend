@@ -1,6 +1,21 @@
 CHANGES
 =======
 
+* Fix several configuration problems: - host realm - hosts and services dependencies - missing raw config for services
+* Fix pylint
+* Fix pylint
+* Fix pylint
+* Add the live state fields to the excluded fields
+* Fix pep8
+* Update arbiter module for the new backend model
+* Update version to 0.5.0
+* New livestate management
+* Clean logs
+* User is also monitored to check if configuration is to be reloaded Thanks to this backend modification: https://github.com/Alignak-monitoring-contrib/alignak-backend/pull/130
+* Fixed arbiter loading unit test
+* Improve logs in hook_tick function
+* Several cleanings: - added logs for module configuration - added logs for loaded configuration - include `tags` in the unused fields - fix resource load count to > 0
+* Clean and log hook_tick function
 * Fixed arbiter loading unit test
 * Improve logs in hook_tick function
 * Several cleanings: - added logs for module configuration - added logs for loaded configuration - include `tags` in the unused fields - fix resource load count to > 0

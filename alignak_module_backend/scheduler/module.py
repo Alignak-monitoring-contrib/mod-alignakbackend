@@ -66,7 +66,7 @@ class AlignakBackendSched(BaseModule):
         """This function is called/used when you need a module with
         a loop function (and use the parameter 'external': True)
         """
-        logger.info("[Backend Broker] In loop")
+        logger.info("[Backend Scheduler] In loop")
         time.sleep(1)
 
     def getToken(self, username, password, generatetoken):

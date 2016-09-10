@@ -23,7 +23,7 @@ This module is used to manage retention and livestate to alignak-backend with sc
 """
 
 import time
-from alignak_backend_client.client import Backend
+from alignak_backend_client.client import Backend, BackendException
 # pylint: disable=wrong-import-order
 from alignak.basemodule import BaseModule
 from alignak.log import logger
@@ -96,11 +96,19 @@ class AlignakBackendSched(BaseModule):
         """
         all_data = {'hosts': {}, 'services': {}}
         response = self.backend.get_all('retentionhost')
-        for host in response:
-            all_data['hosts'][host['host']] = host
+        for host in response['_items']:
+            # clean unusable keys
+            hostname = host['host']
+            for key in ['_created', '_etag', '_id', '_links', '_updated', 'host']:
+                del host[key]
+            all_data['hosts'][hostname] = host
         response = self.backend.get_all('retentionservice')
-        for service in response:
-            all_data['services'][(service['service'][0], service['service'][1])] = service
+        for service in response['_items']:
+            # clean unusable keys
+            servicename = (service['service'][0], service['service'][1])
+            for key in ['_created', '_etag', '_id', '_links', '_updated', 'service']:
+                del service[key]
+            all_data['services'][servicename] = service
 
         scheduler.restore_retention_data(all_data)
 
@@ -112,18 +120,45 @@ class AlignakBackendSched(BaseModule):
         :type scheduler: object
         :return: None
         """
-        headers = {'Content-Type': 'application/json'}
         data_to_save = scheduler.get_retention_data()
-        # clean all hosts first
-        self.backend.delete('retentionhost', headers)
+
+        # clean hosts we will re-upload the retention
+        response = self.backend.get_all('retentionhost')
+        for host in response['_items']:
+            if host['host'] in data_to_save['hosts']:
+                delheaders = {'If-Match': host['_etag']}
+                self.backend.delete('/'.join(['retentionhost', host['_id']]), headers=delheaders)
+
         # Add all hosts after
         for host in data_to_save['hosts']:
             data_to_save['hosts'][host]['host'] = host
-            self.backend.post('retentionhost', data_to_save['hosts'][host], headers)
+            try:
+                self.backend.post('retentionhost', data=data_to_save['hosts'][host])
+            except BackendException as e:
+                logger.error('[Backend Scheduler] Post retentionhost of host has error: %s',
+                             str(e))
+                logger.error('[Backend Scheduler] Response: %s', e.response)
+                return
+        logger.info('[Backend Scheduler] %d hosts saved in retention',
+                    len(data_to_save['hosts']))
 
-        # clean all services first
-        self.backend.delete('retentionservice', headers)
+        # clean services we will re-upload the retention
+        response = self.backend.get_all('retentionservice')
+        for service in response['_items']:
+            if (service['service'][0], service['service'][1]) in data_to_save['services']:
+                delheaders = {'If-Match': service['_etag']}
+                self.backend.delete('/'.join(['retentionservice', service['_id']]),
+                                    headers=delheaders)
+
         # Add all services after
         for service in data_to_save['services']:
             data_to_save['services'][service]['service'] = service
-            self.backend.post('retentionservice', data_to_save['services'][service], headers)
+            try:
+                self.backend.post('retentionservice', data=data_to_save['services'][service])
+            except BackendException as e:
+                logger.error('[Backend Scheduler] Post retentionservice of service has error: %s',
+                             str(e))
+                logger.error('[Backend Scheduler] Response: %s', e.response)
+                return
+        logger.info('[Backend Scheduler] %d services saved in retention',
+                    len(data_to_save['services']))

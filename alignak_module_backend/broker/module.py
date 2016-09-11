@@ -260,6 +260,8 @@ class AlignakBackendBrok(BaseModule):
                     if key.startswith('ls_'):
                         data_to_update[key[3:]] = data_to_update[key]
                         del data_to_update[key]
+                del data_to_update['ls_downtimed']
+
                 ret = self.send_to_backend('log_host', data['host_name'], data_to_update)
                 if ret:
                     counters['log_host'] += 1
@@ -329,6 +331,7 @@ class AlignakBackendBrok(BaseModule):
                     if key.startswith('ls_'):
                         data_to_update[key[3:]] = data_to_update[key]
                         del data_to_update[key]
+                del data_to_update['ls_downtimed']
 
                 self.send_to_backend('log_service', service_name, data_to_update)
                 if ret:

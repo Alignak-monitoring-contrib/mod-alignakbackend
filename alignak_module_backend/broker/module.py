@@ -195,8 +195,28 @@ class AlignakBackendBrok(BaseModule):
             'log_service': 0
         }
 
+        logger.debug("Got data to update: %s - %s", obj_type, data)
+
         if obj_type == 'host':
             if data['host_name'] in self.mapping['host']:
+                # Received data for an host:
+                # {
+                # u'last_time_unreachable': 0, u'last_problem_id': 0, u'check_type': 1,
+                # u'retry_interval': 0,u'last_event_id': 0, u'problem_has_been_acknowledged': False,
+                # u'command_name': u'nsca_host_dead', u'last_state': u'UP', u'latency': 0,
+                # u'last_state_type': u'HARD', u'last_hard_state_change': 0.0,
+                # u'last_time_up': 1473597379, u'percent_state_change': 0.0, u'state': u'UP',
+                # u'last_chk': 1473597379,
+                # u'last_state_id': 0, u'end_time': 0, u'timeout': 0, u'current_event_id': 0,
+                # u'execution_time': 0.0, u'start_time': 0, u'return_code': 0,
+                # u'state_type': u'HARD', u'state_id': 0, u'in_checking': False,
+                # u'early_timeout': 0,
+                # u'in_scheduled_downtime': False, u'attempt': 1, u'state_type_id': 1,
+                # u'acknowledgement_type': 1, u'last_state_change': 0.0, u'last_time_down': 0,
+                # 'instance_id': u'd2d402f5de244d95b10d1b47d9891710', u'long_output': u'',
+                # u'current_problem_id': 0, u'host_name': u'fvc320', u'check_interval': 0,
+                # u'output': u'No message', u'has_been_checked': 1, u'perf_data': u''
+                # }
                 data_to_update = {
                     'ls_state': data['state'],
                     'ls_state_id': data['state_id'],
@@ -208,7 +228,7 @@ class AlignakBackendBrok(BaseModule):
                     'ls_long_output': data['long_output'],
                     'ls_perf_data': data['perf_data'],
                     'ls_acknowledged': data['problem_has_been_acknowledged'],
-                    'ls_execution_time': data['execution_time'],
+                    'ls_downtimed': data['in_scheduled_downtime'],
                     'ls_latency': data['latency']
                 }
 
@@ -246,6 +266,25 @@ class AlignakBackendBrok(BaseModule):
         elif obj_type == 'service':
             service_name = ''.join([data['host_name'], data['service_description']])
             if service_name in self.mapping['service']:
+                # Received data for a service:
+                # {
+                # u'last_problem_id': 0, u'check_type': 0, u'retry_interval': 2,
+                # u'last_event_id': 0, u'problem_has_been_acknowledged': False,
+                # u'last_time_critical': 1473597376,
+                # u'last_time_warning': 0, u'command_name': u'check_nrpe', u'last_state': u'OK',
+                # u'latency': 2.4609699249, u'current_event_id': 1, u'last_state_type': u'HARD',
+                # u'last_hard_state_change': 0.0, u'percent_state_change': 4.1, u'state': u'CRITICAL',
+                # u'last_chk': 1473597375, u'last_state_id': 0, u'host_name': u'denice',
+                # u'check_interval': 5, u'last_time_unknown': 0, u'execution_time': 0.1133639812,
+                # u'start_time': 0, u'return_code': 2, u'state_type': u'SOFT', u'state_id': 2,
+                # u'service_description': u'Disk hda1', u'in_checking': False, u'early_timeout': 0,
+                # u'in_scheduled_downtime': False, u'attempt': 1, u'state_type_id': 0,
+                # u'acknowledgement_type': 1, u'last_state_change': 1473597376.147903,
+                # 'instance_id': u'3ac88dd0c1c04b37a5d181622e93b5bc', u'long_output': u'',
+                # u'current_problem_id': 1, u'last_time_ok': 0, u'timeout': 0,
+                # u'output': u"NRPE: Command 'check_hda1' not defined", u'has_been_checked': 1,
+                # u'perf_data': u'', u'end_time': 0
+                # }
                 data_to_update = {
                     'ls_state': data['state'],
                     'ls_state_id': data['state_id'],
@@ -257,6 +296,7 @@ class AlignakBackendBrok(BaseModule):
                     'ls_long_output': data['long_output'],
                     'ls_perf_data': data['perf_data'],
                     'ls_acknowledged': data['problem_has_been_acknowledged'],
+                    'ls_downtimed': data['in_scheduled_downtime'],
                     'ls_execution_time': data['execution_time'],
                     'ls_latency': data['latency']
                 }

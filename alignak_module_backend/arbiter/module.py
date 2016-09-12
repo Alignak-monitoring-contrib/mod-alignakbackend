@@ -314,7 +314,7 @@ class AlignakBackendArbit(BaseModule):
             self.clean_unusable_keys(contactgroup)
             self.convert_lists(contactgroup)
 
-            logger.info("[Backend Arbiter] - contacts group: %s", contactgroup)
+            logger.debug("[Backend Arbiter] - contacts group: %s", contactgroup)
             self.config['contactgroups'].append(contactgroup)
 
     def get_contacts(self):
@@ -464,6 +464,19 @@ class AlignakBackendArbit(BaseModule):
                     del host['realm']
             for key, value in host['customs'].iteritems():
                 host[key] = value
+            # Fix #9: inconsistent state when no retention module exists
+            if 'ls_last_state' in host:
+                if host['ls_state'] == 'UNREACHABLE':
+                    host['initial_state'] = 'u'
+                if host['ls_state'] == 'DOWN':
+                    host['initial_state'] = 'd'
+                if host['ls_state'] == 'UP':
+                    host['initial_state'] = 'o'
+
+                logger.debug(
+                    "[Backend Arbiter] - host current live state is %s, "
+                    "set initial_state as '%s'", host['ls_state'], host['initial_state']
+                )
             self.clean_unusable_keys(host)
             self.convert_lists(host)
 
@@ -576,6 +589,22 @@ class AlignakBackendArbit(BaseModule):
                 del service['alias']
             for key, value in service['customs'].iteritems():
                 service[key] = value
+            # Fix #9: inconsistent state when no retention module exists
+            if 'ls_last_state' in service:
+                if service['ls_state'] == 'UNKNOWN':
+                    service['initial_state'] = 'u'
+                if service['ls_state'] == 'CRITICAL':
+                    service['initial_state'] = 'c'
+                if service['ls_state'] == 'WARNING':
+                    service['initial_state'] = 'w'
+                if service['ls_state'] == 'UP':
+                    service['initial_state'] = 'o'
+
+                logger.debug(
+                    "[Backend Arbiter] - service current live state is %s, "
+                    "set initial_state as '%s'", service['ls_state'], service['initial_state']
+                )
+
             self.clean_unusable_keys(service)
             self.convert_lists(service)
 

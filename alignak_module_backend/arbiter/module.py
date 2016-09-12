@@ -37,7 +37,7 @@ from alignak.external_command import ExternalCommand
 # pylint: disable=C0103
 properties = {
     'daemons': ['arbiter'],
-    'type': 'alignakbackendarbit',
+    'type': 'backend_arbiter',
     'external': False,
     'phases': ['configuration'],
 }

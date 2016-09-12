@@ -1,6 +1,13 @@
 CHANGES
 =======
 
+* Ignore downtime state for the log check result :/P
+* Ignore downtime state for the log check result :/P
+* Add log in the broker module
+* #2: change module alias
+* Update comments in configuration files
+* Finish retention in scheduler and add tests
+* Remove trigger from the backend configuration check
 * Fix error when inserting logs in the backend
 * Update readme
 * Update requirements (test)

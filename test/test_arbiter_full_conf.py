@@ -117,6 +117,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
     def test_hosts(self):
         self.assertEqual(len(self.objects['hosts']), 13)
         for host in self.objects['hosts']:
+            print("Got host: %s" % host)
             for key, value in host.iteritems():
                 if not key.startswith('ls_') and not key.startswith('_'):
                     self.assertTrue(Host.properties[key])
@@ -124,12 +125,14 @@ class TestArbiterLoadconf(unittest2.TestCase):
     def test_realms(self):
         self.assertEqual(len(self.objects['realms']), 5)
         for realm in self.objects['realms']:
+            print("Got realm: %s" % realm)
             for key, value in realm.iteritems():
                 self.assertTrue(Realm.properties[key])
 
     def test_services(self):
         self.assertEqual(len(self.objects['services']), 94)
         for serv in self.objects['services']:
+            print("Got service: %s" % serv)
             for key, value in serv.iteritems():
                 if not key.startswith('ls_') and not key.startswith('_'):
                     self.assertTrue(Service.properties[key])

@@ -32,7 +32,7 @@ from alignak.log import logger
 # pylint: disable=C0103
 properties = {
     'daemons': ['scheduler'],
-    'type': 'alignakbackendsched',
+    'type': 'backends_scheduler',
     'external': False,
     'phases': ['running'],
 }

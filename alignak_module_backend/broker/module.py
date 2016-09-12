@@ -32,7 +32,7 @@ from alignak.log import logger
 # pylint: disable=C0103
 properties = {
     'daemons': ['broker'],
-    'type': 'alignakbackendbrok',
+    'type': 'backend_broker',
     'external': True,
 }
 

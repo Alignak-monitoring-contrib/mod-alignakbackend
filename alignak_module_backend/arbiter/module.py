@@ -472,7 +472,7 @@ class AlignakBackendArbit(BaseModule):
                     host['initial_state'] = 'd'
                 if host['ls_state'] == 'UP':
                     host['initial_state'] = 'o'
-                    
+
                 logger.debug(
                     "[Backend Arbiter] - host current live state is %s, "
                     "set initial_state as '%s'", host['ls_state'], host['initial_state']

@@ -1,4 +1,1 @@
--e git+https://github.com/Alignak-monitoring/alignak.git@develop+enhanceunittests#egg=alignak
-requests
-ujson
 alignak_backend_client

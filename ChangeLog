@@ -1,6 +1,12 @@
 CHANGES
 =======
 
+* Set version as 0.5.2
+* Update requirements.txt
+* Fix pylint
+* Fix #9: set host/service initial_state as last live state
+* Improve test to fix #9
+* Improve test to fix #9
 * Ignore downtime state for the log check result :/P
 * Ignore downtime state for the log check result :/P
 * Add log in the broker module

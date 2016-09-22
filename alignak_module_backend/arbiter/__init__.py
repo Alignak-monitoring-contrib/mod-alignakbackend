@@ -24,6 +24,4 @@ The objects package contains the arbiter module to get config from alignak-backe
 have too the backend wrapper to manage API of alignak-backend
 """
 
-from alignak_module_backend.version import VERSION as __version__
-
 from .module import properties, get_instance

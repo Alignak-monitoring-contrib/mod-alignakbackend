@@ -23,6 +23,4 @@
 The objects package contains the scheduler module to manage retention and livestates.
 """
 
-from alignak_module_backend.version import VERSION as __version__
-
 from .module import properties, get_instance

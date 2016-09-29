@@ -789,7 +789,8 @@ class AlignakBackendArbit(BaseModule):
         if self.my_arbiter and self.my_arbiter.verify_only:
             logger.info("[Backend Arbiter] my Arbiter is in verify only mode")
             if self.bypass_verify_mode:
-                logger.info("[Backend Arbiter] configured to bypass the objects loading. Skipping objects load and provide an empty list to the Arbiter.")
+                logger.info("[Backend Arbiter] configured to bypass the objects loading. "
+                            "Skipping objects load and provide an empty list to the Arbiter.")
                 return self.config
 
         start_time = time.time()

@@ -114,7 +114,6 @@ class AlignakBackendArbit(BaseModule):
         logger.info("[Backend Arbiter] In loop")
         time.sleep(1)
 
-
     def hook_read_configuration(self, arbiter):
         """
         Hook in arbiter used on configuration parsing start. This is useful to get our arbiter

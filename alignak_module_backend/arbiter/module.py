@@ -64,12 +64,20 @@ class AlignakBackendArbit(BaseModule):
 
     def __init__(self, modconf):
         BaseModule.__init__(self, modconf)
+
+        self.my_arbiter = None
+
         self.url = getattr(modconf, 'api_url', 'http://localhost:5000')
         self.backend = Backend(self.url)
         self.backend.token = getattr(modconf, 'token', '')
         if self.backend.token == '':
             self.getToken(getattr(modconf, 'username', ''), getattr(modconf, 'password', ''),
                           getattr(modconf, 'allowgeneratetoken', False))
+        self.bypass_verify_mode = int(getattr(modconf, 'bypass_verify_mode', 0)) == 1
+        logger.info(
+            "[Backend Arbiter] bypass objects loading when Arbiter is in verfy mode: %s",
+            self.bypass_verify_mode
+        )
         self.verify_modification = int(getattr(modconf, 'verify_modification', 5))
         logger.info(
             "[Backend Arbiter] configuration reload check period: %s minutes",
@@ -105,6 +113,18 @@ class AlignakBackendArbit(BaseModule):
         """
         logger.info("[Backend Arbiter] In loop")
         time.sleep(1)
+
+
+    def hook_read_configuration(self, arbiter):
+        """
+        Hook in arbiter used on configuration parsing start. This is useful to get our arbiter
+        object and its parameters.
+
+        :param arbiter: alignak.daemons.arbiterdaemon.Arbiter
+        :type arbiter: object
+        :return: None
+        """
+        self.my_arbiter = arbiter
 
     def getToken(self, username, password, generatetoken):
         """
@@ -766,6 +786,12 @@ class AlignakBackendArbit(BaseModule):
         :return: configuration objects
         :rtype: dict
         """
+        if self.my_arbiter and self.my_arbiter.verify_only:
+            logger.info("[Backend Arbiter] my Arbiter is in verify only mode")
+            if self.bypass_verify_mode:
+                logger.warning("[Backend Arbiter] configured to bypass the objects loading. Skipping objects load and provide an empty list to the Arbiter.")
+                return self.config
+
         start_time = time.time()
         self.get_realms()
         self.get_commands()

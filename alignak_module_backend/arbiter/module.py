@@ -792,6 +792,12 @@ class AlignakBackendArbit(BaseModule):
                             "Skipping objects load and provide an empty list to the Arbiter.")
                 return self.config
 
+        # Alignak backend importation script is running
+        if 'ALIGNAK_BACKEND_IMPORT_RUN' in os.environ and os.environ['ALIGNAK_BACKEND_IMPORT_RUN']:
+            logger.info("[Backend Arbiter] Alignak backend importation script is active. "
+                        "Provide an empty objects list to the Arbiter.")
+            return self.config
+
         start_time = time.time()
         self.get_realms()
         self.get_commands()

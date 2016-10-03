@@ -20,7 +20,7 @@
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-The objects package contains the scheduler module to manage retention and livestates.
+This package contains the scheduler module to manage retention of the live state.
 """
 
 from .module import properties, get_instance

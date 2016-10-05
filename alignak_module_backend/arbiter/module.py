@@ -331,6 +331,7 @@ class AlignakBackendArbit(BaseModule):
             # contactgroup_members
             self.multiple_relation(contactgroup, 'contactgroup_members', 'contactgroups')
             self.clean_unusable_keys(contactgroup)
+            del contactgroup['notes']
             self.convert_lists(contactgroup)
 
             logger.debug("[Backend Arbiter] - contacts group: %s", contactgroup)

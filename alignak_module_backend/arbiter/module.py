@@ -27,7 +27,7 @@ import traceback
 from datetime import datetime
 import os
 import signal
-from alignak_backend_client.client import Backend
+from alignak_backend_client.client import Backend, BackendException
 # pylint: disable=wrong-import-order
 from alignak.basemodule import BaseModule
 from alignak.log import logger
@@ -67,9 +67,16 @@ class AlignakBackendArbit(BaseModule):
 
         self.my_arbiter = None
 
+        # Alignak backend importation script is running
+        self.backend_import = False
+        if 'ALIGNAK_BACKEND_IMPORT_RUN' in os.environ and os.environ['ALIGNAK_BACKEND_IMPORT_RUN']:
+            logger.info("[Backend Arbiter] Alignak backend importation script is active.")
+            self.backend_import = True
+
         self.url = getattr(modconf, 'api_url', 'http://localhost:5000')
         self.backend = Backend(self.url)
         self.backend.token = getattr(modconf, 'token', '')
+        self.backend_connected = False
         if self.backend.token == '':
             self.getToken(getattr(modconf, 'username', ''), getattr(modconf, 'password', ''),
                           getattr(modconf, 'allowgeneratetoken', False))
@@ -137,10 +144,29 @@ class AlignakBackendArbit(BaseModule):
         :type generatetoken: bool
         :return: None
         """
+        if self.my_arbiter and self.my_arbiter.verify_only and self.bypass_verify_mode:
+            logger.info("[Backend Arbiter] configured to bypass the objects loading. "
+                        "Skipping objects load and provide an empty list to the Arbiter.")
+            return
+
+        if self.backend_import:
+            # Do no try to login when importing a configuration into the backend
+            logger.info("[Backend Arbiter] Alignak backend importation script is active. "
+                        "No backend connection.")
+            return
+
         generate = 'enabled'
         if not generatetoken:
             generate = 'disabled'
-        self.backend.login(username, password, generate)
+
+        try:
+            self.backend.login(username, password, generate)
+            self.backend_connected = True
+        except BackendException as e:
+            logger.warning("[Backend Arbiter] Alignak backend is not available for login. "
+                           "No backend connection.")
+            logger.warning("[Backend Arbiter] Exception: %s", str(e))
+            self.backend_connected = False
 
     def single_relation(self, resource, mapping, ctype):
         """
@@ -786,6 +812,11 @@ class AlignakBackendArbit(BaseModule):
         :return: configuration objects
         :rtype: dict
         """
+        if not self.backend_connected:
+            logger.error("[Backend Arbiter] Alignak backend connection is not available. "
+                         "Skipping objects load and provide an empty list to the Arbiter.")
+            return self.config
+
         if self.my_arbiter and self.my_arbiter.verify_only:
             logger.info("[Backend Arbiter] my Arbiter is in verify only mode")
             if self.bypass_verify_mode:
@@ -793,26 +824,31 @@ class AlignakBackendArbit(BaseModule):
                             "Skipping objects load and provide an empty list to the Arbiter.")
                 return self.config
 
-        # Alignak backend importation script is running
-        if 'ALIGNAK_BACKEND_IMPORT_RUN' in os.environ and os.environ['ALIGNAK_BACKEND_IMPORT_RUN']:
+        if self.backend_import:
             logger.info("[Backend Arbiter] Alignak backend importation script is active. "
                         "Provide an empty objects list to the Arbiter.")
             return self.config
 
         start_time = time.time()
-        self.get_realms()
-        self.get_commands()
-        self.get_timeperiods()
-        self.get_contacts()
-        self.get_contactgroups()
-        self.get_hosts()
-        self.get_hostgroups()
-        self.get_services()
-        self.get_servicegroups()
-        self.get_hostdependencies()
-        self.get_hostescalations()
-        self.get_servicedependencies()
-        self.get_serviceescalations()
+        try:
+            self.get_realms()
+            self.get_commands()
+            self.get_timeperiods()
+            self.get_contacts()
+            self.get_contactgroups()
+            self.get_hosts()
+            self.get_hostgroups()
+            self.get_services()
+            self.get_servicegroups()
+            self.get_hostdependencies()
+            self.get_hostescalations()
+            self.get_servicedependencies()
+            self.get_serviceescalations()
+        except BackendException as e:
+            logger.warning("[Backend Arbiter] Alignak backend is not available for reading. "
+                           "Backend communication error.")
+            logger.warning("[Backend Arbiter] Exception: %s", str(e))
+            self.backend_connected = False
 
         self.time_loaded_conf = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
 

@@ -109,17 +109,17 @@ class TestArbiterLoadconf(unittest2.TestCase):
 
         # Add some realms
         data = {
-            'name': 'All.A',
+            'name': 'All-A',
             '_parent': cls.realm_all
         }
         realm_a = cls.backend.post("realm", data)
         data = {
-            'name': 'All.B',
+            'name': 'All-B',
             '_parent': cls.realm_all
         }
         cls.backend.post("realm", data)
         data = {
-            'name': 'All.A.1',
+            'name': 'All-A-1',
             '_parent': realm_a['_id']
         }
         cls.backend.post("realm", data)
@@ -145,6 +145,27 @@ class TestArbiterLoadconf(unittest2.TestCase):
 
     def test_commands(self):
         reference = [
+            {
+                'command_name': u'_internal_host_up',
+                u'definition_order': 100,
+                u'enable_environment_macros': False,
+                u'imported_from': u'alignakbackend',
+                u'module_type': u'fork',
+                u'poller_tag': u'',
+                u'reactionner_tag': u'',
+                u'timeout': -1
+            },
+            {
+                u'command_line': u'_echo',
+                'command_name': u'_echo',
+                u'definition_order': 100,
+                u'enable_environment_macros': False,
+                u'imported_from': u'alignakbackend',
+                u'module_type': u'fork',
+                u'poller_tag': u'',
+                u'reactionner_tag': u'',
+                u'timeout': -1
+            },
             {
                 u'definition_order': 100,
                 u'poller_tag': u'',
@@ -444,21 +465,21 @@ class TestArbiterLoadconf(unittest2.TestCase):
             },
             {
                 u'default': False,
-                'realm_name': u'All.A',
+                'realm_name': u'All-A',
                 'realm_members': [],
                 u'definition_order': 100,
                 u'imported_from': u'alignakbackend'
             },
             {
                 u'default': False,
-                'realm_name': u'All.B',
+                'realm_name': u'All-B',
                 'realm_members': [],
                 u'definition_order': 100,
                 u'imported_from': u'alignakbackend'
             },
             {
                 u'default': False,
-                'realm_name': u'All.A.1',
+                'realm_name': u'All-A-1',
                 'realm_members': [],
                 u'definition_order': 100,
                 u'imported_from': u'alignakbackend'

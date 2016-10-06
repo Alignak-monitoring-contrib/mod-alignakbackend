@@ -109,17 +109,17 @@ class TestArbiterLoadconf(unittest2.TestCase):
 
         # Add some realms
         data = {
-            'name': 'All.A',
+            'name': 'All-A',
             '_parent': cls.realm_all
         }
         realm_a = cls.backend.post("realm", data)
         data = {
-            'name': 'All.B',
+            'name': 'All-B',
             '_parent': cls.realm_all
         }
         cls.backend.post("realm", data)
         data = {
-            'name': 'All.A.1',
+            'name': 'All-A-1',
             '_parent': realm_a['_id']
         }
         cls.backend.post("realm", data)
@@ -444,21 +444,21 @@ class TestArbiterLoadconf(unittest2.TestCase):
             },
             {
                 u'default': False,
-                'realm_name': u'All.A',
+                'realm_name': u'All-A',
                 'realm_members': [],
                 u'definition_order': 100,
                 u'imported_from': u'alignakbackend'
             },
             {
                 u'default': False,
-                'realm_name': u'All.B',
+                'realm_name': u'All-B',
                 'realm_members': [],
                 u'definition_order': 100,
                 u'imported_from': u'alignakbackend'
             },
             {
                 u'default': False,
-                'realm_name': u'All.A.1',
+                'realm_name': u'All-A-1',
                 'realm_members': [],
                 u'definition_order': 100,
                 u'imported_from': u'alignakbackend'

@@ -165,6 +165,7 @@ class AlignakBackendArbit(BaseModule):
         except BackendException as e:
             logger.warning("[Backend Arbiter] Alignak backend is not available for login. "
                            "No backend connection.")
+            logger.warning("[Backend Arbiter] Exception: %s", str(e))
             self.backend_connected = False
 
     def single_relation(self, resource, mapping, ctype):
@@ -846,6 +847,7 @@ class AlignakBackendArbit(BaseModule):
         except BackendException as e:
             logger.warning("[Backend Arbiter] Alignak backend is not available for reading. "
                            "Backend communication error.")
+            logger.warning("[Backend Arbiter] Exception: %s", str(e))
             self.backend_connected = False
 
         self.time_loaded_conf = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")

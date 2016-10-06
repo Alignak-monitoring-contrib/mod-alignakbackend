@@ -20,10 +20,7 @@
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-The objects package contains the arbiter module to get config from alignak-backend. We
-have too the backend wrapper to manage API of alignak-backend
+This package contains the broker module to update the live state in the alignak backend.
 """
-
-from alignak_module_backend.version import VERSION as __version__
 
 from .module import properties, get_instance

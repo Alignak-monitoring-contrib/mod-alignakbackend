@@ -374,6 +374,7 @@ class AlignakBackendBrok(BaseModule):
                 logger.error('[Backend Broker] Patch livestate host %s has error: %s',
                              self.mapping['host'][name],
                              str(e))
+                logger.error('[Backend Broker] Data: %s', data)
                 logger.error('[Backend Broker] Response: %s', e.response)
         elif type_data == 'livestate_service':
             headers['If-Match'] = self.ref_live['service'][self.mapping['service'][name]]['_etag']
@@ -390,6 +391,7 @@ class AlignakBackendBrok(BaseModule):
             except BackendException as e:
                 logger.error('[Backend Broker] Patch livestate service %s has error: %s',
                              self.mapping['service'][name], str(e))
+                logger.error('[Backend Broker] Data: %s', data)
                 logger.error('[Backend Broker] Response: %s', e.response)
         elif type_data == 'log_host':
             try:
@@ -397,6 +399,7 @@ class AlignakBackendBrok(BaseModule):
             except BackendException as e:
                 logger.error('[Backend Broker] Post logcheckresult of host %s has error: %s',
                              self.mapping['host'][name], str(e))
+                logger.error('[Backend Broker] Data: %s', data)
                 logger.error('[Backend Broker] Response: %s', e.response)
                 ret = False
         elif type_data == 'log_service':
@@ -405,6 +408,7 @@ class AlignakBackendBrok(BaseModule):
             except BackendException as e:
                 logger.error('[Backend Broker] Post logcheckresult of service %s has error: %s',
                              self.mapping['service'][name], str(e))
+                logger.error('[Backend Broker] Data: %s', data)
                 logger.error('[Backend Broker] Response: %s', e.response)
                 ret = False
         return ret

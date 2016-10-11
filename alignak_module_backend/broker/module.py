@@ -24,10 +24,10 @@ This module is used to send logs and livestate to alignak-backend with broker
 
 import time
 
-from alignak_backend_client.client import Backend, BackendException
-# pylint: disable=wrong-import-order
-from alignak.basemodule import BaseModule
 from alignak.log import logger
+from alignak.basemodule import BaseModule
+
+from alignak_backend_client.client import Backend, BackendException
 
 # pylint: disable=C0103
 properties = {
@@ -60,6 +60,7 @@ class AlignakBackendBrok(BaseModule):
         self.url = getattr(modconf, 'api_url', 'http://localhost:5000')
         self.backend = Backend(self.url)
         self.backend.token = getattr(modconf, 'token', '')
+        self.backend_connected = False
         if self.backend.token == '':
             self.getToken(getattr(modconf, 'username', ''), getattr(modconf, 'password', ''),
                           getattr(modconf, 'allowgeneratetoken', False))
@@ -102,12 +103,15 @@ class AlignakBackendBrok(BaseModule):
         generate = 'enabled'
         if not generatetoken:
             generate = 'disabled'
-        result = self.backend.login(username, password, generate)
-        if not result:
-            logger.error(
-                "[Backend Broker] Configured user account is not allowed to log-in: %s", username
-            )
-        return result
+
+        try:
+            self.backend.login(username, password, generate)
+            self.backend_connected = True
+        except BackendException as e:
+            logger.warning("[Backend Arbiter] Alignak backend is not available for login. "
+                           "No backend connection.")
+            logger.warning("[Backend Arbiter] Exception: %s", str(e))
+            self.backend_connected = False
 
     def backendConnection(self):
         """
@@ -355,6 +359,11 @@ class AlignakBackendBrok(BaseModule):
         :return: True if send is ok, False otherwise
         :rtype: bool
         """
+        if not self.backend_connected:
+            logger.error("[Backend Broker] Alignak backend connection is not available. "
+                         "Skipping objects update.")
+            return
+
         headers = {
             'Content-Type': 'application/json',
         }

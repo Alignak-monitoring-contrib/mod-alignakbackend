@@ -196,7 +196,10 @@ class TestBrokerCommon(unittest2.TestCase):
         ref = {'srv001': self.data_host['_id']}
         self.assertEqual(self.brokmodule.mapping['host'], ref)
 
-        r = self.backend.get('host')
+        params = {
+            'where': '{"name": "srv001"}'
+        }
+        r = self.backend.get('host', params)
         self.assertEqual(len(r['_items']), 1)
 
     def test_02_get_refs_service(self):
@@ -232,7 +235,8 @@ class TestBrokerCommon(unittest2.TestCase):
         b.prepare()
         self.brokmodule.manage_brok(b)
 
-        r = self.backend.get('host')
+        params = {'where': '{"name": "srv001"}'}
+        r = self.backend.get('host', params)
         self.assertEqual(len(r['_items']), 1)
         number = 0
         for index, item in enumerate(r['_items']):
@@ -278,10 +282,11 @@ class TestBrokerCommon(unittest2.TestCase):
         b.prepare()
         self.brokmodule.manage_brok(b)
 
-        items = self.backend.get('host')
+        params = {'where': '{"name": "srv001"}'}
+        r = self.backend.get('host', params)
         self.assertEqual(len(r['_items']), 1)
         number = 0
-        for index, item in enumerate(items['_items']):
+        for index, item in enumerate(r['_items']):
             self.assertEqual(item['ls_last_state'], 'UP')
             self.assertEqual(item['ls_state'], 'DOWN')
             self.assertEqual(item['ls_last_state_type'], 'HARD')

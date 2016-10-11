@@ -146,7 +146,8 @@ class TestArbiterLoadconf(unittest2.TestCase):
     def test_commands(self):
         reference = [
             {
-                'command_name': u'_internal_host_up',
+                u'command_line': u'_internal_host_up',
+                u'command_name': u'_internal_host_up',
                 u'definition_order': 100,
                 u'enable_environment_macros': False,
                 u'imported_from': u'alignakbackend',
@@ -157,7 +158,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
             },
             {
                 u'command_line': u'_echo',
-                'command_name': u'_echo',
+                u'command_name': u'_echo',
                 u'definition_order': 100,
                 u'enable_environment_macros': False,
                 u'imported_from': u'alignakbackend',
@@ -339,8 +340,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'imported_from': u'alignakbackend',
                 u'definition_order': 100,
                 u'alias': u'',
-                u'notes': u'',
-                u'contactgroup_members': u'',
+                u'contactgroup_members': '',
                 u'members': u'jeronimo'
             },
             {
@@ -348,8 +348,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'imported_from': u'alignakbackend',
                 u'definition_order': 100,
                 u'alias': u'All users',
-                u'notes': u'',
-                u'contactgroup_members': u'',
+                u'contactgroup_members': '',
                 u'members': u''
             },
         ]

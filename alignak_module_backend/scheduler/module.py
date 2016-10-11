@@ -23,10 +23,11 @@ This module is used to manage retention and livestate to alignak-backend with sc
 """
 
 import time
-from alignak_backend_client.client import Backend, BackendException
-# pylint: disable=wrong-import-order
-from alignak.basemodule import BaseModule
+
 from alignak.log import logger
+from alignak.basemodule import BaseModule
+
+from alignak_backend_client.client import Backend, BackendException
 
 
 # pylint: disable=C0103
@@ -57,6 +58,7 @@ class AlignakBackendSched(BaseModule):
         self.url = getattr(modconf, 'api_url', 'http://localhost:5000')
         self.backend = Backend(self.url)
         self.backend.token = getattr(modconf, 'token', '')
+        self.backend_connected = False
         if self.backend.token == '':
             self.getToken(getattr(modconf, 'username', ''), getattr(modconf, 'password', ''),
                           getattr(modconf, 'allowgeneratetoken', False))
@@ -84,7 +86,15 @@ class AlignakBackendSched(BaseModule):
         generate = 'enabled'
         if not generatetoken:
             generate = 'disabled'
-        self.backend.login(username, password, generate)
+
+        try:
+            self.backend.login(username, password, generate)
+            self.backend_connected = True
+        except BackendException as e:
+            logger.warning("[Backend Arbiter] Alignak backend is not available for login. "
+                           "No backend connection.")
+            logger.warning("[Backend Arbiter] Exception: %s", str(e))
+            self.backend_connected = False
 
     def hook_load_retention(self, scheduler):
         """
@@ -94,21 +104,27 @@ class AlignakBackendSched(BaseModule):
         :type scheduler: object
         :return: None
         """
+
         all_data = {'hosts': {}, 'services': {}}
-        response = self.backend.get_all('retentionhost')
-        for host in response['_items']:
-            # clean unusable keys
-            hostname = host['host']
-            for key in ['_created', '_etag', '_id', '_links', '_updated', 'host']:
-                del host[key]
-            all_data['hosts'][hostname] = host
-        response = self.backend.get_all('retentionservice')
-        for service in response['_items']:
-            # clean unusable keys
-            servicename = (service['service'][0], service['service'][1])
-            for key in ['_created', '_etag', '_id', '_links', '_updated', 'service']:
-                del service[key]
-            all_data['services'][servicename] = service
+        if not self.backend_connected:
+            logger.error("[Backend Scheduler] Alignak backend connection is not available. "
+                         "Skipping objects retention load.")
+        else:
+            # Get data from the backend
+            response = self.backend.get_all('retentionhost')
+            for host in response['_items']:
+                # clean unusable keys
+                hostname = host['host']
+                for key in ['_created', '_etag', '_id', '_links', '_updated', 'host']:
+                    del host[key]
+                all_data['hosts'][hostname] = host
+            response = self.backend.get_all('retentionservice')
+            for service in response['_items']:
+                # clean unusable keys
+                servicename = (service['service'][0], service['service'][1])
+                for key in ['_created', '_etag', '_id', '_links', '_updated', 'service']:
+                    del service[key]
+                all_data['services'][servicename] = service
 
         scheduler.restore_retention_data(all_data)
 
@@ -121,6 +137,11 @@ class AlignakBackendSched(BaseModule):
         :return: None
         """
         data_to_save = scheduler.get_retention_data()
+
+        if not self.backend_connected:
+            logger.error("[Backend Scheduler] Alignak backend connection is not available. "
+                         "Skipping objects retention save.")
+            return
 
         # clean hosts we will re-upload the retention
         response = self.backend.get_all('retentionhost')

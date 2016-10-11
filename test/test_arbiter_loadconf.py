@@ -157,6 +157,28 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'imported_from': u'alignakbackend', u'poller_tag': u'', u'timeout': -1
             },
             {
+                u'command_line': u'_internal_host_up',
+                u'command_name': u'_internal_host_up',
+                u'definition_order': 100,
+                u'enable_environment_macros': False,
+                u'imported_from': u'alignakbackend',
+                u'module_type': u'fork',
+                u'poller_tag': u'',
+                u'reactionner_tag': u'',
+                u'timeout': -1
+            },
+            {
+                u'command_line': u'_echo',
+                u'command_name': u'_echo',
+                u'definition_order': 100,
+                u'enable_environment_macros': False,
+                u'imported_from': u'alignakbackend',
+                u'module_type': u'fork',
+                u'poller_tag': u'',
+                u'reactionner_tag': u'',
+                u'timeout': -1
+            },
+            {
                 u'definition_order': 100,
                 u'poller_tag': u'',
                 u'command_line': u'check_ping -H $HOSTADDRESS$',
@@ -329,8 +351,6 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'imported_from': u'alignakbackend',
                 u'definition_order': 100,
                 u'alias': u'',
-                # notes are filtered for the arbiter
-                # u'notes': u'',
                 u'contactgroup_members': '',
                 u'members': u'jeronimo'
             },
@@ -339,8 +359,6 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 u'imported_from': u'alignakbackend',
                 u'definition_order': 100,
                 u'alias': u'All users',
-                # notes are filtered for the arbiter
-                # u'notes': u'',
                 u'contactgroup_members': '',
                 u'members': u''
             },

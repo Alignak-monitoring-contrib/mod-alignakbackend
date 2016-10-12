@@ -29,11 +29,8 @@ from datetime import datetime
 
 from alignak.basemodule import BaseModule
 from alignak.external_command import ExternalCommand
-from alignak.basemodule import BaseModule
 
 from alignak_backend_client.client import Backend, BackendException
-
-from alignak_backend_client.client import Backend
 
 logger = logging.getLogger('alignak.module')  # pylint: disable=C0103
 

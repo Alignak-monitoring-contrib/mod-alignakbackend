@@ -1,10 +1,8 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak contrib team, see AUTHORS.txt file for contributors
 #
-# This file is part of Alignak.
+# This file is part of Alignak contrib projet.
 #
 # Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -18,16 +16,18 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+
 """
 This module is used to manage retention and livestate to alignak-backend with scheduler
 """
 
 import time
-from alignak_backend_client.client import Backend, BackendException
-# pylint: disable=wrong-import-order
-from alignak.basemodule import BaseModule
-from alignak.log import logger
+import logging
 
+from alignak.basemodule import BaseModule
+from alignak_backend_client.client import Backend, BackendException
+
+logger = logging.getLogger('alignak.module')  # pylint: disable=C0103
 
 # pylint: disable=C0103
 properties = {
@@ -39,15 +39,18 @@ properties = {
 
 
 def get_instance(mod_conf):
-    """ Return a module instance for the plugin manager """
-    logger.info("[Backend Scheduler] Get a Alignak config module for plugin %s",
-                mod_conf.get_name())
+    """
+    Return a module instance for the modules manager
 
-    instance = AlignakBackendSched(mod_conf)
-    return instance
+    :param mod_conf: the module properties as defined globally in this file
+    :return:
+    """
+    logger.info("Give an instance of %s for alias: %s", mod_conf.python_name, mod_conf.module_alias)
+
+    return AlignakBackendScheduler(mod_conf)
 
 
-class AlignakBackendSched(BaseModule):
+class AlignakBackendScheduler(BaseModule):
     """
     This class is used to send live states to alignak-backend
     """

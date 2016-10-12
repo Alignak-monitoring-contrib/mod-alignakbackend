@@ -1,10 +1,8 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak contrib team, see AUTHORS.txt file for contributors
 #
-# This file is part of Alignak.
+# This file is part of Alignak contrib projet.
 #
 # Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -22,17 +20,19 @@
 This module is used to get configuration from alignak-backend with arbiter
 """
 
-import time
-import traceback
-from datetime import datetime
 import os
 import signal
-from alignak_backend_client.client import Backend
-# pylint: disable=wrong-import-order
+import time
+import traceback
+import logging
+from datetime import datetime
+
 from alignak.basemodule import BaseModule
-from alignak.log import logger
 from alignak.external_command import ExternalCommand
 
+from alignak_backend_client.client import Backend
+
+logger = logging.getLogger('alignak.module')  # pylint: disable=C0103
 
 # pylint: disable=C0103
 properties = {
@@ -44,20 +44,18 @@ properties = {
 
 
 def get_instance(mod_conf):
-    """Return a module instance for the plugin manager
-
-    :param mod_conf: Configuration object
-    :type mod_conf: object
-    :return: AlignakBackendArbit instance
-    :rtype: object
     """
-    logger.info("[Backend Arbiter] Get a Alignak config module for plugin %s",
-                mod_conf.get_name())
-    instance = AlignakBackendArbit(mod_conf)
-    return instance
+    Return a module instance for the modules manager
+
+    :param mod_conf: the module properties as defined globally in this file
+    :return:
+    """
+    logger.info("Give an instance of %s for alias: %s", mod_conf.python_name, mod_conf.module_alias)
+
+    return AlignakBackendArbiter(mod_conf)
 
 
-class AlignakBackendArbit(BaseModule):
+class AlignakBackendArbiter(BaseModule):
     # pylint: disable=too-many-public-methods
     """ This class is used to get configuration from alignak-backend
     """
@@ -1022,3 +1020,6 @@ class AlignakBackendArbit(BaseModule):
             logger.info("[Backend Arbiter] build external command: %s", str(command))
             ext = ExternalCommand(command)
             arbiter.external_commands.append(ext)
+
+        logger.info("stopping...")
+        logger.info("stopped")

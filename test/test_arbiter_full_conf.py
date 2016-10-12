@@ -7,7 +7,7 @@ import shlex
 import subprocess
 import json
 import unittest2
-from alignak_module_backend.arbiter.module import AlignakBackendArbit
+from alignak_module_backend.arbiter.module import AlignakBackendArbiter
 from alignak.objects.module import Module
 from alignak.objects.realm import Realm
 from alignak.objects.command import Command
@@ -59,7 +59,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
         modconf.username = "admin"
         modconf.password = "admin"
         modconf.api_url = 'http://127.0.0.1:5000'
-        cls.arbmodule = AlignakBackendArbit(modconf)
+        cls.arbmodule = AlignakBackendArbiter(modconf)
         cls.objects = cls.arbmodule.get_objects()
 
     @classmethod

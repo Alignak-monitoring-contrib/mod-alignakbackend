@@ -1,10 +1,8 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak contrib team, see AUTHORS.txt file for contributors
 #
-# This file is part of Alignak.
+# This file is part of Alignak contrib projet.
 #
 # Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -18,16 +16,18 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+
 """
 This module is used to send logs and livestate to alignak-backend with broker
 """
 
 import time
+import logging
 
-from alignak_backend_client.client import Backend, BackendException
-# pylint: disable=wrong-import-order
 from alignak.basemodule import BaseModule
-from alignak.log import logger
+from alignak_backend_client.client import Backend, BackendException
+
+logger = logging.getLogger('alignak.module')  # pylint: disable=C0103
 
 # pylint: disable=C0103
 properties = {
@@ -38,20 +38,18 @@ properties = {
 
 
 def get_instance(mod_conf):
-    """Return a module instance for the plugin manager
-
-    :param mod_conf: Configuration object
-    :type mod_conf: object
-    :return: AlignakBackendArbit instance
-    :rtype: object
     """
-    logger.info("[Backend Broker] Get a Alignak log & livestate module for plugin %s",
-                mod_conf.get_name())
-    instance = AlignakBackendBrok(mod_conf)
-    return instance
+    Return a module instance for the modules manager
+
+    :param mod_conf: the module properties as defined globally in this file
+    :return:
+    """
+    logger.info("Give an instance of %s for alias: %s", mod_conf.python_name, mod_conf.module_alias)
+
+    return AlignakBackendBroker(mod_conf)
 
 
-class AlignakBackendBrok(BaseModule):
+class AlignakBackendBroker(BaseModule):
     """ This class is used to send logs and livestate to alignak-backend
     """
 
@@ -437,12 +435,17 @@ class AlignakBackendBrok(BaseModule):
 
     def main(self):
         """
-        Main function where send queue to manage_brok function
+        Main loop of the process
 
-        :return: None
+        This module is an "external" module
+        :return:
         """
-        self.set_proctitle(self.name)
+        # Set the OS process title
+        self.set_proctitle(self.alias)
         self.set_exit_handler()
+
+        logger.info("starting...")
+
         while not self.interrupted:
             logger.debug("[Backend Broker] queue length: %s", self.to_q.qsize())
             start = time.time()
@@ -453,3 +456,6 @@ class AlignakBackendBrok(BaseModule):
 
             logger.debug("[Backend Broker] time to manage %s broks (%d secs)", len(l),
                          time.time() - start)
+
+        logger.info("stopping...")
+        logger.info("stopped")

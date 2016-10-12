@@ -1,10 +1,8 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak contrib team, see AUTHORS.txt file for contributors
 #
-# This file is part of Alignak.
+# This file is part of Alignak contrib projet.
 #
 # Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -26,7 +24,7 @@ import requests
 import subprocess
 import json
 import unittest2
-from alignak_module_backend.broker.module import AlignakBackendBrok
+from alignak_module_backend.broker.module import AlignakBackendBroker
 from alignak.objects.module import Module
 from alignak.brok import Brok
 from alignak_backend_client.client import Backend
@@ -93,11 +91,11 @@ class TestBrokerConnection(unittest2.TestCase):
     def test_00_connection_accepted(self):
         # Start broker module with admin user
         modconf = Module()
-        modconf.module_alias = "alignakbackendbrok"
+        modconf.module_alias = "backend_broker"
         modconf.username = "admin"
         modconf.password = "admin"
         modconf.api_url = 'http://127.0.0.1:5000'
-        broker_module = AlignakBackendBrok(modconf)
+        broker_module = AlignakBackendBroker(modconf)
 
         self.assertTrue(broker_module.backendConnection())
         self.assertTrue(broker_module.logged_in)
@@ -105,11 +103,11 @@ class TestBrokerConnection(unittest2.TestCase):
     def test_01_connection_refused(self):
         # Start broker module with not allowed user
         modconf = Module()
-        modconf.module_alias = "alignakbackendbrok"
+        modconf.module_alias = "backend_broker"
         modconf.username = "test"
         modconf.password = "test"
         modconf.api_url = 'http://127.0.0.1:5000'
-        broker_module = AlignakBackendBrok(modconf)
+        broker_module = AlignakBackendBroker(modconf)
 
         self.assertFalse(broker_module.backendConnection())
         self.assertFalse(broker_module.logged_in)
@@ -172,11 +170,11 @@ class TestBrokerCommon(unittest2.TestCase):
 
         # Start broker module
         modconf = Module()
-        modconf.module_alias = "alignakbackendbrok"
+        modconf.module_alias = "backend_broker"
         modconf.username = "admin"
         modconf.password = "admin"
         modconf.api_url = 'http://127.0.0.1:5000'
-        cls.brokmodule = AlignakBackendBrok(modconf)
+        cls.brokmodule = AlignakBackendBroker(modconf)
 
     @classmethod
     def tearDownClass(cls):

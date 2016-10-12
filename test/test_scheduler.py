@@ -1,10 +1,8 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak contrib team, see AUTHORS.txt file for contributors
 #
-# This file is part of Alignak.
+# This file is part of Alignak contrib projet.
 #
 # Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -27,7 +25,7 @@ import time
 import subprocess
 import json
 import unittest2
-from alignak_module_backend.scheduler.module import AlignakBackendSched
+from alignak_module_backend.scheduler.module import AlignakBackendScheduler
 from alignak.objects.module import Module
 from alignak_backend_client.client import Backend
 
@@ -95,11 +93,11 @@ class TestScheduler(unittest2.TestCase):
 
         # Start broker module
         modconf = Module()
-        modconf.module_alias = "alignakbackendsched"
+        modconf.module_alias = "backend_scheduler"
         modconf.username = "admin"
         modconf.password = "admin"
         modconf.api_url = 'http://127.0.0.1:5000'
-        cls.schedmodule = AlignakBackendSched(modconf)
+        cls.schedmodule = AlignakBackendScheduler(modconf)
 
         class scheduler(object):
             """

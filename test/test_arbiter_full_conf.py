@@ -49,7 +49,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
 
         print ("Feeding backend...")
         exit_code = subprocess.call(
-            shlex.split('alignak_backend_import --delete cfg/default/_main.cfg')
+            shlex.split('alignak-backend-import --delete cfg/default/_main.cfg')
         )
         assert exit_code == 0
 
@@ -73,7 +73,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
         time.sleep(2)
 
     def test_commands(self):
-        self.assertEqual(len(self.objects['commands']), 103)
+        self.assertEqual(len(self.objects['commands']), 105)
         for comm in self.objects['commands']:
             for key, value in comm.iteritems():
                 self.assertTrue(Command.properties[key])

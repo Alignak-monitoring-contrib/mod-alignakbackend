@@ -1066,6 +1066,3 @@ class AlignakBackendArbiter(BaseModule):
             logger.info("build external command: %s", str(command))
             ext = ExternalCommand(command)
             arbiter.external_commands.append(ext)
-
-        logger.info("stopping...")
-        logger.info("stopped")

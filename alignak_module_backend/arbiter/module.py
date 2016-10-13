@@ -72,6 +72,7 @@ class AlignakBackendArbiter(BaseModule):
         """
         BaseModule.__init__(self, mod_conf)
 
+        # pylint: disable=global-statement
         global logger
         logger = logging.getLogger('alignak.module.%s' % self.alias)
 

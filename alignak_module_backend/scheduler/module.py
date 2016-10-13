@@ -55,15 +55,31 @@ class AlignakBackendScheduler(BaseModule):
     This class is used to send live states to alignak-backend
     """
 
-    def __init__(self, modconf):
-        BaseModule.__init__(self, modconf)
-        self.url = getattr(modconf, 'api_url', 'http://localhost:5000')
+    def __init__(self, mod_conf):
+        """
+        Module initialization
+
+        mod_conf is a dictionary that contains:
+        - all the variables declared in the module configuration file
+        - a 'properties' value that is the module properties as defined globally in this file
+
+        :param mod_conf: module configuration file as a dictionary
+        """
+        BaseModule.__init__(self, mod_conf)
+
+        global logger
+        logger = logging.getLogger('alignak.module.%s' % self.alias)
+
+        logger.debug("inner properties: %s", self.__dict__)
+        logger.debug("received configuration: %s", mod_conf.__dict__)
+
+        self.url = getattr(mod_conf, 'api_url', 'http://localhost:5000')
         self.backend = Backend(self.url)
-        self.backend.token = getattr(modconf, 'token', '')
+        self.backend.token = getattr(mod_conf, 'token', '')
         self.backend_connected = False
         if self.backend.token == '':
-            self.getToken(getattr(modconf, 'username', ''), getattr(modconf, 'password', ''),
-                          getattr(modconf, 'allowgeneratetoken', False))
+            self.getToken(getattr(mod_conf, 'username', ''), getattr(mod_conf, 'password', ''),
+                          getattr(mod_conf, 'allowgeneratetoken', False))
 
     # Common functions
     def do_loop_turn(self):
@@ -92,10 +108,10 @@ class AlignakBackendScheduler(BaseModule):
         try:
             self.backend.login(username, password, generate)
             self.backend_connected = True
-        except BackendException as e:
-            logger.warning("[Backend Arbiter] Alignak backend is not available for login. "
+        except BackendException as exp:
+            logger.warning("Alignak backend is not available for login. "
                            "No backend connection.")
-            logger.warning("[Backend Arbiter] Exception: %s", str(e))
+            logger.exception("Exception: %s", exp)
             self.backend_connected = False
 
     def hook_load_retention(self, scheduler):
@@ -141,7 +157,7 @@ class AlignakBackendScheduler(BaseModule):
         data_to_save = scheduler.get_retention_data()
 
         if not self.backend_connected:
-            logger.error("[Backend Scheduler] Alignak backend connection is not available. "
+            logger.error("Alignak backend connection is not available. "
                          "Skipping objects retention save.")
             return
 
@@ -157,13 +173,12 @@ class AlignakBackendScheduler(BaseModule):
             data_to_save['hosts'][host]['host'] = host
             try:
                 self.backend.post('retentionhost', data=data_to_save['hosts'][host])
-            except BackendException as e:
-                logger.error('[Backend Scheduler] Post retentionhost of host has error: %s',
-                             str(e))
-                logger.error('[Backend Scheduler] Response: %s', e.response)
+            except BackendException as exp:
+                logger.error('Post retentionhost for host error')
+                logger.error('Response: %s', exp.response)
+                logger.exception("Exception: %s", exp)
                 return
-        logger.info('[Backend Scheduler] %d hosts saved in retention',
-                    len(data_to_save['hosts']))
+        logger.info('%d hosts saved in retention', len(data_to_save['hosts']))
 
         # clean services we will re-upload the retention
         response = self.backend.get_all('retentionservice')
@@ -178,10 +193,8 @@ class AlignakBackendScheduler(BaseModule):
             data_to_save['services'][service]['service'] = service
             try:
                 self.backend.post('retentionservice', data=data_to_save['services'][service])
-            except BackendException as e:
-                logger.error('[Backend Scheduler] Post retentionservice of service has error: %s',
-                             str(e))
-                logger.error('[Backend Scheduler] Response: %s', e.response)
+            except BackendException as exp:
+                logger.error('Post retentionservice for service error')
+                logger.exception("Exception: %s", exp)
                 return
-        logger.info('[Backend Scheduler] %d services saved in retention',
-                    len(data_to_save['services']))
+        logger.info('%d services saved in retention', len(data_to_save['services']))

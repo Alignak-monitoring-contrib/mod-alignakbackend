@@ -53,15 +53,31 @@ class AlignakBackendBroker(BaseModule):
     """ This class is used to send logs and livestate to alignak-backend
     """
 
-    def __init__(self, modconf):
-        BaseModule.__init__(self, modconf)
-        self.url = getattr(modconf, 'api_url', 'http://localhost:5000')
+    def __init__(self, mod_conf):
+        """
+        Module initialization
+
+        mod_conf is a dictionary that contains:
+        - all the variables declared in the module configuration file
+        - a 'properties' value that is the module properties as defined globally in this file
+
+        :param mod_conf: module configuration file as a dictionary
+        """
+        BaseModule.__init__(self, mod_conf)
+
+        global logger
+        logger = logging.getLogger('alignak.module.%s' % self.alias)
+
+        logger.debug("inner properties: %s", self.__dict__)
+        logger.debug("received configuration: %s", mod_conf.__dict__)
+
+        self.url = getattr(mod_conf, 'api_url', 'http://localhost:5000')
         self.backend = Backend(self.url)
-        self.backend.token = getattr(modconf, 'token', '')
+        self.backend.token = getattr(mod_conf, 'token', '')
         self.backend_connected = False
         if self.backend.token == '':
-            self.getToken(getattr(modconf, 'username', ''), getattr(modconf, 'password', ''),
-                          getattr(modconf, 'allowgeneratetoken', False))
+            self.getToken(getattr(mod_conf, 'username', ''), getattr(mod_conf, 'password', ''),
+                          getattr(mod_conf, 'allowgeneratetoken', False))
 
         self.logged_in = self.backendConnection()
 
@@ -83,7 +99,7 @@ class AlignakBackendBroker(BaseModule):
         """This function is called/used when you need a module with
         a loop function (and use the parameter 'external': True)
         """
-        logger.info("[Backend Broker] In loop")
+        logger.info("In loop")
         time.sleep(1)
 
     def getToken(self, username, password, generatetoken):
@@ -105,10 +121,10 @@ class AlignakBackendBroker(BaseModule):
         try:
             self.backend.login(username, password, generate)
             self.backend_connected = True
-        except BackendException as e:
-            logger.warning("[Backend Arbiter] Alignak backend is not available for login. "
+        except BackendException as exp:
+            logger.warning("Alignak backend is not available for login. "
                            "No backend connection.")
-            logger.warning("[Backend Arbiter] Exception: %s", str(e))
+            logger.exception("Exception: %s", exp)
             self.backend_connected = False
 
     def backendConnection(self):
@@ -122,7 +138,7 @@ class AlignakBackendBroker(BaseModule):
         for item in users['_items']:
             return item['can_update_livestate']
 
-        logger.error("[Backend Broker] Configured user account is not allowed for this module")
+        logger.error("Configured user account is not allowed for this module")
         return False
 
     def get_refs(self, type_data):
@@ -243,7 +259,7 @@ class AlignakBackendBroker(BaseModule):
                     del self.ref_live['host'][h_id]['initial_state_type']
 
                 data_to_update['_realm'] = self.ref_live['host'][h_id]['_realm']
-                logger.debug("[Backend Broker] host live state data: %s", data_to_update)
+                logger.debug("host live state data: %s", data_to_update)
 
                 # Update live state
                 ret = self.send_to_backend('livestate_host', data['host_name'], data_to_update)
@@ -315,7 +331,7 @@ class AlignakBackendBroker(BaseModule):
                     del self.ref_live['service'][s_id]['initial_state_type']
 
                 data_to_update['_realm'] = self.ref_live['service'][s_id]['_realm']
-                logger.debug("[Backend Broker] service live state data: %s", data_to_update)
+                logger.debug("service live state data: %s", data_to_update)
 
                 # Update live state
                 ret = self.send_to_backend('livestate_service', service_name, data_to_update)
@@ -358,7 +374,7 @@ class AlignakBackendBroker(BaseModule):
         :rtype: bool
         """
         if not self.backend_connected:
-            logger.error("[Backend Broker] Alignak backend connection is not available. "
+            logger.error("Alignak backend connection is not available. "
                          "Skipping objects update.")
             return
 
@@ -373,16 +389,14 @@ class AlignakBackendBroker(BaseModule):
                     'host/%s' % self.ref_live['host'][self.mapping['host'][name]]['_id'],
                     data, headers, True)
                 if response['_status'] == 'ERR':
-                    logger.error('[Backend Broker] %s', response['_issues'])
+                    logger.error('%s', response['_issues'])
                     ret = False
                 else:
                     self.ref_live['host'][self.mapping['host'][name]]['_etag'] = response['_etag']
-            except BackendException as e:
-                logger.error('[Backend Broker] Patch livestate host %s has error: %s',
-                             self.mapping['host'][name],
-                             str(e))
-                logger.error('[Backend Broker] Data: %s', data)
-                logger.error('[Backend Broker] Response: %s', e.response)
+            except BackendException as exp:
+                logger.error('Patch livestate for host %s error', self.mapping['host'][name])
+                logger.error('Data: %s', data)
+                logger.exception("Exception: %s", exp)
         elif type_data == 'livestate_service':
             headers['If-Match'] = self.ref_live['service'][self.mapping['service'][name]]['_etag']
             try:
@@ -390,33 +404,31 @@ class AlignakBackendBroker(BaseModule):
                     'service/%s' % self.ref_live['service'][self.mapping['service'][name]]['_id'],
                     data, headers, True)
                 if response['_status'] == 'ERR':
-                    logger.error('[Backend Broker] %s', response['_issues'])
+                    logger.error('%s', response['_issues'])
                     ret = False
                 else:
                     self.ref_live['service'][self.mapping['service'][name]]['_etag'] = response[
                         '_etag']
-            except BackendException as e:
-                logger.error('[Backend Broker] Patch livestate service %s has error: %s',
-                             self.mapping['service'][name], str(e))
-                logger.error('[Backend Broker] Data: %s', data)
-                logger.error('[Backend Broker] Response: %s', e.response)
+            except BackendException as exp:
+                logger.error('Patch livestate for service %s error', self.mapping['service'][name])
+                logger.error('Data: %s', data)
+                logger.exception("Exception: %s", exp)
         elif type_data == 'log_host':
             try:
                 response = self.backend.post('logcheckresult', data)
-            except BackendException as e:
-                logger.error('[Backend Broker] Post logcheckresult of host %s has error: %s',
-                             self.mapping['host'][name], str(e))
-                logger.error('[Backend Broker] Data: %s', data)
-                logger.error('[Backend Broker] Response: %s', e.response)
+            except BackendException as exp:
+                logger.error('Post logcheckresult for host %s error', self.mapping['host'][name])
+                logger.error('Data: %s', data)
+                logger.exception("Exception: %s", exp)
                 ret = False
         elif type_data == 'log_service':
             try:
                 response = self.backend.post('logcheckresult', data)
-            except BackendException as e:
-                logger.error('[Backend Broker] Post logcheckresult of service %s has error: %s',
-                             self.mapping['service'][name], str(e))
-                logger.error('[Backend Broker] Data: %s', data)
-                logger.error('[Backend Broker] Response: %s', e.response)
+            except BackendException as exp:
+                logger.error('Post logcheckresult for service %s error',
+                             self.mapping['service'][name])
+                logger.error('Data: %s', data)
+                logger.exception("Exception: %s", exp)
                 ret = False
         return ret
 
@@ -429,7 +441,7 @@ class AlignakBackendBroker(BaseModule):
         :return: None
         """
         if not self.logged_in:
-            logger.debug("[Backend Broker] Not logged-in, ignoring broks...")
+            logger.debug("Not logged-in, ignoring broks...")
             return
 
         if not self.loaded_hosts:
@@ -456,14 +468,14 @@ class AlignakBackendBroker(BaseModule):
         logger.info("starting...")
 
         while not self.interrupted:
-            logger.debug("[Backend Broker] queue length: %s", self.to_q.qsize())
+            logger.debug("queue length: %s", self.to_q.qsize())
             start = time.time()
             l = self.to_q.get()
             for b in l:
                 b.prepare()
                 self.manage_brok(b)
 
-            logger.debug("[Backend Broker] time to manage %s broks (%d secs)", len(l),
+            logger.debug("time to manage %s broks (%d secs)", len(l),
                          time.time() - start)
 
         logger.info("stopping...")

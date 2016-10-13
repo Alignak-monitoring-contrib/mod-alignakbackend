@@ -60,37 +60,52 @@ class AlignakBackendArbiter(BaseModule):
     """ This class is used to get configuration from alignak-backend
     """
 
-    def __init__(self, modconf):
-        BaseModule.__init__(self, modconf)
+    def __init__(self, mod_conf):
+        """
+        Module initialization
+
+        mod_conf is a dictionary that contains:
+        - all the variables declared in the module configuration file
+        - a 'properties' value that is the module properties as defined globally in this file
+
+        :param mod_conf: module configuration file as a dictionary
+        """
+        BaseModule.__init__(self, mod_conf)
+
+        global logger
+        logger = logging.getLogger('alignak.module.%s' % self.alias)
+
+        logger.debug("inner properties: %s", self.__dict__)
+        logger.debug("received configuration: %s", mod_conf.__dict__)
 
         self.my_arbiter = None
 
         # Alignak backend importation script is running
         self.backend_import = False
         if 'ALIGNAK_BACKEND_IMPORT_RUN' in os.environ and os.environ['ALIGNAK_BACKEND_IMPORT_RUN']:
-            logger.info("[Backend Arbiter] Alignak backend importation script is active.")
+            logger.info("Alignak backend importation script is active.")
             self.backend_import = True
 
-        self.url = getattr(modconf, 'api_url', 'http://localhost:5000')
+        self.url = getattr(mod_conf, 'api_url', 'http://localhost:5000')
         self.backend = Backend(self.url)
-        self.backend.token = getattr(modconf, 'token', '')
+        self.backend.token = getattr(mod_conf, 'token', '')
         self.backend_connected = False
         if self.backend.token == '':
-            self.getToken(getattr(modconf, 'username', ''), getattr(modconf, 'password', ''),
-                          getattr(modconf, 'allowgeneratetoken', False))
-        self.bypass_verify_mode = int(getattr(modconf, 'bypass_verify_mode', 0)) == 1
+            self.getToken(getattr(mod_conf, 'username', ''), getattr(mod_conf, 'password', ''),
+                          getattr(mod_conf, 'allowgeneratetoken', False))
+        self.bypass_verify_mode = int(getattr(mod_conf, 'bypass_verify_mode', 0)) == 1
         logger.info(
-            "[Backend Arbiter] bypass objects loading when Arbiter is in verify mode: %s",
+            "bypass objects loading when Arbiter is in verify mode: %s",
             self.bypass_verify_mode
         )
-        self.verify_modification = int(getattr(modconf, 'verify_modification', 5))
+        self.verify_modification = int(getattr(mod_conf, 'verify_modification', 5))
         logger.info(
-            "[Backend Arbiter] configuration reload check period: %s minutes",
+            "configuration reload check period: %s minutes",
             self.verify_modification
         )
-        self.action_check = int(getattr(modconf, 'action_check', 15))
+        self.action_check = int(getattr(mod_conf, 'action_check', 15))
         logger.info(
-            "[Backend Arbiter] actions check period: %s seconds", self.action_check
+            "actions check period: %s seconds", self.action_check
         )
         self.next_check = 0
         self.next_action_check = 0
@@ -116,7 +131,7 @@ class AlignakBackendArbiter(BaseModule):
         """This function is called/used when you need a module with
         a loop function (and use the parameter 'external': True)
         """
-        logger.info("[Backend Arbiter] In loop")
+        logger.info("In loop")
         time.sleep(1)
 
     def hook_read_configuration(self, arbiter):
@@ -144,7 +159,7 @@ class AlignakBackendArbiter(BaseModule):
         """
         if self.backend_import:
             # Do no try to login when importing a configuration into the backend
-            logger.info("[Backend Arbiter] Alignak backend importation script is active. "
+            logger.info("Alignak backend importation script is active. "
                         "No backend connection.")
             return
 
@@ -155,10 +170,10 @@ class AlignakBackendArbiter(BaseModule):
         try:
             self.backend.login(username, password, generate)
             self.backend_connected = True
-        except BackendException as e:
-            logger.warning("[Backend Arbiter] Alignak backend is not available for login. "
+        except BackendException as exp:
+            logger.warning("Alignak backend is not available for login. "
                            "No backend connection.")
-            logger.warning("[Backend Arbiter] Exception: %s", str(e))
+            logger.exception("Exception: %s", exp)
             self.backend_connected = False
 
     def single_relation(self, resource, mapping, ctype):
@@ -262,10 +277,10 @@ class AlignakBackendArbiter(BaseModule):
         """
         self.configraw['realms'] = {}
         all_realms = self.backend.get_all('realm')
-        logger.info("[Backend Arbiter] Got %d realms",
+        logger.info("Got %d realms",
                     len(all_realms['_items']))
         for realm in all_realms['_items']:
-            logger.info("[Backend Arbiter] - %s", realm['name'])
+            logger.info("- %s", realm['name'])
             self.configraw['realms'][realm['_id']] = realm['name']
             realm['imported_from'] = u'alignakbackend'
             realm['realm_name'] = realm['name']
@@ -275,7 +290,7 @@ class AlignakBackendArbiter(BaseModule):
             del realm['alias']
             # self.convert_lists(realm)
 
-            logger.debug("[Backend Arbiter] - realm: %s", realm)
+            logger.debug("- realm: %s", realm)
             self.config['realms'].append(realm)
 
     def get_commands(self):
@@ -286,10 +301,10 @@ class AlignakBackendArbiter(BaseModule):
         """
         self.configraw['commands'] = {}
         all_commands = self.backend.get_all('command')
-        logger.info("[Backend Arbiter] Got %d commands",
+        logger.info("Got %d commands",
                     len(all_commands['_items']))
         for command in all_commands['_items']:
-            logger.info("[Backend Arbiter] - %s", command['name'])
+            logger.info("- %s", command['name'])
             self.configraw['commands'][command['_id']] = command['name']
             command['imported_from'] = u'alignakbackend'
             command['command_name'] = command['name']
@@ -298,7 +313,7 @@ class AlignakBackendArbiter(BaseModule):
             del command['notes']
             self.convert_lists(command)
 
-            logger.debug("[Backend Arbiter] - command: %s", command)
+            logger.debug("- command: %s", command)
             self.config['commands'].append(command)
 
     def get_timeperiods(self):
@@ -309,10 +324,10 @@ class AlignakBackendArbiter(BaseModule):
         """
         self.configraw['timeperiods'] = {}
         all_timeperiods = self.backend.get_all('timeperiod')
-        logger.info("[Backend Arbiter] Got %d timeperiods",
+        logger.info("Got %d timeperiods",
                     len(all_timeperiods['_items']))
         for timeperiod in all_timeperiods['_items']:
-            logger.info("[Backend Arbiter] - %s", timeperiod['name'])
+            logger.info("- %s", timeperiod['name'])
             self.configraw['timeperiods'][timeperiod['_id']] = timeperiod['name']
             timeperiod['imported_from'] = u'alignakbackend'
             timeperiod['timeperiod_name'] = timeperiod['name']
@@ -323,7 +338,7 @@ class AlignakBackendArbiter(BaseModule):
             del timeperiod['notes']
             self.convert_lists(timeperiod)
 
-            logger.debug("[Backend Arbiter] - timeperiod: %s", timeperiod)
+            logger.debug("- timeperiod: %s", timeperiod)
             self.config['timeperiods'].append(timeperiod)
 
     def get_contactgroups(self):
@@ -334,10 +349,10 @@ class AlignakBackendArbiter(BaseModule):
         """
         self.configraw['contactgroups'] = {}
         all_contactgroups = self.backend.get_all('usergroup')
-        logger.info("[Backend Arbiter] Got %d contactgroups",
+        logger.info("Got %d contactgroups",
                     len(all_contactgroups['_items']))
         for contactgroup in all_contactgroups['_items']:
-            logger.info("[Backend Arbiter] - %s", contactgroup['name'])
+            logger.info("- %s", contactgroup['name'])
             self.configraw['contactgroups'][contactgroup['_id']] = contactgroup['name']
 
         for contactgroup in all_contactgroups['_items']:
@@ -353,7 +368,7 @@ class AlignakBackendArbiter(BaseModule):
             del contactgroup['notes']
             self.convert_lists(contactgroup)
 
-            logger.debug("[Backend Arbiter] - contacts group: %s", contactgroup)
+            logger.debug("- contacts group: %s", contactgroup)
             self.config['contactgroups'].append(contactgroup)
 
     def get_contacts(self):
@@ -364,10 +379,10 @@ class AlignakBackendArbiter(BaseModule):
         """
         self.configraw['contacts'] = {}
         all_contacts = self.backend.get_all('user')
-        logger.info("[Backend Arbiter] Got %d contacts",
+        logger.info("Got %d contacts",
                     len(all_contacts['_items']))
         for contact in all_contacts['_items']:
-            logger.info("[Backend Arbiter] - %s", contact['name'])
+            logger.info("- %s", contact['name'])
             self.configraw['contacts'][contact['_id']] = contact['name']
             contact['imported_from'] = u'alignakbackend'
             contact['contact_name'] = contact['name']
@@ -402,7 +417,7 @@ class AlignakBackendArbiter(BaseModule):
             del contact['ui_preferences']
             self.convert_lists(contact)
 
-            logger.debug("[Backend Arbiter] - contact: %s", contact)
+            logger.debug("- contact: %s", contact)
             self.config['contacts'].append(contact)
 
     def get_hostgroups(self):
@@ -413,10 +428,10 @@ class AlignakBackendArbiter(BaseModule):
         """
         self.configraw['hostgroups'] = {}
         all_hostgroups = self.backend.get_all('hostgroup')
-        logger.info("[Backend Arbiter] Got %d hostgroups",
+        logger.info("Got %d hostgroups",
                     len(all_hostgroups['_items']))
         for hostgroup in all_hostgroups['_items']:
-            logger.info("[Backend Arbiter] - %s", hostgroup['name'])
+            logger.info("- %s", hostgroup['name'])
             self.configraw['hostgroups'][hostgroup['_id']] = hostgroup['name']
 
         for hostgroup in all_hostgroups['_items']:
@@ -432,7 +447,7 @@ class AlignakBackendArbiter(BaseModule):
             self.clean_unusable_keys(hostgroup)
             self.convert_lists(hostgroup)
 
-            logger.debug("[Backend Arbiter] - hosts group: %s", hostgroup)
+            logger.debug("- hosts group: %s", hostgroup)
             self.config['hostgroups'].append(hostgroup)
 
     def get_hosts(self):
@@ -443,10 +458,10 @@ class AlignakBackendArbiter(BaseModule):
         """
         self.configraw['hosts'] = {}
         all_hosts = self.backend.get_all('host', {"where": '{"_is_template": false}'})
-        logger.info("[Backend Arbiter] Got %d hosts",
+        logger.info("Got %d hosts",
                     len(all_hosts['_items']))
         for host in all_hosts['_items']:
-            logger.info("[Backend Arbiter] - %s", host['name'])
+            logger.info("- %s", host['name'])
             self.configraw['hosts'][host['_id']] = host['name']
             host[u'host_name'] = host['name']
             host[u'imported_from'] = u'alignakbackend'
@@ -513,13 +528,13 @@ class AlignakBackendArbiter(BaseModule):
                     host['initial_state'] = 'o'
 
                 logger.debug(
-                    "[Backend Arbiter] - host current live state is %s, "
+                    "- host current live state is %s, "
                     "set initial_state as '%s'", host['ls_state'], host['initial_state']
                 )
             self.clean_unusable_keys(host)
             self.convert_lists(host)
 
-            logger.debug("[Backend Arbiter] - host: %s", host)
+            logger.debug("- host: %s", host)
             self.config['hosts'].append(host)
 
     def get_servicegroups(self):
@@ -530,10 +545,10 @@ class AlignakBackendArbiter(BaseModule):
         """
         self.configraw['servicegroups'] = {}
         all_servicegroups = self.backend.get_all('servicegroup')
-        logger.info("[Backend Arbiter] Got %d servicegroups",
+        logger.info("Got %d servicegroups",
                     len(all_servicegroups['_items']))
         for servicegroup in all_servicegroups['_items']:
-            logger.info("[Backend Arbiter] - %s", servicegroup['name'])
+            logger.info("- %s", servicegroup['name'])
             self.configraw['servicegroups'][servicegroup['_id']] = servicegroup['name']
 
         for servicegroup in all_servicegroups['_items']:
@@ -555,7 +570,7 @@ class AlignakBackendArbiter(BaseModule):
             self.clean_unusable_keys(servicegroup)
             self.convert_lists(servicegroup)
 
-            logger.debug("[Backend Arbiter] - services group: %s", servicegroup)
+            logger.debug("- services group: %s", servicegroup)
             self.config['servicegroups'].append(servicegroup)
 
     def get_services(self):
@@ -568,10 +583,10 @@ class AlignakBackendArbiter(BaseModule):
         params = {'embedded': '{"escalations":1,"service_dependencies":1}',
                   "where": '{"_is_template": false}'}
         all_services = self.backend.get_all('service', params)
-        logger.info("[Backend Arbiter] Got %d services",
+        logger.info("Got %d services",
                     len(all_services['_items']))
         for service in all_services['_items']:
-            logger.info("[Backend Arbiter] - %s", service['name'])
+            logger.info("- %s", service['name'])
             self.configraw['services'][service['_id']] = service['name']
             service['imported_from'] = u'alignakbackend'
             service['service_description'] = service['name']
@@ -640,14 +655,14 @@ class AlignakBackendArbiter(BaseModule):
                     service['initial_state'] = 'o'
 
                 logger.debug(
-                    "[Backend Arbiter] - service current live state is %s, "
+                    "- service current live state is %s, "
                     "set initial_state as '%s'", service['ls_state'], service['initial_state']
                 )
 
             self.clean_unusable_keys(service)
             self.convert_lists(service)
 
-            logger.debug("[Backend Arbiter] - service: %s", service)
+            logger.debug("- service: %s", service)
             self.config['services'].append(service)
 
     def get_hostdependencies(self):
@@ -658,10 +673,10 @@ class AlignakBackendArbiter(BaseModule):
         """
         self.configraw['hostdependencies'] = {}
         all_hostdependencies = self.backend.get_all('hostdependency')
-        logger.info("[Backend Arbiter] Got %d hostdependencies",
+        logger.info("Got %d hostdependencies",
                     len(all_hostdependencies['_items']))
         for hostdependency in all_hostdependencies['_items']:
-            logger.info("[Backend Arbiter] - %s", hostdependency['name'])
+            logger.info("- %s", hostdependency['name'])
             self.configraw['hostdependencies'][hostdependency['_id']] = hostdependency['name']
             hostdependency['imported_from'] = u'alignakbackend'
             # Do not exist in Alignak
@@ -683,7 +698,7 @@ class AlignakBackendArbiter(BaseModule):
             self.clean_unusable_keys(hostdependency)
             self.convert_lists(hostdependency)
 
-            logger.debug("[Backend Arbiter] - hosts dependency: %s", hostdependency)
+            logger.debug("- hosts dependency: %s", hostdependency)
             self.config['hostdependencies'].append(hostdependency)
 
     def get_hostescalations(self):
@@ -694,10 +709,10 @@ class AlignakBackendArbiter(BaseModule):
         """
         self.configraw['hostescalations'] = {}
         all_hostescalations = self.backend.get_all('hostescalation')
-        logger.info("[Backend Arbiter] Got %d hostescalations",
+        logger.info("Got %d hostescalations",
                     len(all_hostescalations['_items']))
         for hostescalation in all_hostescalations['_items']:
-            logger.info("[Backend Arbiter] - %s", hostescalation['name'])
+            logger.info("- %s", hostescalation['name'])
             self.configraw['hostescalations'][hostescalation['_id']] = hostescalation['name']
             hostescalation['hostescalation_name'] = hostescalation['name']
             hostescalation['imported_from'] = u'alignakbackend'
@@ -712,7 +727,7 @@ class AlignakBackendArbiter(BaseModule):
             self.clean_unusable_keys(hostescalation)
             self.convert_lists(hostescalation)
 
-            logger.debug("[Backend Arbiter] - host escalation: %s", hostescalation)
+            logger.debug("- host escalation: %s", hostescalation)
             self.config['hostescalations'].append(hostescalation)
 
     def get_servicedependencies(self):
@@ -723,10 +738,10 @@ class AlignakBackendArbiter(BaseModule):
         """
         self.configraw['servicedependencies'] = {}
         all_servicedependencies = self.backend.get_all('servicedependency')
-        logger.info("[Backend Arbiter] Got %d servicedependencies",
+        logger.info("Got %d servicedependencies",
                     len(all_servicedependencies['_items']))
         for servicedependency in all_servicedependencies['_items']:
-            logger.info("[Backend Arbiter] - %s", servicedependency['name'])
+            logger.info("- %s", servicedependency['name'])
             self.configraw['servicedependencies'][servicedependency['_id']] = \
                 servicedependency['name']
             servicedependency['imported_from'] = u'alignakbackend'
@@ -763,7 +778,7 @@ class AlignakBackendArbiter(BaseModule):
             if not servicedependency['dependent_hostgroup_name']:
                 del servicedependency['dependent_hostgroup_name']
 
-            logger.debug("[Backend Arbiter] - services dependency: %s", servicedependency)
+            logger.debug("- services dependency: %s", servicedependency)
             self.config['servicedependencies'].append(servicedependency)
 
     def get_serviceescalations(self):
@@ -774,10 +789,10 @@ class AlignakBackendArbiter(BaseModule):
         """
         self.configraw['serviceescalations'] = {}
         all_serviceescalations = self.backend.get_all('serviceescalation')
-        logger.info("[Backend Arbiter] Got %d serviceescalations",
+        logger.info("Got %d serviceescalations",
                     len(all_serviceescalations['_items']))
         for serviceescalation in all_serviceescalations['_items']:
-            logger.info("[Backend Arbiter] - %s", serviceescalation['name'])
+            logger.info("- %s", serviceescalation['name'])
             self.configraw['serviceescalations'][serviceescalation['_id']] = \
                 serviceescalation['name']
             serviceescalation['serviceescalation_name'] = serviceescalation['name']
@@ -795,7 +810,7 @@ class AlignakBackendArbiter(BaseModule):
             self.clean_unusable_keys(serviceescalation)
             self.convert_lists(serviceescalation)
 
-            logger.debug("[Backend Arbiter] - service escalation: %s", serviceescalation)
+            logger.debug("- service escalation: %s", serviceescalation)
             self.config['serviceescalations'].append(serviceescalation)
 
     def get_objects(self):
@@ -806,19 +821,19 @@ class AlignakBackendArbiter(BaseModule):
         :rtype: dict
         """
         if not self.backend_connected:
-            logger.error("[Backend Arbiter] Alignak backend connection is not available. "
+            logger.error("Alignak backend connection is not available. "
                          "Skipping objects load and provide an empty list to the Arbiter.")
             return self.config
 
         if self.my_arbiter and self.my_arbiter.verify_only:
-            logger.info("[Backend Arbiter] my Arbiter is in verify only mode")
+            logger.info("my Arbiter is in verify only mode")
             if self.bypass_verify_mode:
-                logger.info("[Backend Arbiter] configured to bypass the objects loading. "
+                logger.info("configured to bypass the objects loading. "
                             "Skipping objects load and provide an empty list to the Arbiter.")
                 return self.config
 
         if self.backend_import:
-            logger.info("[Backend Arbiter] Alignak backend importation script is active. "
+            logger.info("Alignak backend importation script is active. "
                         "Provide an empty objects list to the Arbiter.")
             return self.config
 
@@ -837,17 +852,17 @@ class AlignakBackendArbiter(BaseModule):
             self.get_hostescalations()
             self.get_servicedependencies()
             self.get_serviceescalations()
-        except BackendException as e:
-            logger.warning("[Backend Arbiter] Alignak backend is not available for reading. "
+        except BackendException as exp:
+            logger.warning("Alignak backend is not available for reading. "
                            "Backend communication error.")
-            logger.warning("[Backend Arbiter] Exception: %s", str(e))
+            logger.exception("Exception: %s", exp)
             self.backend_connected = False
 
         self.time_loaded_conf = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
 
         now = time.time()
         logger.info(
-            "[Backend Arbiter] backend configuration loaded in %s seconds",
+            "backend configuration loaded in %s seconds",
             (now - start_time)
         )
 
@@ -856,11 +871,11 @@ class AlignakBackendArbiter(BaseModule):
         self.next_action_check = int(now) + self.action_check
 
         logger.info(
-            "[Backend Arbiter] next configuration reload check in %s seconds ---",
+            "next configuration reload check in %s seconds ---",
             (self.next_check - int(now))
         )
         logger.info(
-            "[Backend Arbiter] next actions check in %s seconds ---",
+            "next actions check in %s seconds ---",
             (self.next_action_check - int(now))
         )
         return self.config
@@ -878,7 +893,7 @@ class AlignakBackendArbiter(BaseModule):
             now = int(time.time())
             if now > self.next_check:
                 logger.info(
-                    "[Backend Arbiter] Check if system configuration changed in the backend..."
+                    "Check if system configuration changed in the backend..."
                 )
                 resources = [
                     'realm', 'command', 'timeperiod',
@@ -898,14 +913,14 @@ class AlignakBackendArbiter(BaseModule):
                         reload_conf = True
                 if reload_conf:
                     logger.warning(
-                        "[Backend Arbiter] Hey, we must reload configuration from the backend!"
+                        "Hey, we must reload configuration from the backend!"
                     )
                     with open(arbiter.pidfile, 'r') as f:
                         arbiterpid = f.readline()
                     os.kill(int(arbiterpid), signal.SIGHUP)
                 self.next_check = now + (60 * self.verify_modification)
                 logger.debug(
-                    "[Backend Arbiter] next configuration reload check in %s seconds ---",
+                    "next configuration reload check in %s seconds ---",
                     (self.next_check - now)
                 )
 
@@ -919,12 +934,12 @@ class AlignakBackendArbiter(BaseModule):
 
                 self.next_action_check = now + self.action_check
                 logger.debug(
-                    "[Backend Arbiter] next actions check in %s seconds ---",
+                    "next actions check in %s seconds ---",
                     (self.next_action_check - int(now))
                 )
         except Exception as exp:
-            logger.warning("[Backend Arbiter] hook_tick exception: %s", str(exp))
-            logger.warning("[Backend Arbiter] traceback: %s", traceback.format_exc())
+            logger.warning("hook_tick exception: %s", str(exp))
+            logger.exception("Exception: %s", exp)
 
     @staticmethod
     def convert_date_timestamp(mydate):
@@ -978,7 +993,7 @@ class AlignakBackendArbiter(BaseModule):
             data = {'processed': True}
             self.backend.patch('actionacknowledge/' + ack['_id'], data, headers)
 
-            logger.info("[Backend Arbiter] build external command: %s", str(command))
+            logger.info("build external command: %s", str(command))
             ext = ExternalCommand(command)
             arbiter.external_commands.append(ext)
 
@@ -1022,7 +1037,7 @@ class AlignakBackendArbiter(BaseModule):
             data = {'processed': True}
             self.backend.patch('actiondowntime/' + downt['_id'], data, headers)
 
-            logger.info("[Backend Arbiter] build external command: %s", str(command))
+            logger.info("build external command: %s", str(command))
             ext = ExternalCommand(command)
             arbiter.external_commands.append(ext)
 
@@ -1048,7 +1063,7 @@ class AlignakBackendArbiter(BaseModule):
             data = {'processed': True}
             self.backend.patch('actionforcecheck/' + fcheck['_id'], data, headers)
 
-            logger.info("[Backend Arbiter] build external command: %s", str(command))
+            logger.info("build external command: %s", str(command))
             ext = ExternalCommand(command)
             arbiter.external_commands.append(ext)
 

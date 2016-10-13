@@ -1,5 +1,7 @@
 # this is the requirements dedicated to tests.
 -r ../requirements.txt
+# alignak
+-e git+https://github.com/Alignak-monitoring/alignak.git@develop#egg=alignak
 unittest2
 mock
 coveralls
@@ -10,7 +12,7 @@ pylint
 pep8
 pep257
 httmock
--e git+https://github.com/Alignak-monitoring-contrib/alignak-backend.git#egg=alignak-backend
+alignak_backend
 Eve>=0.5
 docopt
 jsonschema

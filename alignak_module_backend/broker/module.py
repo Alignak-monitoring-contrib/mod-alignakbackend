@@ -248,6 +248,7 @@ class AlignakBackendBroker(BaseModule):
                     'ls_perf_data': data['perf_data'],
                     'ls_acknowledged': data['problem_has_been_acknowledged'],
                     'ls_downtimed': data['in_scheduled_downtime'],
+                    'ls_execution_time': data['execution_time'],
                     'ls_latency': data['latency']
                 }
 
@@ -445,10 +446,10 @@ class AlignakBackendBroker(BaseModule):
             logger.debug("Not logged-in, ignoring broks...")
             return
 
-        if not self.loaded_hosts:
+        if queue.type == 'new_conf':
             self.get_refs('livestate_host')
-        if not self.loaded_services:
             self.get_refs('livestate_service')
+            logger.info("Refs reloaded")
 
         if queue.type == 'host_check_result':
             self.update(queue.data, 'host')

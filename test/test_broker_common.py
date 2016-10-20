@@ -238,13 +238,21 @@ class TestBrokerCommon(unittest2.TestCase):
         self.assertEqual(len(r['_items']), 1)
         number = 0
         for index, item in enumerate(r['_items']):
-            self.assertEqual(item['ls_last_state'], 'UNREACHABLE')
             self.assertEqual(item['ls_state'], 'UP')
-            self.assertEqual(item['ls_last_state_type'], 'HARD')
+            self.assertEqual(item['ls_state_id'], 1)
             self.assertEqual(item['ls_state_type'], 'HARD')
+            self.assertEqual(item['ls_last_check'], 1444427104)
+            self.assertEqual(item['ls_last_state'], 'UNREACHABLE')
+            self.assertEqual(item['ls_last_state_type'], 'HARD')
+            self.assertEqual(item['ls_last_state_changed'], 1444427108)
             self.assertEqual(item['ls_output'], 'PING OK - Packet loss = 0%, RTA = 0.05 ms')
+            self.assertEqual(item['ls_long_output'], 'Long output ...')
             self.assertEqual(item['ls_perf_data'],
                              'rta=0.049000ms;2.000000;3.000000;0.000000 pl=0%;50;80;0')
+            self.assertEqual(item['ls_acknowledged'], False)
+            self.assertEqual(item['ls_downtimed'], False)
+            self.assertEqual(item['ls_execution_time'], 3.1496069431000002)
+            self.assertEqual(item['ls_latency'], 0.2317881584)
             number += 1
         self.assertEqual(1, number)
 

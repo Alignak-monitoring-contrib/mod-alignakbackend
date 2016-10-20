@@ -3,10 +3,7 @@
 
 import os
 import sys
-import re
-import datetime
 del os.link
-import fileinput
 from alignak_setup.tools import get_alignak_cfg, get_files, get_to_be_installed_files, parse_files
 
 try:
@@ -110,7 +107,7 @@ setup(
     data_files = data_files,
 
     # Dependencies (if some) ...
-    install_requires=[''],
+    install_requires=['alignak_backend_client', 'alignak_setup'],
 
     # Entry points (if some) ...
     entry_points={

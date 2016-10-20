@@ -220,21 +220,21 @@ class AlignakBackendBroker(BaseModule):
             if data['host_name'] in self.mapping['host']:
                 # Received data for an host:
                 # {
-                # u'last_time_unreachable': 0, u'last_problem_id': 0, u'check_type': 1,
-                # u'retry_interval': 0,u'last_event_id': 0, u'problem_has_been_acknowledged': False,
-                # u'command_name': u'nsca_host_dead', u'last_state': u'UP', u'latency': 0,
-                # u'last_state_type': u'HARD', u'last_hard_state_change': 0.0,
-                # u'last_time_up': 1473597379, u'percent_state_change': 0.0, u'state': u'UP',
-                # u'last_chk': 1473597379,
-                # u'last_state_id': 0, u'end_time': 0, u'timeout': 0, u'current_event_id': 0,
-                # u'execution_time': 0.0, u'start_time': 0, u'return_code': 0,
-                # u'state_type': u'HARD', u'state_id': 0, u'in_checking': False,
-                # u'early_timeout': 0,
-                # u'in_scheduled_downtime': False, u'attempt': 1, u'state_type_id': 1,
-                # u'acknowledgement_type': 1, u'last_state_change': 0.0, u'last_time_down': 0,
-                # 'instance_id': u'd2d402f5de244d95b10d1b47d9891710', u'long_output': u'',
-                # u'current_problem_id': 0, u'host_name': u'fvc320', u'check_interval': 0,
-                # u'output': u'No message', u'has_been_checked': 1, u'perf_data': u''
+                # `last_time_unreachable`: 0, `last_problem_id`: 0, `check_type`: 1,
+                # `retry_interval`: 0,`last_event_id`: 0, `problem_has_been_acknowledged`: False,
+                # `command_name`: `nsca_host_dead`, `last_state`: `UP`, `latency`: 0,
+                # `last_state_type`: `HARD`, `last_hard_state_change`: 0.0,
+                # `last_time_up`: 1473597379, `percent_state_change`: 0.0, `state`: `UP`,
+                # `last_chk`: 1473597379,
+                # `last_state_id`: 0, `end_time`: 0, `timeout`: 0, `current_event_id`: 0,
+                # `execution_time`: 0.0, `start_time`: 0, `return_code`: 0,
+                # `state_type`: `HARD`, `state_id`: 0, `in_checking`: False,
+                # `early_timeout`: 0,
+                # `in_scheduled_downtime`: False, `attempt`: 1, `state_type_id`: 1,
+                # `acknowledgement_type`: 1, `last_state_change`: 0.0, `last_time_down`: 0,
+                # `instance_id`: `d2d402f5de244d95b10d1b47d9891710`, `long_output`: ``,
+                # `current_problem_id`: 0, `host_name`: `fvc320`, `check_interval`: 0,
+                # `output`: `No message`, `has_been_checked`: 1, `perf_data`: ``
                 # }
                 data_to_update = {
                     'ls_state': data['state'],
@@ -243,6 +243,7 @@ class AlignakBackendBroker(BaseModule):
                     'ls_last_check': data['last_chk'],
                     'ls_last_state': data['last_state'],
                     'ls_last_state_type': data['last_state_type'],
+                    'ls_last_state_changed': data['last_state_change'],
                     'ls_output': data['output'],
                     'ls_long_output': data['long_output'],
                     'ls_perf_data': data['perf_data'],
@@ -277,6 +278,7 @@ class AlignakBackendBroker(BaseModule):
 
                 # Rename ls_ keys...
                 del data_to_update['ls_downtimed']
+                del data_to_update['ls_last_state_changed']
                 for key in data_to_update:
                     if key.startswith('ls_'):
                         data_to_update[key[3:]] = data_to_update[key]
@@ -315,6 +317,7 @@ class AlignakBackendBroker(BaseModule):
                     'ls_last_check': data['last_chk'],
                     'ls_last_state': data['last_state'],
                     'ls_last_state_type': data['last_state_type'],
+                    'ls_last_state_changed': data['last_state_change'],
                     'ls_output': data['output'],
                     'ls_long_output': data['long_output'],
                     'ls_perf_data': data['perf_data'],
@@ -349,6 +352,7 @@ class AlignakBackendBroker(BaseModule):
 
                 # Rename ls_ keys...
                 del data_to_update['ls_downtimed']
+                del data_to_update['ls_last_state_changed']
                 for key in data_to_update:
                     if key.startswith('ls_'):
                         data_to_update[key[3:]] = data_to_update[key]

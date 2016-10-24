@@ -128,6 +128,16 @@ class TestArbiterLoadconf(unittest2.TestCase):
             print("Got realm: %s" % realm)
             for key, value in realm.iteritems():
                 self.assertTrue(Realm.properties[key])
+            if realm['realm_name'] == 'All':
+                members = realm['realm_members'].split(',')
+                self.assertEqual(len(members), 2)
+                for member in members:
+                    self.assertIn(member, ['Europe', 'US'])
+            if realm['realm_name'] == 'Europe':
+                members = realm['realm_members'].split(',')
+                self.assertEqual(len(members), 2)
+                for member in members:
+                    self.assertIn(member, ['Italy', 'France'])
 
     def test_services(self):
         self.assertEqual(len(self.objects['services']), 94)

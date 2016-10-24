@@ -20,10 +20,11 @@
 This module is used to get configuration from alignak-backend with arbiter
 """
 
+
 import os
 import signal
 import time
-import traceback
+import json
 import logging
 from datetime import datetime
 
@@ -277,7 +278,7 @@ class AlignakBackendArbiter(BaseModule):
         :return: None
         """
         self.configraw['realms'] = {}
-        all_realms = self.backend.get_all('realm')
+        all_realms = self.backend.get_all('realm', {'embedded': json.dumps({'_children': 1})})
         logger.info("Got %d realms",
                     len(all_realms['_items']))
         for realm in all_realms['_items']:
@@ -286,10 +287,12 @@ class AlignakBackendArbiter(BaseModule):
             realm['imported_from'] = u'alignakbackend'
             realm['realm_name'] = realm['name']
             realm['realm_members'] = []
+            for child in realm['_children']:
+                realm['realm_members'].append(child['name'])
             self.clean_unusable_keys(realm)
             del realm['notes']
             del realm['alias']
-            # self.convert_lists(realm)
+            self.convert_lists(realm)
 
             logger.debug("- realm: %s", realm)
             self.config['realms'].append(realm)

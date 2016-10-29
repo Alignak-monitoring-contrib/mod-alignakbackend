@@ -909,11 +909,11 @@ class AlignakBackendArbiter(BaseModule):
                 for resource in resources:
                     ret = self.backend.get(resource, {'where': '{"_updated":{"$gte": "' +
                                                                self.time_loaded_conf + '"}}'})
-                    logger.info(
-                        " - backend updated resource: %s, count: %d",
-                        resource, ret['_meta']['total']
-                    )
                     if ret['_meta']['total'] > 0:
+                        logger.info(
+                            " - backend updated resource: %s, count: %d",
+                            resource, ret['_meta']['total']
+                        )
                         reload_conf = True
                 if reload_conf:
                     logger.warning(
@@ -922,6 +922,8 @@ class AlignakBackendArbiter(BaseModule):
                     with open(arbiter.pidfile, 'r') as f:
                         arbiterpid = f.readline()
                     os.kill(int(arbiterpid), signal.SIGHUP)
+                else:
+                    logger.info("No changes found")
                 self.next_check = now + (60 * self.verify_modification)
                 logger.debug(
                     "next configuration reload check in %s seconds ---",

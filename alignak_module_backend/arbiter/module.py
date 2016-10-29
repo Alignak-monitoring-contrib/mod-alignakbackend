@@ -309,6 +309,9 @@ class AlignakBackendArbiter(BaseModule):
             self.configraw['commands'][command['_id']] = command['name']
             command['imported_from'] = u'alignakbackend'
             command['command_name'] = command['name']
+            # poller_tag empty
+            if 'poller_tag' in command and command['poller_tag'] == '':
+                del command['poller_tag']
             self.clean_unusable_keys(command)
             del command['alias']
             del command['notes']
@@ -481,6 +484,9 @@ class AlignakBackendArbiter(BaseModule):
                     host['check_command'] += '!'
                     host['check_command'] += host['check_command_args']
                 del host['check_command_args']
+            # poller_tag empty
+            if 'poller_tag' in host and host['poller_tag'] == '':
+                del host['poller_tag']
             host[u'contacts'] = []
             if 'users' in host:
                 host[u'contacts'] = host['users']
@@ -615,6 +621,9 @@ class AlignakBackendArbiter(BaseModule):
                     service['check_command'] += '!'
                 service['check_command'] += service['check_command_args']
                 del service['check_command_args']
+            # poller_tag empty
+            if 'poller_tag' in service and service['poller_tag'] == '':
+                del service['poller_tag']
             # host_name
             self.single_relation(service, 'host_name', 'hosts')
             # check_period

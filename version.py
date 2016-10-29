@@ -12,7 +12,7 @@ __pkg_name__ = u"alignak_module_backend"
 __module_type__ = u"backend"
 
 # Application manifest
-__version__ = u"0.2.11"
+__version__ = u"0.2.13"
 __author__ = u"Alignak team"
 __author_email__ = u"d.durieux@siprossii.com"
 __copyright__ = u"(c) 2015-2016 - %s" % __author__

@@ -170,8 +170,7 @@ class AlignakBackendArbiter(BaseModule):
             generate = 'disabled'
 
         try:
-            self.backend.login(username, password, generate)
-            self.backend_connected = True
+            self.backend_connected = self.backend.login(username, password, generate)
         except BackendException as exp:
             logger.warning("Alignak backend is not available for login. "
                            "No backend connection.")

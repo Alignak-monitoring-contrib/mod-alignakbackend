@@ -479,13 +479,15 @@ class AlignakBackendArbiter(BaseModule):
                     host['check_command'] = self.configraw['commands'][host['check_command']]
                 else:
                     host['check_command'] = ''
-            if 'check_command_args' in host:
-                if 'check_command' not in host:
-                    host['check_command'] = ''
-                elif host['check_command_args'] != '':
-                    host['check_command'] += '!'
-                    host['check_command'] += host['check_command_args']
-                del host['check_command_args']
+            for command_arg in ['check_command', 'event_handler']:
+                arg = command_arg + "_args"
+                if arg in host:
+                    if command_arg not in host:
+                        host[command_arg] = ''
+                    elif host[arg] != '':
+                        host[command_arg] += '!'
+                        host[command_arg] += host[arg]
+                    del host[arg]
             # poller_tag empty
             if 'poller_tag' in host and host['poller_tag'] == '':
                 del host['poller_tag']
@@ -616,13 +618,15 @@ class AlignakBackendArbiter(BaseModule):
                     service['check_command'] = self.configraw['commands'][service['check_command']]
                 else:
                     del service['check_command']
-            if 'check_command_args' in service:
-                if 'check_command' not in service:
-                    service['check_command'] = ''
-                else:
-                    service['check_command'] += '!'
-                service['check_command'] += service['check_command_args']
-                del service['check_command_args']
+            for command_arg in ['check_command', 'event_handler']:
+                arg = command_arg + "_args"
+                if arg in service:
+                    if command_arg not in service:
+                        service[command_arg] = ''
+                    else:
+                        service[command_arg] += '!'
+                    service[command_arg] += service[arg]
+                    del service[arg]
             # poller_tag empty
             if 'poller_tag' in service and service['poller_tag'] == '':
                 del service['poller_tag']

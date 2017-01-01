@@ -17,6 +17,13 @@ Build status (development release)
     :target: https://travis-ci.org/Alignak-monitoring-contrib/alignak-module-backend
 
 
+Most recent release
+-------------------
+
+.. image:: https://badge.fury.io/py/alignak_module_backend.svg
+    :target: https://badge.fury.io/py/alignak_module_backend
+
+
 Short description
 -----------------
 

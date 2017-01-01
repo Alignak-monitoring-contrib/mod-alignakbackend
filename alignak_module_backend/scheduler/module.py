@@ -148,7 +148,7 @@ class AlignakBackendScheduler(BaseModule):
 
     def hook_save_retention(self, scheduler):
         """
-        Save retention data from alignak-backend
+        Save retention data to alignak-backend
 
         :param scheduler: scheduler instance of alignak
         :type scheduler: object

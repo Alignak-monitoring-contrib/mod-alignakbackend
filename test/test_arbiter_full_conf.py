@@ -23,7 +23,7 @@ from alignak.objects.servicedependency import Servicedependency
 from alignak_backend_client.client import Backend
 
 
-class TestArbiterLoadconf(unittest2.TestCase):
+class TestArbiterFullConfiguration(unittest2.TestCase):
 
     maxDiff = None
 
@@ -53,9 +53,9 @@ class TestArbiterLoadconf(unittest2.TestCase):
         )
         assert exit_code == 0
 
-        # Start broker module
+        # Start arbiter module
         modconf = Module()
-        modconf.module_alias = "alignakbackendarbit"
+        modconf.module_alias = "backend_arbiter"
         modconf.username = "admin"
         modconf.password = "admin"
         modconf.api_url = 'http://127.0.0.1:5000'

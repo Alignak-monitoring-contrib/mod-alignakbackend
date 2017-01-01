@@ -243,11 +243,19 @@ class AlignakBackendArbiter(BaseModule):
             'usergroups', 'users',
             'location',
             'duplicate_foreach', 'tags',
-            'ls_acknowledged', 'ls_current_attempt', 'ls_downtimed', 'ls_execution_time',
+            'ls_acknowledged', 'ls_acknowledgement_type', 'ls_current_attempt', 'ls_attempt',
+            'ls_downtimed', 'ls_execution_time',
             'ls_grafana', 'ls_grafana_panelid', 'ls_impact', 'ls_last_check', 'ls_last_state',
-            'ls_last_state_changed', 'ls_last_state_type', 'ls_latency', 'ls_long_output',
+            'ls_last_state_changed', 'ls_last_hard_state_changed', 'ls_last_state_type',
+            'ls_latency', 'ls_long_output',
             'ls_max_attempts', 'ls_next_check', 'ls_output', 'ls_perf_data',
-            'ls_state', 'ls_state_id', 'ls_state_type'
+            'ls_state', 'ls_state_id', 'ls_state_type',
+            'ls_last_time_up', 'ls_last_time_down',
+            'ls_last_time_ok', 'ls_last_time_warning', 'ls_last_time_critical',
+            'ls_last_time_unknown', 'ls_last_time_unreachable',
+            'ls_passive_check',
+            '_overall_state_id',
+            'trigger'
         ]
         for field in fields:
             if field in resource:
@@ -283,7 +291,9 @@ class AlignakBackendArbiter(BaseModule):
         for realm in all_realms['_items']:
             logger.info("- %s", realm['name'])
             self.configraw['realms'][realm['_id']] = realm['name']
-            realm['imported_from'] = u'alignakbackend'
+            realm['imported_from'] = u'alignak-backend'
+            if 'definition_order' in realm and realm['definition_order'] == 100:
+                realm['definition_order'] = 50
             realm['realm_name'] = realm['name']
             realm['realm_members'] = []
             for child in realm['_children']:
@@ -309,7 +319,9 @@ class AlignakBackendArbiter(BaseModule):
         for command in all_commands['_items']:
             logger.info("- %s", command['name'])
             self.configraw['commands'][command['_id']] = command['name']
-            command['imported_from'] = u'alignakbackend'
+            command['imported_from'] = u'alignak-backend'
+            if 'definition_order' in command and command['definition_order'] == 100:
+                command['definition_order'] = 50
             command['command_name'] = command['name']
             # poller_tag empty
             if 'poller_tag' in command and command['poller_tag'] == '':
@@ -335,7 +347,9 @@ class AlignakBackendArbiter(BaseModule):
         for timeperiod in all_timeperiods['_items']:
             logger.info("- %s", timeperiod['name'])
             self.configraw['timeperiods'][timeperiod['_id']] = timeperiod['name']
-            timeperiod['imported_from'] = u'alignakbackend'
+            timeperiod['imported_from'] = u'alignak-backend'
+            if 'definition_order' in timeperiod and timeperiod['definition_order'] == 100:
+                timeperiod['definition_order'] = 50
             timeperiod['timeperiod_name'] = timeperiod['name']
             for daterange in timeperiod['dateranges']:
                 timeperiod.update(daterange)
@@ -362,7 +376,9 @@ class AlignakBackendArbiter(BaseModule):
             self.configraw['contactgroups'][contactgroup['_id']] = contactgroup['name']
 
         for contactgroup in all_contactgroups['_items']:
-            contactgroup[u'imported_from'] = u'alignakbackend'
+            contactgroup[u'imported_from'] = u'alignak-backend'
+            if 'definition_order' in contactgroup and contactgroup['definition_order'] == 100:
+                contactgroup['definition_order'] = 50
             contactgroup[u'contactgroup_name'] = contactgroup['name']
             contactgroup[u'contactgroup_members'] = contactgroup['usergroups']
             contactgroup[u'members'] = contactgroup['users']
@@ -390,7 +406,9 @@ class AlignakBackendArbiter(BaseModule):
         for contact in all_contacts['_items']:
             logger.info("- %s", contact['name'])
             self.configraw['contacts'][contact['_id']] = contact['name']
-            contact['imported_from'] = u'alignakbackend'
+            contact['imported_from'] = u'alignak-backend'
+            if 'definition_order' in contact and contact['definition_order'] == 100:
+                contact['definition_order'] = 50
             contact['contact_name'] = contact['name']
 
             # host_notification_period
@@ -442,7 +460,9 @@ class AlignakBackendArbiter(BaseModule):
 
         for hostgroup in all_hostgroups['_items']:
             self.configraw['hostgroups'][hostgroup['_id']] = hostgroup['name']
-            hostgroup[u'imported_from'] = u'alignakbackend'
+            hostgroup[u'imported_from'] = u'alignak-backend'
+            if 'definition_order' in hostgroup and hostgroup['definition_order'] == 100:
+                hostgroup['definition_order'] = 50
             hostgroup[u'hostgroup_name'] = hostgroup['name']
             hostgroup[u'hostgroup_members'] = hostgroup['hostgroups']
             hostgroup[u'members'] = hostgroup['hosts']
@@ -470,7 +490,9 @@ class AlignakBackendArbiter(BaseModule):
             logger.info("- %s", host['name'])
             self.configraw['hosts'][host['_id']] = host['name']
             host[u'host_name'] = host['name']
-            host[u'imported_from'] = u'alignakbackend'
+            host[u'imported_from'] = u'alignak-backend'
+            if 'definition_order' in host and host['definition_order'] == 100:
+                host['definition_order'] = 50
             # check_command
             if 'check_command' in host:
                 if host['check_command'] is None:
@@ -564,7 +586,9 @@ class AlignakBackendArbiter(BaseModule):
 
         for servicegroup in all_servicegroups['_items']:
             self.configraw['servicegroups'][servicegroup['_id']] = servicegroup['name']
-            servicegroup['imported_from'] = u'alignakbackend'
+            servicegroup['imported_from'] = u'alignak-backend'
+            if 'definition_order' in servicegroup and servicegroup['definition_order'] == 100:
+                servicegroup['definition_order'] = 50
             servicegroup['servicegroup_name'] = servicegroup['name']
             servicegroup[u'servicegroup_members'] = servicegroup['servicegroups']
             # members
@@ -599,7 +623,9 @@ class AlignakBackendArbiter(BaseModule):
         for service in all_services['_items']:
             logger.info("- %s", service['name'])
             self.configraw['services'][service['_id']] = service['name']
-            service['imported_from'] = u'alignakbackend'
+            service['imported_from'] = u'alignak-backend'
+            if 'definition_order' in service and service['definition_order'] == 100:
+                service['definition_order'] = 50
             service['service_description'] = service['name']
             service['host_name'] = service['host']
             service['merge_host_contacts'] = service['merge_host_users']
@@ -694,7 +720,9 @@ class AlignakBackendArbiter(BaseModule):
         for hostdependency in all_hostdependencies['_items']:
             logger.info("- %s", hostdependency['name'])
             self.configraw['hostdependencies'][hostdependency['_id']] = hostdependency['name']
-            hostdependency['imported_from'] = u'alignakbackend'
+            hostdependency['imported_from'] = u'alignak-backend'
+            if 'definition_order' in hostdependency and hostdependency['definition_order'] == 100:
+                hostdependency['definition_order'] = 50
             # Do not exist in Alignak
             # hostdependency['hostdependency_name'] = hostdependency['name']
 
@@ -731,7 +759,9 @@ class AlignakBackendArbiter(BaseModule):
             logger.info("- %s", hostescalation['name'])
             self.configraw['hostescalations'][hostescalation['_id']] = hostescalation['name']
             hostescalation['hostescalation_name'] = hostescalation['name']
-            hostescalation['imported_from'] = u'alignakbackend'
+            hostescalation['imported_from'] = u'alignak-backend'
+            if 'definition_order' in hostescalation and hostescalation['definition_order'] == 100:
+                hostescalation['definition_order'] = 50
             # host_name
             self.single_relation(hostescalation, 'host_name', 'hosts')
             # hostgroup_name
@@ -760,7 +790,10 @@ class AlignakBackendArbiter(BaseModule):
             logger.info("- %s", servicedependency['name'])
             self.configraw['servicedependencies'][servicedependency['_id']] = \
                 servicedependency['name']
-            servicedependency['imported_from'] = u'alignakbackend'
+            servicedependency['imported_from'] = u'alignak-backend'
+            if 'definition_order' in servicedependency and \
+                    servicedependency['definition_order'] == 100:
+                servicedependency['definition_order'] = 50
             # Do not exist in Alignak
             # servicedependency['servicedependency_name'] = servicedependency['name']
 
@@ -812,7 +845,10 @@ class AlignakBackendArbiter(BaseModule):
             self.configraw['serviceescalations'][serviceescalation['_id']] = \
                 serviceescalation['name']
             serviceescalation['serviceescalation_name'] = serviceescalation['name']
-            serviceescalation['imported_from'] = u'alignakbackend'
+            serviceescalation['imported_from'] = u'alignak-backend'
+            if 'definition_order' in serviceescalation and \
+                    serviceescalation['definition_order'] == 100:
+                serviceescalation['definition_order'] = 50
             # host_name
             self.single_relation(serviceescalation, 'host_name', 'hosts')
             # hostgroup_name
@@ -992,8 +1028,6 @@ class AlignakBackendArbiter(BaseModule):
                                ack['service']['name'], sticky, int(ack['notify']),
                                int(ack['persistent']), ack['user']['name'], ack['comment'])
                 else:
-                    # logger.warning(time.time())
-                    # logger.warning(self.convert_date_timestamp(ack['_created']))
                     command = '[{}] ACKNOWLEDGE_HOST_PROBLEM;{};{};{};{};{};{}\n'. \
                         format(self.convert_date_timestamp(ack['_created']), ack['host']['name'],
                                sticky, int(ack['notify']), int(ack['persistent']),

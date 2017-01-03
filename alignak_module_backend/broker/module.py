@@ -238,7 +238,7 @@ class AlignakBackendBroker(BaseModule):
                     'ls_execution_time': data['execution_time'],
                     'ls_latency': data['latency'],
 
-                    'ls_passive_check': data['passive_check'],
+                    # 'ls_passive_check': data['passive_check'],
                     'ls_attempt': data['attempt'],
                     'ls_last_hard_state_changed': data['last_hard_state_change'],
                     # Last time in the corresponding state
@@ -305,7 +305,7 @@ class AlignakBackendBroker(BaseModule):
                     'ls_execution_time': data['execution_time'],
                     'ls_latency': data['latency'],
 
-                    'ls_passive_check': data['passive_check'],
+                    # 'ls_passive_check': data['passive_check'],
                     'ls_attempt': data['attempt'],
                     'ls_last_hard_state_changed': data['last_hard_state_change'],
                     # Last time in the corresponding state

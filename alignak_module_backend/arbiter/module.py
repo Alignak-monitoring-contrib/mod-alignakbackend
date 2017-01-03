@@ -510,6 +510,8 @@ class AlignakBackendArbiter(BaseModule):
                         host[command_arg] += '!'
                         host[command_arg] += host[arg]
                     del host[arg]
+                    logger.debug("Host %s, %s: '%s'",
+                                 host['name'], command_arg, host[command_arg])
             # poller_tag empty
             if 'poller_tag' in host and host['poller_tag'] == '':
                 del host['poller_tag']
@@ -649,10 +651,12 @@ class AlignakBackendArbiter(BaseModule):
                 if arg in service:
                     if command_arg not in service:
                         service[command_arg] = ''
-                    else:
+                    elif service[arg] != '':
                         service[command_arg] += '!'
-                    service[command_arg] += service[arg]
+                        service[command_arg] += service[arg]
                     del service[arg]
+                logger.debug("Service %s, %s: '%s'",
+                             service['name'], command_arg, service[command_arg])
             # poller_tag empty
             if 'poller_tag' in service and service['poller_tag'] == '':
                 del service['poller_tag']

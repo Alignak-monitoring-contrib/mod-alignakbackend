@@ -2,6 +2,11 @@
 -r ../requirements.txt
 # alignak
 -e git+https://github.com/Alignak-monitoring/alignak.git@develop#egg=alignak
+# alignak backend
+alignak_backend
+# alignak backend import script
+alignak_backend_import
+
 unittest2
 mock
 coveralls
@@ -12,7 +17,6 @@ pylint
 pep8
 pep257
 httmock
-alignak_backend
 Eve>=0.5
 docopt
 jsonschema

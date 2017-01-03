@@ -99,6 +99,9 @@ class AlignakBackendBroker(BaseModule):
     def do_loop_turn(self):
         """This function is called/used when you need a module with
         a loop function (and use the parameter 'external': True)
+
+        Note: We are obliged to define this method (even if not called!) because
+        it is an abstract function in the base class
         """
         logger.info("In loop")
         time.sleep(1)
@@ -218,23 +221,6 @@ class AlignakBackendBroker(BaseModule):
         if obj_type == 'host':
             if data['host_name'] in self.mapping['host']:
                 # Received data for an host:
-                # {
-                # `last_time_unreachable`: 0, `last_problem_id`: 0, `passive_check`: True,
-                # `retry_interval`: 0,`last_event_id`: 0, `problem_has_been_acknowledged`: False,
-                # `command_name`: `nsca_host_dead`, `last_state`: `UP`, `latency`: 0,
-                # `last_state_type`: `HARD`, `last_hard_state_change`: 0.0,
-                # `last_time_up`: 1473597379, `percent_state_change`: 0.0, `state`: `UP`,
-                # `last_chk`: 1473597379,
-                # `last_state_id`: 0, `end_time`: 0, `timeout`: 0, `current_event_id`: 0,
-                # `execution_time`: 0.0, `start_time`: 0, `return_code`: 0,
-                # `state_type`: `HARD`, `state_id`: 0, `in_checking`: False,
-                # `early_timeout`: 0,
-                # `in_scheduled_downtime`: False, `attempt`: 1, `state_type_id`: 1,
-                # `acknowledgement_type`: 1, `last_state_change`: 0.0, `last_time_down`: 0,
-                # `instance_id`: `d2d402f5de244d95b10d1b47d9891710`, `long_output`: ``,
-                # `current_problem_id`: 0, `host_name`: `fvc320`, `check_interval`: 0,
-                # `output`: `No message`, `has_been_checked`: 1, `perf_data`: ``
-                # }
                 data_to_update = {
                     'ls_state': data['state'],
                     'ls_state_id': data['state_id'],
@@ -285,9 +271,11 @@ class AlignakBackendBroker(BaseModule):
                 data_to_update['host'] = self.mapping['host'][data['host_name']]
                 data_to_update['service'] = None
 
-                # Rename ls_ keys...
-                del data_to_update['ls_downtimed']
-                del data_to_update['ls_last_state_changed']
+                # Rename ls_ keys and delete non used keys...
+                for field in ['ls_attempt', 'ls_last_state_changed', 'ls_last_hard_state_changed',
+                              'ls_last_time_up', 'ls_last_time_down', 'ls_last_time_unknown',
+                              'ls_last_time_unreachable']:
+                    del data_to_update[field]
                 for key in data_to_update:
                     if key.startswith('ls_'):
                         data_to_update[key[3:]] = data_to_update[key]
@@ -300,25 +288,6 @@ class AlignakBackendBroker(BaseModule):
             service_name = ''.join([data['host_name'], data['service_description']])
             if service_name in self.mapping['service']:
                 # Received data for a service:
-                # {
-                # u'last_problem_id': 0, u'passive_check': False, u'retry_interval': 2,
-                # u'last_event_id': 0, u'problem_has_been_acknowledged': False,
-                # u'last_time_critical': 1473597376,
-                # u'last_time_warning': 0, u'command_name': u'check_nrpe', u'last_state': u'OK',
-                # u'latency': 2.4609699249, u'current_event_id': 1, u'last_state_type': u'HARD',
-                # u'last_hard_state_change': 0.0, u'percent_state_change': 4.1,
-                # u'state': u'CRITICAL',
-                # u'last_chk': 1473597375, u'last_state_id': 0, u'host_name': u'denice',
-                # u'check_interval': 5, u'last_time_unknown': 0, u'execution_time': 0.1133639812,
-                # u'start_time': 0, u'return_code': 2, u'state_type': u'SOFT', u'state_id': 2,
-                # u'service_description': u'Disk hda1', u'in_checking': False, u'early_timeout': 0,
-                # u'in_scheduled_downtime': False, u'attempt': 1, u'state_type_id': 0,
-                # u'acknowledgement_type': 1, u'last_state_change': 1473597376.147903,
-                # 'instance_id': u'3ac88dd0c1c04b37a5d181622e93b5bc', u'long_output': u'',
-                # u'current_problem_id': 1, u'last_time_ok': 0, u'timeout': 0,
-                # u'output': u"NRPE: Command 'check_hda1' not defined", u'has_been_checked': 1,
-                # u'perf_data': u'', u'end_time': 0
-                # }
                 data_to_update = {
                     'ls_state': data['state'],
                     'ls_state_id': data['state_id'],
@@ -370,9 +339,11 @@ class AlignakBackendBroker(BaseModule):
                 data_to_update['host'] = self.mapping['host'][data['host_name']]
                 data_to_update['service'] = self.mapping['service'][service_name]
 
-                # Rename ls_ keys...
-                del data_to_update['ls_downtimed']
-                del data_to_update['ls_last_state_changed']
+                # Rename ls_ keys and delete non used keys...
+                for field in ['ls_attempt', 'ls_last_state_changed', 'ls_last_hard_state_changed',
+                              'ls_last_time_ok', 'ls_last_time_warning', 'ls_last_time_critical',
+                              'ls_last_time_unknown', 'ls_last_time_unreachable']:
+                    del data_to_update[field]
                 for key in data_to_update:
                     if key.startswith('ls_'):
                         data_to_update[key[3:]] = data_to_update[key]
@@ -455,31 +426,33 @@ class AlignakBackendBroker(BaseModule):
                              self.mapping['service'][name])
                 logger.error('Data: %s', data)
                 logger.exception("Exception: %s", exp)
+                logger.error('Error detail: %s, %s, %s', exp.code, exp.message, exp.response)
                 ret = False
         return ret
 
-    def manage_brok(self, queue):
+    def manage_brok(self, brok):
         """
         We get the data to manage
 
-        :param queue: Brok object
-        :type queue: object
+        :param brok: Brok object
+        :type brok: object
         :return: None
         """
         if not self.logged_in:
             logger.debug("Not logged-in, ignoring broks...")
             return
 
-        if queue.type == 'new_conf':
+        logger.debug("Received a brok :%s", brok.type)
+        if brok.type == 'new_conf':
             logger.info("Got configuration")
             self.get_refs('livestate_host')
             self.get_refs('livestate_service')
             logger.info("Hosts/services references reloaded")
 
-        if queue.type == 'host_check_result':
-            self.update(queue.data, 'host')
-        elif queue.type == 'service_check_result':
-            self.update(queue.data, 'service')
+        if brok.type == 'host_check_result':
+            self.update(brok.data, 'host')
+        elif brok.type == 'service_check_result':
+            self.update(brok.data, 'service')
 
     def main(self):
         """

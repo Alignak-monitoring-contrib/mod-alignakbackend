@@ -501,6 +501,14 @@ class AlignakBackendArbiter(BaseModule):
                     host['check_command'] = self.configraw['commands'][host['check_command']]
                 else:
                     host['check_command'] = ''
+            # event_handler
+            if 'event_handler' in host:
+                if host['event_handler'] is None:
+                    host['event_handler'] = ''
+                elif host['event_handler'] in self.configraw['commands']:
+                    host['event_handler'] = self.configraw['commands'][host['event_handler']]
+                else:
+                    del host['event_handler']
             for command_arg in ['check_command', 'event_handler']:
                 arg = command_arg + "_args"
                 if arg in host:
@@ -646,6 +654,14 @@ class AlignakBackendArbiter(BaseModule):
                     service['check_command'] = self.configraw['commands'][service['check_command']]
                 else:
                     del service['check_command']
+            # event_handler
+            if 'event_handler' in service:
+                if service['event_handler'] is None:
+                    service['event_handler'] = ''
+                elif service['event_handler'] in self.configraw['commands']:
+                    service['event_handler'] = self.configraw['commands'][service['event_handler']]
+                else:
+                    del service['event_handler']
             for command_arg in ['check_command', 'event_handler']:
                 arg = command_arg + "_args"
                 if arg in service:

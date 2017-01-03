@@ -219,7 +219,7 @@ class AlignakBackendBroker(BaseModule):
             if data['host_name'] in self.mapping['host']:
                 # Received data for an host:
                 # {
-                # `last_time_unreachable`: 0, `last_problem_id`: 0, `check_type`: 1,
+                # `last_time_unreachable`: 0, `last_problem_id`: 0, `passive_check`: True,
                 # `retry_interval`: 0,`last_event_id`: 0, `problem_has_been_acknowledged`: False,
                 # `command_name`: `nsca_host_dead`, `last_state`: `UP`, `latency`: 0,
                 # `last_state_type`: `HARD`, `last_hard_state_change`: 0.0,
@@ -247,9 +247,19 @@ class AlignakBackendBroker(BaseModule):
                     'ls_long_output': data['long_output'],
                     'ls_perf_data': data['perf_data'],
                     'ls_acknowledged': data['problem_has_been_acknowledged'],
+                    'ls_acknowledgement_type': data['acknowledgement_type'],
                     'ls_downtimed': data['in_scheduled_downtime'],
                     'ls_execution_time': data['execution_time'],
-                    'ls_latency': data['latency']
+                    'ls_latency': data['latency'],
+
+                    'ls_passive_check': data['passive_check'],
+                    'ls_attempt': data['attempt'],
+                    'ls_last_hard_state_changed': data['last_hard_state_change'],
+                    # Last time in the corresponding state
+                    'ls_last_time_up': data['last_time_up'],
+                    'ls_last_time_down': data['last_time_down'],
+                    'ls_last_time_unknown': 0,
+                    'ls_last_time_unreachable': data['last_time_unreachable']
                 }
 
                 h_id = self.mapping['host'][data['host_name']]
@@ -261,12 +271,12 @@ class AlignakBackendBroker(BaseModule):
                     del self.ref_live['host'][h_id]['initial_state_type']
 
                 data_to_update['_realm'] = self.ref_live['host'][h_id]['_realm']
-                logger.debug("host live state data: %s", data_to_update)
 
                 # Update live state
                 ret = self.send_to_backend('livestate_host', data['host_name'], data_to_update)
                 if ret:
                     counters['livestate_host'] += 1
+                logger.debug("Updated host live state data: %s", data_to_update)
 
                 # Add an host log
                 data_to_update['ls_state_changed'] = (
@@ -291,7 +301,7 @@ class AlignakBackendBroker(BaseModule):
             if service_name in self.mapping['service']:
                 # Received data for a service:
                 # {
-                # u'last_problem_id': 0, u'check_type': 0, u'retry_interval': 2,
+                # u'last_problem_id': 0, u'passive_check': False, u'retry_interval': 2,
                 # u'last_event_id': 0, u'problem_has_been_acknowledged': False,
                 # u'last_time_critical': 1473597376,
                 # u'last_time_warning': 0, u'command_name': u'check_nrpe', u'last_state': u'OK',
@@ -321,9 +331,20 @@ class AlignakBackendBroker(BaseModule):
                     'ls_long_output': data['long_output'],
                     'ls_perf_data': data['perf_data'],
                     'ls_acknowledged': data['problem_has_been_acknowledged'],
+                    'ls_acknowledgement_type': data['acknowledgement_type'],
                     'ls_downtimed': data['in_scheduled_downtime'],
                     'ls_execution_time': data['execution_time'],
-                    'ls_latency': data['latency']
+                    'ls_latency': data['latency'],
+
+                    'ls_passive_check': data['passive_check'],
+                    'ls_attempt': data['attempt'],
+                    'ls_last_hard_state_changed': data['last_hard_state_change'],
+                    # Last time in the corresponding state
+                    'ls_last_time_ok': data['last_time_ok'],
+                    'ls_last_time_warning': data['last_time_warning'],
+                    'ls_last_time_critical': data['last_time_critical'],
+                    'ls_last_time_unknown': data['last_time_unknown'],
+                    'ls_last_time_unreachable': data['last_time_unreachable']
                 }
                 s_id = self.mapping['service'][service_name]
                 if 'initial_state' in self.ref_live['service'][s_id]:
@@ -335,12 +356,12 @@ class AlignakBackendBroker(BaseModule):
                     del self.ref_live['service'][s_id]['initial_state_type']
 
                 data_to_update['_realm'] = self.ref_live['service'][s_id]['_realm']
-                logger.debug("service live state data: %s", data_to_update)
 
                 # Update live state
                 ret = self.send_to_backend('livestate_service', service_name, data_to_update)
                 if ret:
                     counters['livestate_service'] += 1
+                logger.debug("Updated service live state data: %s", data_to_update)
 
                 # Add a service log
                 data_to_update['ls_state_changed'] = (
@@ -450,9 +471,10 @@ class AlignakBackendBroker(BaseModule):
             return
 
         if queue.type == 'new_conf':
+            logger.info("Got configuration")
             self.get_refs('livestate_host')
             self.get_refs('livestate_service')
-            logger.info("Refs reloaded")
+            logger.info("Hosts/services references reloaded")
 
         if queue.type == 'host_check_result':
             self.update(queue.data, 'host')
@@ -480,8 +502,7 @@ class AlignakBackendBroker(BaseModule):
                 b.prepare()
                 self.manage_brok(b)
 
-            logger.debug("time to manage %s broks (%d secs)", len(l),
-                         time.time() - start)
+            logger.debug("time to manage %s broks (%d secs)", len(l), time.time() - start)
 
         logger.info("stopping...")
         logger.info("stopped")

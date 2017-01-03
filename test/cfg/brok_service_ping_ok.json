@@ -29,6 +29,7 @@
   "last_state_type": "HARD",
   "last_hard_state_change": 0.0,
   "last_time_unknown": 0,
+  "last_time_unreachable": 0,
   "last_time_critical": 1473597376,
   "last_time_warning": 0,
   "last_time_ok": 0,

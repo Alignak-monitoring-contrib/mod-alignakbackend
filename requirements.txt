@@ -1,2 +1,1 @@
 alignak_backend_client
-alignak_setup

@@ -174,7 +174,7 @@ class AlignakBackendArbiter(BaseModule):
         except BackendException as exp:
             logger.warning("Alignak backend is not available for login. "
                            "No backend connection.")
-            logger.exception("Exception: %s", exp)
+            logger.debug("Exception: %s", exp)
             self.backend_connected = False
 
     def single_relation(self, resource, mapping, ctype):

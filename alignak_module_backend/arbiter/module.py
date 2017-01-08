@@ -88,8 +88,13 @@ class AlignakBackendArbiter(BaseModule):
             logger.info("Alignak backend importation script is active.")
             self.backend_import = True
 
+        self.client_processes = int(getattr(mod_conf, 'client_processes', 1))
+        logger.info(
+            "Number of processes used by backend client: %s", self.client_processes
+        )
+
         self.url = getattr(mod_conf, 'api_url', 'http://localhost:5000')
-        self.backend = Backend(self.url)
+        self.backend = Backend(self.url, self.client_processes)
         self.backend.token = getattr(mod_conf, 'token', '')
         self.backend_connected = False
         if self.backend.token == '':

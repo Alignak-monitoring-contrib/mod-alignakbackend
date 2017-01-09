@@ -1075,6 +1075,7 @@ class AlignakBackendArbiter(BaseModule):
             if ack['sticky']:
                 sticky = 2
             if ack['action'] == 'add':
+                ack['comment'] = ack['comment'].encode('utf8', 'replace')
                 if ack['service']:
                     command = '[{}] ACKNOWLEDGE_SVC_PROBLEM;{};{};{};{};{};{};{}\n'.\
                         format(self.convert_date_timestamp(ack['_created']), ack['host']['name'],
@@ -1115,13 +1116,13 @@ class AlignakBackendArbiter(BaseModule):
         # pylint: disable=too-many-format-args
         for downt in all_downt['_items']:
             if downt['action'] == 'add':
+                downt['comment'] = downt['comment'].encode('utf8', 'replace')
                 if downt['service']:
                     command = '[{}] SCHEDULE_SVC_DOWNTIME;{};{};{};{};{};{};{};{};{}\n'.\
                         format(self.convert_date_timestamp(downt['_created']),
                                downt['host']['name'], downt['service']['name'],
                                downt['start_time'], downt['end_time'], int(downt['fixed']),
-                               0, downt['duration'], downt['user']['name'],
-                               downt['comment'])
+                               0, downt['duration'], downt['user']['name'], downt['comment'])
                 elif downt['host'] and 'name' in downt['host']:
                     command = '[{}] SCHEDULE_HOST_DOWNTIME;{};{};{};{};{};{};{};{}\n'.\
                         format(self.convert_date_timestamp(downt['_created']),

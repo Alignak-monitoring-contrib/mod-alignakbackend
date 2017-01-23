@@ -116,8 +116,15 @@ class AlignakBackendArbiter(BaseModule):
         )
         self.next_check = 0
         self.next_action_check = 0
+        self.next_daemons_state = 0
         self.time_loaded_conf = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
         self.configraw = {}
+        self.highlevelrealm = {
+            'level': 30000,
+            'name': ''
+        }
+        self.daemonlist = {'arbiter': {}, 'scheduler': {}, 'poller': {}, 'reactionner': {},
+                           'receiver': {}, 'broker': {}}
         self.config = {'commands': [],
                        'timeperiods': [],
                        'hosts': [],
@@ -290,12 +297,18 @@ class AlignakBackendArbiter(BaseModule):
         :return: None
         """
         self.configraw['realms'] = {}
+        self.configraw['realms_name'] = {}
         all_realms = self.backend.get_all('realm', {'embedded': json.dumps({'_children': 1})})
         logger.info("Got %d realms",
                     len(all_realms['_items']))
         for realm in all_realms['_items']:
             logger.info("- %s", realm['name'])
             self.configraw['realms'][realm['_id']] = realm['name']
+            # we store the relation name => id because will use it for add / update alignak daemon
+            # state in the backend
+            self.configraw['realms_name'][realm['name']] = realm['_id']
+            if realm['_level'] < self.highlevelrealm['level']:
+                self.highlevelrealm['name'] = realm['name']
             realm['imported_from'] = u'alignak-backend'
             if 'definition_order' in realm and realm['definition_order'] == 100:
                 realm['definition_order'] = 50
@@ -946,6 +959,7 @@ class AlignakBackendArbiter(BaseModule):
         # Schedule next configuration reload check in 10 minutes (need time to finish load config)
         self.next_check = int(now) + (60 * self.verify_modification)
         self.next_action_check = int(now) + self.action_check
+        self.next_daemons_state = int(now) + 60
 
         logger.info(
             "next configuration reload check in %s seconds ---",
@@ -954,6 +968,10 @@ class AlignakBackendArbiter(BaseModule):
         logger.info(
             "next actions check in %s seconds ---",
             (self.next_action_check - int(now))
+        )
+        logger.info(
+            "next update daemons state in %s seconds ---",
+            (self.next_daemons_state - int(now))
         )
         return self.config
 
@@ -1016,6 +1034,16 @@ class AlignakBackendArbiter(BaseModule):
                     "next actions check in %s seconds ---",
                     (self.next_action_check - int(now))
                 )
+            if now > self.next_daemons_state:
+                logger.debug("Update daemons state in the backend...")
+                self.update_daemons_state(arbiter)
+
+                self.next_daemons_state = now + 60
+                logger.debug(
+                    "next update daemons state in %s seconds ---",
+                    (self.next_daemons_state - int(now))
+                )
+
         except Exception as exp:
             logger.warning("hook_tick exception: %s", str(exp))
             logger.exception("Exception: %s", exp)
@@ -1143,3 +1171,47 @@ class AlignakBackendArbiter(BaseModule):
             logger.info("build external command: %s", str(command))
             ext = ExternalCommand(command)
             arbiter.external_commands.append(ext)
+
+    def update_daemons_state(self, arbiter):
+        """Update the daemons status in the backend
+
+        :param arbiter:
+        :return:
+        """
+        if len(self.daemonlist['arbiter']) == 0:
+            all_daemons = self.backend.get_all('alignakdaemon')
+            for item in all_daemons['_items']:
+                self.daemonlist[item['type']][item['name']] = item
+
+        for s_type in ['arbiter', 'scheduler', 'poller', 'reactionner', 'receiver', 'broker']:
+            for daemon in getattr(arbiter.conf, s_type + 's'):
+                data = {'type': s_type}
+                data['name'] = getattr(daemon, s_type + '_name')
+                for field in ['address', 'port', 'alive', 'reachable', 'passive', 'spare']:
+                    data[field] = getattr(daemon, field)
+                data['last_check'] = int(getattr(daemon, 'last_check'))
+                if s_type == 'arbiter' and data['last_check'] == 0 and data['reachable']:
+                    data['last_check'] = int(time.time())
+                if getattr(daemon, 'realm_name') == '':
+                    # it's arbiter case not have realm refined
+                    data['_realm'] = self.configraw['realms_name'][self.highlevelrealm['name']]
+                    if len(self.configraw['realms']) == 1:
+                        data['_sub_realm'] = False
+                    else:
+                        data['_sub_realm'] = True
+                else:
+                    data['_realm'] = self.configraw['realms_name'][getattr(daemon, 'realm_name')]
+                    if hasattr(daemon, 'manage_sub_realms'):
+                        data['_sub_realm'] = getattr(daemon, 'manage_sub_realms')
+
+                if data['name'] in self.daemonlist[s_type]:
+                    headers = {
+                        'Content-Type': 'application/json',
+                        'If-Match': self.daemonlist[s_type][data['name']]['_etag']
+                    }
+                    response = self.backend.patch(
+                        'alignakdaemon/%s' % self.daemonlist[s_type][data['name']]['_id'],
+                        data, headers, True)
+                else:
+                    response = self.backend.post('alignakdaemon', data)
+                self.daemonlist[s_type][data['name']] = response

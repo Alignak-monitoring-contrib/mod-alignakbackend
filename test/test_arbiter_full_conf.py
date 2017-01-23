@@ -82,7 +82,7 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
         self.assertEqual(len(self.objects['hostescalations']), 0)
 
     def test_contacts(self):
-        self.assertEqual(len(self.objects['contacts']), 5)
+        self.assertEqual(len(self.objects['contacts']), 7)
         for cont in self.objects['contacts']:
             for key, value in cont.iteritems():
                 # problem in alignak because not defined

@@ -258,7 +258,7 @@ class AlignakBackendArbiter(BaseModule):
             'ls_last_time_up', 'ls_last_time_down',
             'ls_last_time_ok', 'ls_last_time_warning', 'ls_last_time_critical',
             'ls_last_time_unknown', 'ls_last_time_unreachable',
-            'ls_passive_check',
+            'ls_passive_check', 'ls_last_notification',
             '_overall_state_id',
             'trigger'
         ]

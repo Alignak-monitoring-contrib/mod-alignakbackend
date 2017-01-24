@@ -22,6 +22,7 @@ This module is used to send logs and livestate to alignak-backend with broker
 """
 
 import time
+import json
 import logging
 
 from alignak.basemodule import BaseModule
@@ -458,6 +459,97 @@ class AlignakBackendBroker(BaseModule):
             self.update(brok.data, 'host')
         elif brok.type == 'service_check_result':
             self.update(brok.data, 'service')
+        elif brok.type in ['acknowledge_raise', 'acknowledge_expire', 'downtime_raise',
+                           'downtime_raise']:
+            self.update_actions(brok)
+
+    def update_actions(self, brok):
+        """We manage the acknowledge and downtime broks
+
+        :param brok: the brok
+        :type brok:
+        :return: None
+        """
+        if brok.data['host'] not in self.mapping['host']:
+            return
+        if 'service' in brok.data:
+            service_name = ''.join([brok.data['host'], brok.data['service']])
+            if service_name not in self.mapping['service']:
+                return
+
+        data_to_update = {}
+        endpoint = 'actionacknowledge'
+        if brok.type == 'acknowledge_raise':
+            data_to_update['ls_acknowledged'] = True
+        elif brok.type == 'acknowledge_expire':
+            data_to_update['ls_acknowledged'] = False
+        elif brok.type == 'downtime_raise':
+            data_to_update['ls_downtimed'] = True
+            endpoint = 'actiondowntime'
+        elif brok.type == 'downtime_expire':
+            data_to_update['ls_downtimed'] = False
+            endpoint = 'actiondowntime'
+
+        where = {
+            'processed': True,
+            'notified': False,
+            'host': self.mapping['host'][brok.data['host']],
+            'comment': brok.data['comment'],
+            'service': None
+        }
+
+        if 'service' in brok.data:
+            # it's a service
+            self.send_to_backend('livestate_service', service_name, data_to_update)
+            where['service'] = self.mapping['service'][service_name]
+        else:
+            # it's a host
+            self.send_to_backend('livestate_host', brok.data['host'], data_to_update)
+
+        params = {
+            'where': json.dumps(where)
+        }
+        actions = self.backend.get_all(endpoint, params)
+        if len(actions['_items']) > 0:
+            # case 1: the acknowledge / downtime come from backend, we update the 'notified' field
+            # to True
+            headers = {
+                'Content-Type': 'application/json',
+                'If-Match': actions['_items'][0]['_etag']
+            }
+            self.backend.patch(
+                endpoint + '/' + actions['_items'][0]['_id'], {"notified": True}, headers, True)
+        else:
+            # case 2: the acknowledge / downtime not come from backend, it's only an external
+            # command so we create a new entry
+            where['notified'] = True
+            # try find the user
+            users = self.backend.get_all('user',
+                                         {'where': '{"name":"' + brok.data['author'] + '"}'})
+            if len(users['_items']) > 0:
+                where['user'] = users['_items'][0]['_id']
+            else:
+                return
+
+            if brok.type in ['acknowledge_raise', 'downtime_raise']:
+                where['action'] = 'add'
+            else:
+                where['action'] = 'delete'
+            where['_realm'] = self.ref_live['host'][where['host']]['_realm']
+
+            if endpoint == 'actionacknowledge':
+                if brok.data['sticky'] == 2:
+                    where['sticky'] = False
+                else:
+                    where['sticky'] = True
+                where['notify'] = bool(brok.data['notify'])
+                where['persistent'] = bool(brok.data['persistent'])
+            elif endpoint == 'actiondowntime':
+                where['start_time'] = int(brok.data['start_time'])
+                where['end_time'] = int(brok.data['end_time'])
+                where['fixed'] = bool(brok.data['fixed'])
+                where['duration'] = int(brok.data['duration'])
+            self.backend.post(endpoint, where)
 
     def main(self):
         """

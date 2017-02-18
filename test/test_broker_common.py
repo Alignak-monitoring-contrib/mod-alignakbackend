@@ -228,6 +228,84 @@ class TestBrokerCommon(unittest2.TestCase):
                'srv001http toto.com': self.data_srv_http['_id']}
         self.assertEqual(self.brokmodule.mapping['service'], ref)
 
+    def test_03_2_manage_brok_host(self):
+        """Test host livestate is updated with an alignak host update retention brok"""
+        self.brokmodule.get_refs('livestate_host')
+        self.assertEqual(len(self.brokmodule.ref_live['host']), 1)
+
+        # Simulate an host UP brok
+        data = json.loads(open('cfg/brok_host_srv001_up.json').read())
+        b = Brok({'data': data, 'type': 'host_retention_status'}, False)
+        b.prepare()
+        self.brokmodule.manage_brok(b)
+
+        params = {'where': '{"name": "srv001"}'}
+        r = self.backend.get('host', params)
+        self.assertEqual(len(r['_items']), 1)
+        number = 0
+        for index, item in enumerate(r['_items']):
+            self.assertEqual(item['ls_state'], 'UP')
+            self.assertEqual(item['ls_state_id'], 1)
+            self.assertEqual(item['ls_state_type'], 'HARD')
+            self.assertEqual(item['ls_last_check'], 1444427104)
+            self.assertEqual(item['ls_last_state'], 'UNREACHABLE')
+            self.assertEqual(item['ls_last_state_type'], 'HARD')
+            self.assertEqual(item['ls_last_state_changed'], 1444427108)
+            self.assertEqual(item['ls_output'], 'PING OK - Packet loss = 0%, RTA = 0.05 ms')
+            self.assertEqual(item['ls_long_output'], 'Long output ...')
+            self.assertEqual(item['ls_perf_data'],
+                             'rta=0.049000ms;2.000000;3.000000;0.000000 pl=0%;50;80;0')
+            self.assertEqual(item['ls_acknowledged'], False)
+            self.assertEqual(item['ls_downtimed'], False)
+            self.assertEqual(item['ls_execution_time'], 3.1496069431000002)
+            self.assertEqual(item['ls_latency'], 0.2317881584)
+            number += 1
+        self.assertEqual(1, number)
+
+        r = self.backend.get('livesynthesis')
+        self.assertEqual(len(r['_items']), 1)
+        self.assertEqual(r['_items'][0]['hosts_total'], 1)
+        self.assertEqual(r['_items'][0]['hosts_up_hard'], 1)
+        self.assertEqual(r['_items'][0]['hosts_up_soft'], 0)
+        self.assertEqual(r['_items'][0]['hosts_down_hard'], 0)
+        self.assertEqual(r['_items'][0]['hosts_down_soft'], 0)
+        self.assertEqual(r['_items'][0]['hosts_unreachable_hard'], 0)
+        self.assertEqual(r['_items'][0]['hosts_unreachable_soft'], 0)
+        self.assertEqual(r['_items'][0]['hosts_acknowledged'], 0)
+        self.assertEqual(r['_items'][0]['hosts_in_downtime'], 0)
+
+        # Simulate an host DOWN brok
+        data = json.loads(open('cfg/brok_host_srv001_down.json').read())
+        b = Brok({'data': data, 'type': 'host_check_result'}, False)
+        b.prepare()
+        self.brokmodule.manage_brok(b)
+
+        params = {'where': '{"name": "srv001"}'}
+        r = self.backend.get('host', params)
+        self.assertEqual(len(r['_items']), 1)
+        number = 0
+        for index, item in enumerate(r['_items']):
+            self.assertEqual(item['ls_last_state'], 'UP')
+            self.assertEqual(item['ls_state'], 'DOWN')
+            self.assertEqual(item['ls_last_state_type'], 'HARD')
+            self.assertEqual(item['ls_state_type'], 'SOFT')
+            self.assertEqual(item['ls_output'], 'CRITICAL - Plugin timed out after 10 seconds')
+            self.assertEqual(item['ls_perf_data'], '')
+            number += 1
+        self.assertEqual(1, number)
+
+        r = self.backend.get('livesynthesis')
+        self.assertEqual(len(r['_items']), 1)
+        self.assertEqual(r['_items'][0]['hosts_total'], 1)
+        self.assertEqual(r['_items'][0]['hosts_up_hard'], 0)
+        self.assertEqual(r['_items'][0]['hosts_up_soft'], 0)
+        self.assertEqual(r['_items'][0]['hosts_down_hard'], 0)
+        self.assertEqual(r['_items'][0]['hosts_down_soft'], 1)
+        self.assertEqual(r['_items'][0]['hosts_unreachable_hard'], 0)
+        self.assertEqual(r['_items'][0]['hosts_unreachable_soft'], 0)
+        self.assertEqual(r['_items'][0]['hosts_acknowledged'], 0)
+        self.assertEqual(r['_items'][0]['hosts_in_downtime'], 0)
+
     def test_03_manage_brok_host(self):
         """Test host livestate is updated with an alignak brok"""
         self.brokmodule.get_refs('livestate_host')
@@ -316,6 +394,59 @@ class TestBrokerCommon(unittest2.TestCase):
         # Simulate a service OK brok
         data = json.loads(open('cfg/brok_service_ping_ok.json').read())
         b = Brok({'data': data, 'type': 'service_check_result'}, False)
+        b.prepare()
+        self.brokmodule.manage_brok(b)
+
+        params = {'where': '{"name": "ping"}'}
+        r = self.backend.get('service', params)
+        self.assertEqual(len(r['_items']), 1)
+        number = 0
+        for index, item in enumerate(r['_items']):
+            self.assertEqual(item['ls_state'], 'OK')
+            self.assertEqual(item['ls_state_id'], 0)
+            self.assertEqual(item['ls_state_type'], 'HARD')
+            self.assertEqual(item['ls_last_check'], 1473597375)
+            self.assertEqual(item['ls_last_state'], 'UNKNOWN')
+            self.assertEqual(item['ls_last_state_type'], 'HARD')
+            self.assertEqual(item['ls_last_state_changed'], 1444427108)
+            self.assertEqual(item['ls_output'], 'PING OK - Packet loss = 0%, RTA = 0.05 ms')
+            self.assertEqual(item['ls_long_output'], 'Long output ...')
+            self.assertEqual(item['ls_perf_data'],
+                             'rta=0.049000ms;2.000000;3.000000;0.000000 pl=0%;50;80;0')
+            self.assertEqual(item['ls_acknowledged'], False)
+            self.assertEqual(item['ls_downtimed'], False)
+            self.assertEqual(item['ls_execution_time'], 3.1496069431000002)
+            self.assertEqual(item['ls_latency'], 0.2317881584)
+            number += 1
+        self.assertEqual(1, number)
+
+        r = self.backend.get('service')
+        self.assertEqual(len(r['_items']), 2)
+
+        r = self.backend.get('livesynthesis')
+        self.assertEqual(len(r['_items']), 1)
+        self.assertEqual(r['_items'][0]['services_total'], 2)
+        self.assertEqual(r['_items'][0]['services_ok_hard'], 1)
+        self.assertEqual(r['_items'][0]['services_ok_soft'], 0)
+        self.assertEqual(r['_items'][0]['services_warning_hard'], 0)
+        self.assertEqual(r['_items'][0]['services_warning_soft'], 0)
+        self.assertEqual(r['_items'][0]['services_critical_hard'], 0)
+        self.assertEqual(r['_items'][0]['services_critical_soft'], 0)
+        self.assertEqual(r['_items'][0]['services_unknown_hard'], 1)
+        self.assertEqual(r['_items'][0]['services_unknown_soft'], 0)
+        self.assertEqual(r['_items'][0]['services_acknowledged'], 0)
+        self.assertEqual(r['_items'][0]['services_in_downtime'], 0)
+
+    def test_04_2_manage_brok_service(self):
+        """Test service livestate is updated with an alignak service retention update brok"""
+        self.brokmodule.get_refs('livestate_host')
+        self.assertEqual(len(self.brokmodule.ref_live['host']), 1)
+        self.brokmodule.get_refs('livestate_service')
+        self.assertEqual(len(self.brokmodule.ref_live['service']), 2)
+
+        # Simulate a service OK brok
+        data = json.loads(open('cfg/brok_service_ping_ok.json').read())
+        b = Brok({'data': data, 'type': 'service_retention_status'}, False)
         b.prepare()
         self.brokmodule.manage_brok(b)
 

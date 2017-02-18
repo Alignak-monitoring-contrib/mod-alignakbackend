@@ -455,9 +455,11 @@ class AlignakBackendBroker(BaseModule):
             self.get_refs('livestate_service')
             logger.info("Hosts/services references reloaded")
 
-        if brok.type == 'host_check_result':
+        # Should also manage: host_next_schedule and service_next_schedule
+
+        if brok.type in ['host_retention_status', 'host_check_result']:
             self.update(brok.data, 'host')
-        elif brok.type == 'service_check_result':
+        elif brok.type in ['service_retention_status', 'service_check_result']:
             self.update(brok.data, 'service')
         elif brok.type in ['acknowledge_raise', 'acknowledge_expire', 'downtime_raise',
                            'downtime_raise']:

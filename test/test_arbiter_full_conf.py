@@ -140,12 +140,13 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
                     self.assertIn(member, ['Italy', 'France'])
 
     def test_services(self):
-        self.assertEqual(len(self.objects['services']), 94)
+        self.assertEqual(len(self.objects['services']), 74)
         for serv in self.objects['services']:
             print("Got service: %s" % serv)
             for key, value in serv.iteritems():
                 if not key.startswith('ls_') and not key.startswith('_'):
                     self.assertTrue(Service.properties[key])
+        self.assertEqual(len(self.objects['services']), 74)
 
     def test_servicegroups(self):
         self.assertEqual(len(self.objects['servicegroups']), 6)

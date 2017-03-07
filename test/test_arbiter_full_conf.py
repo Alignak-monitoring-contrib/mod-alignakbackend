@@ -140,7 +140,7 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
                     self.assertIn(member, ['Italy', 'France'])
 
     def test_services(self):
-        self.assertEqual(len(self.objects['services']), 94)
+        self.assertEqual(len(self.objects['services']), 74)
         for serv in self.objects['services']:
             print("Got service: %s" % serv)
             for key, value in serv.iteritems():

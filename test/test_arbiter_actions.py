@@ -175,7 +175,7 @@ class TestArbiterActions(unittest2.TestCase):
                       '2;1;1;admin;User comment host', ext_cmd.cmd_line)
         ext_cmd = arbiter.external_commands[1]
         self.assertIn('ACKNOWLEDGE_SVC_PROBLEM;srv001;ping;'
-                      '1;0;0;admin;User comment service', ext_cmd.cmd_line)
+                      '1;0;1;admin;User comment service', ext_cmd.cmd_line)
         ext_cmd = arbiter.external_commands[2]
         self.assertIn('REMOVE_HOST_ACKNOWLEDGEMENT;srv001', ext_cmd.cmd_line)
         ext_cmd = arbiter.external_commands[3]

@@ -1080,12 +1080,11 @@ class AlignakBackendArbiter(BaseModule):
                     command = '[{}] ACKNOWLEDGE_SVC_PROBLEM;{};{};{};{};{};{};{}\n'.\
                         format(self.convert_date_timestamp(ack['_created']), ack['host']['name'],
                                ack['service']['name'], sticky, int(ack['notify']),
-                               int(ack['persistent']), ack['user']['name'], ack['comment'])
+                               1, ack['user']['name'], ack['comment'])
                 else:
                     command = '[{}] ACKNOWLEDGE_HOST_PROBLEM;{};{};{};{};{};{}\n'. \
                         format(self.convert_date_timestamp(ack['_created']), ack['host']['name'],
-                               sticky, int(ack['notify']), int(ack['persistent']),
-                               ack['user']['name'], ack['comment'])
+                               sticky, int(ack['notify']), 1, ack['user']['name'], ack['comment'])
             elif ack['action'] == 'delete':
                 if ack['service']:
                     command = '[{}] REMOVE_SVC_ACKNOWLEDGEMENT;{};{}\n'.\

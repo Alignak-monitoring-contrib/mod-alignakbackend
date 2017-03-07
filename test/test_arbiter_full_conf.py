@@ -130,14 +130,16 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
                 self.assertTrue(Realm.properties[key])
             if realm['realm_name'] == 'All':
                 members = realm['realm_members'].split(',')
+                print("Realm All members: %s", members)
                 self.assertEqual(len(members), 2)
                 for member in members:
-                    self.assertIn(member, ['Europe', 'US'])
+                    self.assertIn(member, [u'Europe', u'US'])
             if realm['realm_name'] == 'Europe':
                 members = realm['realm_members'].split(',')
+                print("Realm Europe members: %s", members)
                 self.assertEqual(len(members), 2)
                 for member in members:
-                    self.assertIn(member, ['Italy', 'France'])
+                    self.assertIn(member, [u'Italy', u'France'])
 
     def test_services(self):
         self.assertEqual(len(self.objects['services']), 74)

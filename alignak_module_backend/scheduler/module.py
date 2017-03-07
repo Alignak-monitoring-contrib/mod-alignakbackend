@@ -171,7 +171,11 @@ class AlignakBackendScheduler(BaseModule):
         for host in response['_items']:
             if host['host'] in data_to_save['hosts']:
                 delheaders = {'If-Match': host['_etag']}
-                self.backend.delete('/'.join(['retentionhost', host['_id']]), headers=delheaders)
+                try:
+                    self.backend.delete('/'.join(['retentionhost', host['_id']]),
+                                        headers=delheaders)
+                except BackendException as exp:
+                    logger.exception("Backend exception: %s", exp)
 
         # Add all hosts after
         for host in data_to_save['hosts']:
@@ -190,8 +194,11 @@ class AlignakBackendScheduler(BaseModule):
         for service in response['_items']:
             if (service['service'][0], service['service'][1]) in data_to_save['services']:
                 delheaders = {'If-Match': service['_etag']}
-                self.backend.delete('/'.join(['retentionservice', service['_id']]),
-                                    headers=delheaders)
+                try:
+                    self.backend.delete('/'.join(['retentionservice', service['_id']]),
+                                        headers=delheaders)
+                except BackendException as exp:
+                    logger.exception("Backend exception: %s", exp)
 
         # Add all services after
         for service in data_to_save['services']:

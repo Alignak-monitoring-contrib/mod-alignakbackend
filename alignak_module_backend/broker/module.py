@@ -520,7 +520,7 @@ class AlignakBackendBroker(BaseModule):
             self.backend.patch(
                 endpoint + '/' + actions['_items'][0]['_id'], {"notified": True}, headers, True)
         else:
-            # case 2: the acknowledge / downtime not come from backend, it's only an external
+            # case 2: the acknowledge / downtime do not come from the backend, it's an external
             # command so we create a new entry
             where['notified'] = True
             # try find the user
@@ -543,7 +543,6 @@ class AlignakBackendBroker(BaseModule):
                 else:
                     where['sticky'] = True
                 where['notify'] = bool(brok.data['notify'])
-                where['persistent'] = bool(brok.data['persistent'])
             elif endpoint == 'actiondowntime':
                 where['start_time'] = int(brok.data['start_time'])
                 where['end_time'] = int(brok.data['end_time'])

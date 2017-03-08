@@ -448,20 +448,23 @@ class AlignakBackendBroker(BaseModule):
             logger.debug("Not logged-in, ignoring broks...")
             return
 
-        logger.debug("Received a brok :%s", brok.type)
-        if brok.type == 'new_conf':
-            logger.info("Got configuration")
-            self.get_refs('livestate_host')
-            self.get_refs('livestate_service')
-            logger.info("Hosts/services references reloaded")
+        try:
+            logger.debug("Received a brok :%s", brok.type)
+            if brok.type == 'new_conf':
+                logger.info("Got configuration")
+                self.get_refs('livestate_host')
+                self.get_refs('livestate_service')
+                logger.info("Hosts/services references reloaded")
 
-        if brok.type == 'host_check_result':
-            self.update(brok.data, 'host')
-        elif brok.type == 'service_check_result':
-            self.update(brok.data, 'service')
-        elif brok.type in ['acknowledge_raise', 'acknowledge_expire', 'downtime_raise',
-                           'downtime_raise']:
-            self.update_actions(brok)
+            if brok.type == 'host_check_result':
+                self.update(brok.data, 'host')
+            elif brok.type == 'service_check_result':
+                self.update(brok.data, 'service')
+            elif brok.type in ['acknowledge_raise', 'acknowledge_expire', 'downtime_raise',
+                               'downtime_raise']:
+                self.update_actions(brok)
+        except Exception as exp:
+            logger.exception("Manage brok exception: %s", exp)
 
     def update_actions(self, brok):
         """We manage the acknowledge and downtime broks

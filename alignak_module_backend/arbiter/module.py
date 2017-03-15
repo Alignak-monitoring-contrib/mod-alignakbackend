@@ -706,6 +706,8 @@ class AlignakBackendArbiter(BaseModule):
             self.single_relation(service, 'snapshot_period', 'timeperiods')
             # event_handler
             self.single_relation(service, 'event_handler', 'commands')
+            # hostgroups
+            self.multiple_relation(service, 'hostgroup_name', 'hostgroups')
             # servicegroups
             self.multiple_relation(service, 'servicegroups', 'servicegroups')
             # contacts

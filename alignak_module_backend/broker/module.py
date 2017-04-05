@@ -23,6 +23,7 @@ This module is used to send logs and livestate to alignak-backend with broker
 
 import time
 import json
+import Queue
 import logging
 
 from alignak.basemodule import BaseModule
@@ -567,14 +568,20 @@ class AlignakBackendBroker(BaseModule):
         logger.info("starting...")
 
         while not self.interrupted:
-            logger.debug("queue length: %s", self.to_q.qsize())
-            start = time.time()
-            l = self.to_q.get()
-            for b in l:
-                b.prepare()
-                self.manage_brok(b)
+            try:
+                logger.debug("queue length: %s", self.to_q.qsize())
+                start = time.time()
 
-            logger.debug("time to manage %s broks (%d secs)", len(l), time.time() - start)
+                message = self.to_q.get_nowait()
+                for brok in message:
+                    # Prepare and manage each brok in the queue message
+                    brok.prepare()
+                    self.manage_brok(brok)
+
+                logger.debug("time to manage %s broks (%d secs)", len(message), time.time() - start)
+            except Queue.Empty:
+                # logger.debug("No message in the module queue")
+                time.sleep(0.1)
 
         logger.info("stopping...")
         logger.info("stopped")

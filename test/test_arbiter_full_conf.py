@@ -17,9 +17,11 @@ from alignak.objects.contactgroup import Contactgroup
 from alignak.objects.host import Host
 from alignak.objects.hostgroup import Hostgroup
 from alignak.objects.hostdependency import Hostdependency
+from alignak.objects.hostescalation import Hostescalation
 from alignak.objects.service import Service
 from alignak.objects.servicegroup import Servicegroup
 from alignak.objects.servicedependency import Servicedependency
+from alignak.objects.serviceescalation import Serviceescalation
 from alignak_backend_client.client import Backend
 
 
@@ -79,10 +81,13 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
                 self.assertTrue(Command.properties[key])
 
     def test_hostescalations(self):
-        self.assertEqual(len(self.objects['hostescalations']), 0)
+        self.assertEqual(len(self.objects['hostescalations']), 2)
+        for item in self.objects['hostescalations']:
+            for key, value in item.iteritems():
+                self.assertTrue(Hostescalation.properties[key])
 
     def test_contacts(self):
-        self.assertEqual(len(self.objects['contacts']), 7)
+        self.assertEqual(len(self.objects['contacts']), 10)
         for cont in self.objects['contacts']:
             for key, value in cont.iteritems():
                 # problem in alignak because not defined
@@ -96,7 +101,10 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
         #         self.assertTrue(Timeperiod.properties[key])
 
     def test_serviceescalations(self):
-        self.assertEqual(len(self.objects['serviceescalations']), 0)
+        self.assertEqual(len(self.objects['serviceescalations']), 3)
+        for item in self.objects['serviceescalations']:
+            for key, value in item.iteritems():
+                self.assertTrue(Serviceescalation.properties[key])
 
     def test_hostgroups(self):
         self.assertEqual(len(self.objects['hostgroups']), 9)
@@ -107,7 +115,7 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
                     self.assertTrue(Hostgroup.properties[key])
 
     def test_contactgroups(self):
-        self.assertEqual(len(self.objects['contactgroups']), 3)
+        self.assertEqual(len(self.objects['contactgroups']), 4)
         for contact in self.objects['contactgroups']:
             for key, value in contact.iteritems():
                 # problem in alignak because not defined
@@ -142,11 +150,12 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
                     self.assertIn(member, [u'Italy', u'France'])
 
     def test_services(self):
+        # mohierf: I got 76 locally but 74 on Travis ... :/
         self.assertEqual(len(self.objects['services']), 74)
         for serv in self.objects['services']:
             print("Got service: %s" % serv)
             for key, value in serv.iteritems():
-                if not key.startswith('ls_') and not key.startswith('_'):
+                if not key.startswith('ls_') and not key.startswith('_') and not key in ['alias']:
                     self.assertTrue(Service.properties[key])
 
     def test_servicegroups(self):

@@ -300,7 +300,7 @@ class TestArbiterDaemonsState(unittest2.TestCase):
         setattr(a, 'reachable', True)
         setattr(a, 'passive', False)
         setattr(a, 'spare', False)
-        setattr(a, 'realm_name', '')
+        setattr(a, 'realm_name', 'All')
         setattr(a, 'manage_sub_realms', False)
         arb.conf.arbiters.append(copy.copy(a))
 

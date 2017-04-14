@@ -86,7 +86,7 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
         for cont in self.objects['contacts']:
             for key, value in cont.iteritems():
                 # problem in alignak because not defined
-                if key not in ['can_update_livestate'] and not key.startswith('_'):
+                if key not in ['can_update_livestate', 'skill_level'] and not key.startswith('_'):
                     self.assertTrue(Contact.properties[key])
 
     def test_timeperiods(self):

@@ -1186,7 +1186,7 @@ class AlignakBackendArbiter(BaseModule):
         :param arbiter:
         :return:
         """
-        if len(self.daemonlist['arbiter']) == 0:
+        if not self.daemonlist['arbiter']:
             all_daemons = self.backend.get_all('alignakdaemon')
             for item in all_daemons['_items']:
                 self.daemonlist[item['type']][item['name']] = item

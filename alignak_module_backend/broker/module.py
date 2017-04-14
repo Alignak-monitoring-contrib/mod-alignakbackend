@@ -514,7 +514,7 @@ class AlignakBackendBroker(BaseModule):
             'where': json.dumps(where)
         }
         actions = self.backend.get_all(endpoint, params)
-        if len(actions['_items']) > 0:
+        if actions['_items']:
             # case 1: the acknowledge / downtime come from backend, we update the 'notified' field
             # to True
             headers = {
@@ -530,7 +530,7 @@ class AlignakBackendBroker(BaseModule):
             # try find the user
             users = self.backend.get_all('user',
                                          {'where': '{"name":"' + brok.data['author'] + '"}'})
-            if len(users['_items']) > 0:
+            if users['_items']:
                 where['user'] = users['_items'][0]['_id']
             else:
                 return

@@ -802,6 +802,9 @@ class AlignakBackendArbiter(BaseModule):
             hostescalation['imported_from'] = u'alignak-backend'
             if 'definition_order' in hostescalation and hostescalation['definition_order'] == 100:
                 hostescalation['definition_order'] = 50
+            hostescalation[u'contacts'] = []
+            if 'users' in hostescalation:
+                hostescalation[u'contacts'] = hostescalation['users']
             # host_name
             self.single_relation(hostescalation, 'host_name', 'hosts')
             # hostgroup_name
@@ -889,6 +892,9 @@ class AlignakBackendArbiter(BaseModule):
             if 'definition_order' in serviceescalation and \
                     serviceescalation['definition_order'] == 100:
                 serviceescalation['definition_order'] = 50
+            serviceescalation[u'contacts'] = []
+            if 'users' in serviceescalation:
+                serviceescalation[u'contacts'] = serviceescalation['users']
             # host_name
             self.single_relation(serviceescalation, 'host_name', 'hosts')
             # hostgroup_name

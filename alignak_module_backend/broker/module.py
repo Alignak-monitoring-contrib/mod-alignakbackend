@@ -131,7 +131,7 @@ class AlignakBackendBroker(BaseModule):
 
         try:
             self.backend_connected = self.backend.login(username, password, generate)
-        except BackendException as exp:
+        except BackendException as exp:  # pragma: no cover - should not happen
             logger.warning("Alignak backend is not available for login. "
                            "No backend connection.")
             logger.exception("Exception: %s", exp)
@@ -397,7 +397,7 @@ class AlignakBackendBroker(BaseModule):
                     ret = False
                 else:
                     self.ref_live['host'][self.mapping['host'][name]]['_etag'] = response['_etag']
-            except BackendException as exp:
+            except BackendException as exp:  # pragma: no cover - should not happen
                 logger.error('Patch livestate for host %s error', self.mapping['host'][name])
                 logger.error('Data: %s', data)
                 logger.exception("Exception: %s", exp)
@@ -413,14 +413,14 @@ class AlignakBackendBroker(BaseModule):
                 else:
                     self.ref_live['service'][self.mapping['service'][name]]['_etag'] = response[
                         '_etag']
-            except BackendException as exp:
+            except BackendException as exp:  # pragma: no cover - should not happen
                 logger.error('Patch livestate for service %s error', self.mapping['service'][name])
                 logger.error('Data: %s', data)
                 logger.exception("Exception: %s", exp)
         elif type_data == 'log_host':
             try:
                 response = self.backend.post('logcheckresult', data)
-            except BackendException as exp:
+            except BackendException as exp:  # pragma: no cover - should not happen
                 logger.error('Post logcheckresult for host %s error', self.mapping['host'][name])
                 logger.error('Data: %s', data)
                 logger.exception("Exception: %s", exp)
@@ -428,7 +428,7 @@ class AlignakBackendBroker(BaseModule):
         elif type_data == 'log_service':
             try:
                 response = self.backend.post('logcheckresult', data)
-            except BackendException as exp:
+            except BackendException as exp:  # pragma: no cover - should not happen
                 logger.error('Post logcheckresult for service %s error',
                              self.mapping['service'][name])
                 logger.error('Data: %s', data)

@@ -183,7 +183,7 @@ class AlignakBackendArbiter(BaseModule):
 
         try:
             self.backend_connected = self.backend.login(username, password, generate)
-        except BackendException as exp:
+        except BackendException as exp:  # pragma: no cover - should not happen
             logger.warning("Alignak backend is not available for login. "
                            "No backend connection.")
             logger.debug("Exception: %s", exp)
@@ -955,7 +955,7 @@ class AlignakBackendArbiter(BaseModule):
             self.get_hostescalations()
             self.get_servicedependencies()
             self.get_serviceescalations()
-        except BackendException as exp:
+        except BackendException as exp:  # pragma: no cover - should not happen
             logger.warning("Alignak backend is not available for reading. "
                            "Backend communication error.")
             logger.exception("Exception: %s", exp)

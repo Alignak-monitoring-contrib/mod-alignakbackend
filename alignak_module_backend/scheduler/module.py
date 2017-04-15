@@ -113,7 +113,7 @@ class AlignakBackendScheduler(BaseModule):
 
         try:
             self.backend_connected = self.backend.login(username, password, generate)
-        except BackendException as exp:
+        except BackendException as exp:  # pragma: no cover - should not happen
             logger.warning("Alignak backend is not available for login. "
                            "No backend connection.")
             logger.exception("Exception: %s", exp)
@@ -174,7 +174,9 @@ class AlignakBackendScheduler(BaseModule):
                 try:
                     self.backend.delete('/'.join(['retentionhost', host['_id']]),
                                         headers=delheaders)
-                except BackendException as exp:
+                except BackendException as exp:  # pragma: no cover - should not happen
+                    logger.error('Delete retentionhost error')
+                    logger.error('Response: %s', exp.response)
                     logger.exception("Backend exception: %s", exp)
 
         # Add all hosts after
@@ -182,8 +184,8 @@ class AlignakBackendScheduler(BaseModule):
             data_to_save['hosts'][host]['host'] = host
             try:
                 self.backend.post('retentionhost', data=data_to_save['hosts'][host])
-            except BackendException as exp:
-                logger.error('Post retentionhost for host error')
+            except BackendException as exp:  # pragma: no cover - should not happen
+                logger.error('Post retentionhost error')
                 logger.error('Response: %s', exp.response)
                 logger.exception("Exception: %s", exp)
                 return
@@ -197,7 +199,9 @@ class AlignakBackendScheduler(BaseModule):
                 try:
                     self.backend.delete('/'.join(['retentionservice', service['_id']]),
                                         headers=delheaders)
-                except BackendException as exp:
+                except BackendException as exp:  # pragma: no cover - should not happen
+                    logger.error('Delete retentionservice error')
+                    logger.error('Response: %s', exp.response)
                     logger.exception("Backend exception: %s", exp)
 
         # Add all services after
@@ -205,8 +209,9 @@ class AlignakBackendScheduler(BaseModule):
             data_to_save['services'][service]['service'] = service
             try:
                 self.backend.post('retentionservice', data=data_to_save['services'][service])
-            except BackendException as exp:
-                logger.error('Post retentionservice for service error')
+            except BackendException as exp:  # pragma: no cover - should not happen
+                logger.error('Post retentionservice error')
+                logger.error('Response: %s', exp.response)
                 logger.exception("Exception: %s", exp)
                 return
         logger.info('%d services saved in retention', len(data_to_save['services']))

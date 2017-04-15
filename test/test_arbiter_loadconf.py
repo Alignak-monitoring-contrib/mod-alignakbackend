@@ -591,7 +591,6 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'freshness_state': u'x',
                 u'contacts': u'jeronimo',
                 u'contact_groups': u'admins',
-                u'escalations': u''
             },
             {
                 'hostgroup_name': '',
@@ -659,7 +658,6 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'freshness_state': u'x',
                 u'contacts': u'jeronimo',
                 u'contact_groups': u'admins',
-                u'escalations': u''
             },
             {
                 'hostgroup_name': u'allmyhosts',
@@ -727,12 +725,10 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'freshness_state': u'x',
                 u'contacts': u'jeronimo',
                 u'contact_groups': u'admins',
-                u'escalations': u''
             },
         ]
         self.assertEqual(len(self.objects['services']), 3)
         sorted_reference = sorted(reference, key=lambda k: k["service_description"])
-        print(sorted_reference)
         sorted_list = sorted(self.objects['services'], key=lambda k: k["service_description"])
         self.assertEqual(sorted_reference, sorted_list)
         for serv in self.objects['services']:

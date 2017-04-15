@@ -571,7 +571,12 @@ class AlignakBackendArbiter(BaseModule):
             self.multiple_relation(host, 'contact_groups', 'contactgroups')
             # escalations
             # ## self.multiple_relation(host, 'escalations', 'escalation_name')
-            del host['escalations']
+            if 'escalations' in host:
+                del host['escalations']
+            if 'maintenance_period' in host and not host['maintenance_period']:
+                del host['maintenance_period']
+            if 'snapshot_period' in host and not host['snapshot_period']:
+                del host['snapshot_period']
             if 'alias' in host and host['alias'] == '':
                 del host['alias']
             if 'realm' in host:
@@ -716,11 +721,15 @@ class AlignakBackendArbiter(BaseModule):
             self.multiple_relation(service, 'contact_groups', 'contactgroups')
             # escalations
             # ## self.multiple_relation(service, 'escalations', 'escalation_name')
-            if 'escalations' in service and service['escalations'] == '':
+            if 'escalations' in service:
                 del service['escalations']
             # service_dependencies
             # ## self.multiple_relation(service, 'service_dependencies', 'service_name')
             service['service_dependencies'] = ''
+            if 'maintenance_period' in service and not service['maintenance_period']:
+                del service['maintenance_period']
+            if 'snapshot_period' in service and not service['snapshot_period']:
+                del service['snapshot_period']
             if 'alias' in service and service['alias'] == '':
                 del service['alias']
             for key, value in service['customs'].iteritems():

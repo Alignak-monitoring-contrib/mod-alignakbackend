@@ -245,7 +245,7 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'address4': u'',
                 u'address5': u'',
                 u'address6': u'',
-                u'is_admin': False,
+                u'is_admin': True,
                 u'password': self.objects['contacts'][0]['password'],
                 u'pager': u'',
                 u'imported_from': u'alignak-backend',

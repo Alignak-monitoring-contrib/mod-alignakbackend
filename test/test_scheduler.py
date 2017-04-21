@@ -20,6 +20,7 @@
 This file test the retention of scheduler in the backend
 """
 
+import os
 import shlex
 import time
 import subprocess
@@ -39,26 +40,32 @@ class TestScheduler(unittest2.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        """
-        This method:
-          * delete mongodb database
-          * start the backend with uwsgi
-          * log in the backend and get the token
+        """This method:
+          * deletes mongodb database
+          * starts the backend with uwsgi
+          * logs in the backend and gets the token
 
         :return: None
         """
+        # Set test mode for alignak backend
+        os.environ['TEST_ALIGNAK_BACKEND'] = '1'
+        os.environ['ALIGNAK_BACKEND_MONGO_DBNAME'] = 'alignak-module-backend-test'
 
         # Delete used mongo DBs
+        print ("Deleting Alignak backend DB...")
         exit_code = subprocess.call(
             shlex.split(
-                'mongo %s --eval "db.dropDatabase()"' % 'alignak-backend')
+                'mongo %s --eval "db.dropDatabase()"' % os.environ[
+                    'ALIGNAK_BACKEND_MONGO_DBNAME'])
         )
         assert exit_code == 0
+
         cls.p = subprocess.Popen(['uwsgi', '--plugin', 'python', '-w', 'alignakbackend:app',
                                   '--socket', '0.0.0.0:5000',
                                   '--protocol=http', '--enable-threads', '--pidfile',
                                   '/tmp/uwsgi.pid'])
         time.sleep(3)
+
         cls.backend = Backend('http://127.0.0.1:5000')
         cls.backend.login("admin", "admin", "force")
         realms = cls.backend.get_all('realm')
@@ -67,6 +74,7 @@ class TestScheduler(unittest2.TestCase):
 
         # add commands
         data = json.loads(open('cfg/command_ping.json').read())
+        data['name'] = 'other-ping'
         data['_realm'] = cls.realm_all
         data_cmd_ping = cls.backend.post("command", data)
         data = json.loads(open('cfg/command_http.json').read())

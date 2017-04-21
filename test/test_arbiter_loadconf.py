@@ -234,12 +234,11 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
             {
                 u'definition_order': 50,
                 u'service_notifications_enabled': True,
-                u'can_submit_commands': False,
+                u'can_submit_commands': True,
                 u'can_update_livestate': True,
                 'contact_name': u'admin',
                 'service_notification_commands': '',
                 u'service_notification_options': u'w,u,c,r,f,s',
-                u'definition_order': 50,
                 u'address1': u'',
                 u'address2': u'',
                 u'address3': u'',
@@ -258,7 +257,8 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'min_business_impact': 0,
                 u'email': u'',
                 u'alias': u'Administrator',
-                u'host_notification_options': u'd,u,r,f,s'
+                u'host_notification_options': u'd,u,r,f,s',
+                u'skill_level': 2
             },
             {
                 u'definition_order': 50,
@@ -268,7 +268,6 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 'contact_name': u'jeronimo',
                 'service_notification_commands': '',
                 u'service_notification_options': u'w,u,c,r,f,s',
-                u'definition_order': 50,
                 u'address1': u'',
                 u'address2': u'',
                 u'address3': u'',
@@ -287,14 +286,15 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'min_business_impact': 0,
                 u'email': u'',
                 u'alias': u'',
-                u'host_notification_options': u'd,u,r,f,s'
+                u'host_notification_options': u'd,u,r,f,s',
+                u'skill_level': 0
             }
         ]
         self.assertItemsEqual(reference, self.objects['contacts'])
         for cont in self.objects['contacts']:
             for key, value in cont.iteritems():
                 # problem in alignak because not defined
-                if key not in ['can_update_livestate']:
+                if key not in ['can_update_livestate', 'skill_level']:
                     self.assertTrue(Contact.properties[key])
 
     def test_timeperiods(self):
@@ -536,12 +536,13 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'action_url': u'',
                 u'is_volatile': False,
                 u'snapshot_enabled': False,
-                u'low_flap_threshold': -1,
+                u'low_flap_threshold': 25,
                 u'process_perf_data': True,
                 u'icon_image': u'',
                 u'snapshot_interval': 5,
                 u'default_value': u'',
-                u'business_rule_service_notification_options': u'',
+                u'business_rule_service_notification_options': u'w,u,c,r,f,s',
+                u'business_rule_output_template': u'',
                 u'display_name': u'',
                 u'notification_interval': 60,
                 u'trending_policies': u'',
@@ -556,14 +557,14 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'initial_state': 'u',
                 u'first_notification_delay': 0,
                 u'flap_detection_enabled': True,
-                u'business_rule_host_notification_options': u'',
+                u'business_rule_host_notification_options': u'd,u,r,f,s',
                 u'passive_checks_enabled': True,
                 u'host_dependency_enabled': True,
                 u'labels': u'',
                 u'icon_set': u'',
                 u'definition_order': 50,
                 u'parallelize_check': True,
-                u'snapshot_criteria': u'w,c,u,x',
+                u'snapshot_criteria': u'w,c,x',
                 u'notifications_enabled': True,
                 u'aggregation': u'',
                 u'business_rule_smart_notifications': False,
@@ -580,17 +581,16 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'notification_options': u'w,u,c,r,f,s,x',
                 u'notes_url': u'',
                 'merge_host_contacts': False,
-                u'high_flap_threshold': -1,
+                u'high_flap_threshold': 50,
                 u'check_interval': 5,
                 u'business_impact': 2,
                 u'max_check_attempts': 1,
                 u'notes': u'',
                 u'freshness_threshold': 0,
                 u'check_freshness': False,
-                u'freshness_state': u'o',
+                u'freshness_state': u'x',
                 u'contacts': u'jeronimo',
                 u'contact_groups': u'admins',
-                u'escalations': u''
             },
             {
                 'hostgroup_name': '',
@@ -603,12 +603,13 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'action_url': u'',
                 u'is_volatile': False,
                 u'snapshot_enabled': False,
-                u'low_flap_threshold': -1,
+                u'low_flap_threshold': 25,
                 u'process_perf_data': True,
                 u'icon_image': u'',
                 u'snapshot_interval': 5,
                 u'default_value': u'',
-                u'business_rule_service_notification_options': u'',
+                u'business_rule_service_notification_options': u'w,u,c,r,f,s',
+                u'business_rule_output_template': u'',
                 u'display_name': u'',
                 u'notification_interval': 60,
                 u'trending_policies': u'',
@@ -623,14 +624,14 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'initial_state': 'u',
                 u'first_notification_delay': 0,
                 u'flap_detection_enabled': True,
-                u'business_rule_host_notification_options': u'',
+                u'business_rule_host_notification_options': u'd,u,r,f,s',
                 u'passive_checks_enabled': True,
                 u'host_dependency_enabled': True,
                 u'labels': u'',
                 u'icon_set': u'',
                 u'definition_order': 50,
                 u'parallelize_check': True,
-                u'snapshot_criteria': u'w,c,u,x',
+                u'snapshot_criteria': u'w,c,x',
                 u'notifications_enabled': True,
                 u'aggregation': u'',
                 u'business_rule_smart_notifications': False,
@@ -647,17 +648,16 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'notification_options': u'w,u,c,r,f,s,x',
                 u'notes_url': u'',
                 'merge_host_contacts': False,
-                u'high_flap_threshold': -1,
+                u'high_flap_threshold': 50,
                 u'check_interval': 5,
                 u'business_impact': 2,
                 u'max_check_attempts': 1,
                 u'notes': u'',
                 u'freshness_threshold': 0,
                 u'check_freshness': False,
-                u'freshness_state': u'o',
+                u'freshness_state': u'x',
                 u'contacts': u'jeronimo',
                 u'contact_groups': u'admins',
-                u'escalations': u''
             },
             {
                 'hostgroup_name': u'allmyhosts',
@@ -670,12 +670,13 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'action_url': u'',
                 u'is_volatile': False,
                 u'snapshot_enabled': False,
-                u'low_flap_threshold': -1,
+                u'low_flap_threshold': 25,
                 u'process_perf_data': True,
                 u'icon_image': u'',
                 u'snapshot_interval': 5,
                 u'default_value': u'',
-                u'business_rule_service_notification_options': u'',
+                u'business_rule_service_notification_options': u'w,u,c,r,f,s',
+                u'business_rule_output_template': u'',
                 u'display_name': u'',
                 u'notification_interval': 60,
                 u'trending_policies': u'',
@@ -690,14 +691,14 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'initial_state': 'u',
                 u'first_notification_delay': 0,
                 u'flap_detection_enabled': True,
-                u'business_rule_host_notification_options': u'',
+                u'business_rule_host_notification_options': u'd,u,r,f,s',
                 u'passive_checks_enabled': True,
                 u'host_dependency_enabled': True,
                 u'labels': u'',
                 u'icon_set': u'',
                 u'definition_order': 50,
                 u'parallelize_check': True,
-                u'snapshot_criteria': u'w,c,u,x',
+                u'snapshot_criteria': u'w,c,x',
                 u'notifications_enabled': True,
                 u'aggregation': u'',
                 u'business_rule_smart_notifications': False,
@@ -714,22 +715,22 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'notification_options': u'w,u,c,r,f,s,x',
                 u'notes_url': u'',
                 'merge_host_contacts': False,
-                u'high_flap_threshold': -1,
+                u'high_flap_threshold': 50,
                 u'check_interval': 5,
                 u'business_impact': 2,
                 u'max_check_attempts': 1,
                 u'notes': u'',
                 u'freshness_threshold': 0,
                 u'check_freshness': False,
-                u'freshness_state': u'o',
+                u'freshness_state': u'x',
                 u'contacts': u'jeronimo',
                 u'contact_groups': u'admins',
-                u'escalations': u''
             },
         ]
         self.assertEqual(len(self.objects['services']), 3)
+        sorted_reference = sorted(reference, key=lambda k: k["service_description"])
         sorted_list = sorted(self.objects['services'], key=lambda k: k["service_description"])
-        self.assertEqual(reference, sorted_list)
+        self.assertEqual(sorted_reference, sorted_list)
         for serv in self.objects['services']:
             for key, value in serv.iteritems():
                 if not key.startswith('ls_'):

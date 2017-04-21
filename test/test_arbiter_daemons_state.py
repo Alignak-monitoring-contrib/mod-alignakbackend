@@ -108,7 +108,7 @@ class TestArbiterDaemonsState(unittest2.TestCase):
         data = {'name': 'user1', 'password': 'test', 'back_role_super_admin': False,
                 'host_notification_period': cls.user_admin['host_notification_period'],
                 'service_notification_period': cls.user_admin['service_notification_period'],
-                '_realm': realm_a['_id']}
+                '_realm': realm_a['_id'], '_sub_realm': False}
         user1 = cls.backend.post('user', data)
 
         data = {'user': user1['_id'], 'realm': realm_a['_id'], 'resource': '*',
@@ -132,8 +132,7 @@ class TestArbiterDaemonsState(unittest2.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        """
-        Kill uwsgi
+        """Kill uwsgi
 
         :return: None
         """

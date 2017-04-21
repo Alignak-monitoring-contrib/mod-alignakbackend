@@ -183,7 +183,7 @@ class AlignakBackendArbiter(BaseModule):
 
         try:
             self.backend_connected = self.backend.login(username, password, generate)
-        except BackendException as exp:
+        except BackendException as exp:  # pragma: no cover - should not happen
             logger.warning("Alignak backend is not available for login. "
                            "No backend connection.")
             logger.debug("Exception: %s", exp)
@@ -571,7 +571,12 @@ class AlignakBackendArbiter(BaseModule):
             self.multiple_relation(host, 'contact_groups', 'contactgroups')
             # escalations
             # ## self.multiple_relation(host, 'escalations', 'escalation_name')
-            del host['escalations']
+            if 'escalations' in host:
+                del host['escalations']
+            if 'maintenance_period' in host and not host['maintenance_period']:
+                del host['maintenance_period']
+            if 'snapshot_period' in host and not host['snapshot_period']:
+                del host['snapshot_period']
             if 'alias' in host and host['alias'] == '':
                 del host['alias']
             if 'realm' in host:
@@ -716,11 +721,15 @@ class AlignakBackendArbiter(BaseModule):
             self.multiple_relation(service, 'contact_groups', 'contactgroups')
             # escalations
             # ## self.multiple_relation(service, 'escalations', 'escalation_name')
-            if 'escalation' in service and service['escalation'] == '':
-                del service['escalation']
+            if 'escalations' in service:
+                del service['escalations']
             # service_dependencies
             # ## self.multiple_relation(service, 'service_dependencies', 'service_name')
             service['service_dependencies'] = ''
+            if 'maintenance_period' in service and not service['maintenance_period']:
+                del service['maintenance_period']
+            if 'snapshot_period' in service and not service['snapshot_period']:
+                del service['snapshot_period']
             if 'alias' in service and service['alias'] == '':
                 del service['alias']
             for key, value in service['customs'].iteritems():
@@ -798,10 +807,13 @@ class AlignakBackendArbiter(BaseModule):
         for hostescalation in all_hostescalations['_items']:
             logger.info("- %s", hostescalation['name'])
             self.configraw['hostescalations'][hostescalation['_id']] = hostescalation['name']
-            hostescalation['hostescalation_name'] = hostescalation['name']
+            # hostescalation['hostescalation_name'] = hostescalation['name']
             hostescalation['imported_from'] = u'alignak-backend'
             if 'definition_order' in hostescalation and hostescalation['definition_order'] == 100:
                 hostescalation['definition_order'] = 50
+            hostescalation[u'contacts'] = []
+            if 'users' in hostescalation:
+                hostescalation[u'contacts'] = hostescalation['users']
             # host_name
             self.single_relation(hostescalation, 'host_name', 'hosts')
             # hostgroup_name
@@ -812,6 +824,9 @@ class AlignakBackendArbiter(BaseModule):
             self.multiple_relation(hostescalation, 'contact_groups', 'contactgroups')
             self.clean_unusable_keys(hostescalation)
             self.convert_lists(hostescalation)
+
+            del hostescalation['notes']
+            del hostescalation['alias']
 
             logger.debug("- host escalation: %s", hostescalation)
             self.config['hostescalations'].append(hostescalation)
@@ -884,11 +899,14 @@ class AlignakBackendArbiter(BaseModule):
             logger.info("- %s", serviceescalation['name'])
             self.configraw['serviceescalations'][serviceescalation['_id']] = \
                 serviceescalation['name']
-            serviceescalation['serviceescalation_name'] = serviceescalation['name']
+            # serviceescalation['serviceescalation_name'] = serviceescalation['name']
             serviceescalation['imported_from'] = u'alignak-backend'
             if 'definition_order' in serviceescalation and \
                     serviceescalation['definition_order'] == 100:
                 serviceescalation['definition_order'] = 50
+            serviceescalation[u'contacts'] = []
+            if 'users' in serviceescalation:
+                serviceescalation[u'contacts'] = serviceescalation['users']
             # host_name
             self.single_relation(serviceescalation, 'host_name', 'hosts')
             # hostgroup_name
@@ -902,6 +920,8 @@ class AlignakBackendArbiter(BaseModule):
             self.clean_unusable_keys(serviceescalation)
             self.convert_lists(serviceescalation)
 
+            del serviceescalation['notes']
+            del serviceescalation['alias']
             logger.debug("- service escalation: %s", serviceescalation)
             self.config['serviceescalations'].append(serviceescalation)
 
@@ -944,7 +964,7 @@ class AlignakBackendArbiter(BaseModule):
             self.get_hostescalations()
             self.get_servicedependencies()
             self.get_serviceescalations()
-        except BackendException as exp:
+        except BackendException as exp:  # pragma: no cover - should not happen
             logger.warning("Alignak backend is not available for reading. "
                            "Backend communication error.")
             logger.exception("Exception: %s", exp)
@@ -1180,7 +1200,7 @@ class AlignakBackendArbiter(BaseModule):
         :param arbiter:
         :return:
         """
-        if len(self.daemonlist['arbiter']) == 0:
+        if not self.daemonlist['arbiter']:
             all_daemons = self.backend.get_all('alignakdaemon')
             for item in all_daemons['_items']:
                 self.daemonlist[item['type']][item['name']] = item

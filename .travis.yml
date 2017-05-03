@@ -25,7 +25,7 @@ script:
   # Delete previously existing coverage results
   - coverage erase
   # Run test suite with py.test running its coverage plugin
-  - pytest --cov=alignak_module_backend --cov-config .coveragerc test_*.py
+  - pytest -v --cov=alignak_module_backend --cov-config .coveragerc test_*.py
   # Report about coverage
   - coverage report -m
   - cd ..

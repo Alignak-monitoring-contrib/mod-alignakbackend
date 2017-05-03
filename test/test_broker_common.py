@@ -224,8 +224,8 @@ class TestBrokerCommon(unittest2.TestCase):
             'HARD'
         )
 
-        ref = {'srv001ping': self.data_srv_ping['_id'],
-               'srv001http toto.com': self.data_srv_http['_id']}
+        ref = {'srv001__ping': self.data_srv_ping['_id'],
+               'srv001__http toto.com': self.data_srv_http['_id']}
         self.assertEqual(self.brokmodule.mapping['service'], ref)
 
     def test_03_manage_brok_host(self):
@@ -259,6 +259,37 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_downtimed'], False)
             self.assertEqual(item['ls_execution_time'], 3.1496069431000002)
             self.assertEqual(item['ls_latency'], 0.2317881584)
+            number += 1
+        self.assertEqual(1, number)
+
+        # Simulate an host next check brok
+        data = json.loads(open('cfg/brok_host_srv001_next_check.json').read())
+        b = Brok({'data': data, 'type': 'host_next_schedule'}, False)
+        b.prepare()
+        self.brokmodule.manage_brok(b)
+
+        params = {'where': '{"name": "srv001"}'}
+        r = self.backend.get('host', params)
+        self.assertEqual(len(r['_items']), 1)
+        number = 0
+        for index, item in enumerate(r['_items']):
+            self.assertEqual(item['ls_state'], 'UP')
+            self.assertEqual(item['ls_state_id'], 1)
+            self.assertEqual(item['ls_state_type'], 'HARD')
+            self.assertEqual(item['ls_last_check'], 1444427104)
+            self.assertEqual(item['ls_last_state'], 'UNREACHABLE')
+            self.assertEqual(item['ls_last_state_type'], 'HARD')
+            self.assertEqual(item['ls_last_state_changed'], 1444427108)
+            self.assertEqual(item['ls_output'], 'PING OK - Packet loss = 0%, RTA = 0.05 ms')
+            self.assertEqual(item['ls_long_output'], 'Long output ...')
+            self.assertEqual(item['ls_perf_data'],
+                             'rta=0.049000ms;2.000000;3.000000;0.000000 pl=0%;50;80;0')
+            self.assertEqual(item['ls_acknowledged'], False)
+            self.assertEqual(item['ls_downtimed'], False)
+            self.assertEqual(item['ls_execution_time'], 3.1496069431000002)
+            self.assertEqual(item['ls_latency'], 0.2317881584)
+            # Next check !
+            self.assertEqual(item['ls_next_check'], 1444428104)
             number += 1
         self.assertEqual(1, number)
 
@@ -339,6 +370,37 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_downtimed'], False)
             self.assertEqual(item['ls_execution_time'], 3.1496069431000002)
             self.assertEqual(item['ls_latency'], 0.2317881584)
+            number += 1
+        self.assertEqual(1, number)
+
+        # Simulate a service next scheduler brok
+        data = json.loads(open('cfg/brok_service_ping_next_check.json').read())
+        b = Brok({'data': data, 'type': 'service_next_schedule'}, False)
+        b.prepare()
+        self.brokmodule.manage_brok(b)
+
+        params = {'where': '{"name": "ping"}'}
+        r = self.backend.get('service', params)
+        self.assertEqual(len(r['_items']), 1)
+        number = 0
+        for index, item in enumerate(r['_items']):
+            self.assertEqual(item['ls_state'], 'OK')
+            self.assertEqual(item['ls_state_id'], 0)
+            self.assertEqual(item['ls_state_type'], 'HARD')
+            self.assertEqual(item['ls_last_check'], 1473597375)
+            self.assertEqual(item['ls_last_state'], 'UNKNOWN')
+            self.assertEqual(item['ls_last_state_type'], 'HARD')
+            self.assertEqual(item['ls_last_state_changed'], 1444427108)
+            self.assertEqual(item['ls_output'], 'PING OK - Packet loss = 0%, RTA = 0.05 ms')
+            self.assertEqual(item['ls_long_output'], 'Long output ...')
+            self.assertEqual(item['ls_perf_data'],
+                             'rta=0.049000ms;2.000000;3.000000;0.000000 pl=0%;50;80;0')
+            self.assertEqual(item['ls_acknowledged'], False)
+            self.assertEqual(item['ls_downtimed'], False)
+            self.assertEqual(item['ls_execution_time'], 3.1496069431000002)
+            self.assertEqual(item['ls_latency'], 0.2317881584)
+            # Next check !
+            self.assertEqual(item['ls_next_check'], 1473598375)
             number += 1
         self.assertEqual(1, number)
 

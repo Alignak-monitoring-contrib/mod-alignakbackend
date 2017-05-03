@@ -26,7 +26,11 @@ import unittest2
 from alignak_module_backend.broker.module import AlignakBackendBroker
 from alignak.objects.module import Module
 from alignak.acknowledge import Acknowledge
+from alignak.downtime import Downtime
 from alignak_backend_client.client import Backend
+
+from calendar import timegm
+from datetime import datetime, timedelta
 
 
 class TestBrokerAckDowntime(unittest2.TestCase):
@@ -364,11 +368,11 @@ class TestBrokerAckDowntime(unittest2.TestCase):
         self.assertEqual(len(actionack['_items']), 1)
         self.assertEqual(actionack['_items'][0]['notified'], True)
 
-        hosts = self.backend.get_all('service')
-        self.assertEqual(len(hosts['_items']), 2)
-        self.assertEqual(hosts['_items'][1]['name'], 'http toto.com')
-        self.assertEqual(hosts['_items'][1]['host'], self.data_host['_id'])
-        self.assertEqual(hosts['_items'][1]['ls_acknowledged'], True)
+        services = self.backend.get_all('service')
+        self.assertEqual(len(services['_items']), 2)
+        self.assertEqual(services['_items'][1]['name'], 'http toto.com')
+        self.assertEqual(services['_items'][1]['host'], self.data_host['_id'])
+        self.assertEqual(services['_items'][1]['ls_acknowledged'], True)
 
     def test_brok_acknowledge_raise_extcommand_sknown(self):
         """Test with a brok acknowledge_raise come from external command (so not from backend).
@@ -402,3 +406,61 @@ class TestBrokerAckDowntime(unittest2.TestCase):
         self.assertEqual(hosts['_items'][1]['name'], 'http toto.com')
         self.assertEqual(hosts['_items'][1]['host'], self.data_host['_id'])
         self.assertEqual(hosts['_items'][1]['ls_acknowledged'], True)
+
+##########
+    def test_brok_downtime(self):
+        """Test with a brok downtime_raise come from backend
+
+        :return: None
+        """
+        now = datetime.utcnow()
+        later = now + timedelta(days=2, hours=4, minutes=3, seconds=12)
+        now = timegm(now.timetuple())
+        later = timegm(later.timetuple())
+
+        # ---
+        # Add downtimes into the backend
+        # downtime a service
+        data = {
+            'action': 'add',
+            'host': self.data_host['_id'],
+            'service': self.data_srv_http['_id'],
+            'user': self.user_id,
+            "start_time": now,
+            "end_time": later,
+            "fixed": False,
+            'duration': 86400,
+            "comment": "User comment host",
+            'processed': True
+        }
+        resp = self.backend.post("actiondowntime", data)
+
+        actiondowntime = self.backend.get_all('actiondowntime')
+        self.assertEqual(len(actiondowntime['_items']), 1)
+        self.assertEqual(actiondowntime['_items'][0]['notified'], False)
+
+        # send downtime_raise brok to our broker module
+        data = {'ref': '0123456789', 'ref_type': 'host.my_type',
+                'start_time': actiondowntime['_items'][0]['start_time'],
+                'end_time': actiondowntime['_items'][0]['end_time'],
+                'fixed': actiondowntime['_items'][0]['fixed'],
+                'trigger_id': '',
+                'duration': actiondowntime['_items'][0]['duration'],
+                'author': 'me',
+                'comment': actiondowntime['_items'][0]['comment']}
+        downtime = Downtime(data)
+        b = downtime.get_raise_brok('srv001', 'http toto.com')
+        b.prepare()
+        self.brokmodule.get_refs('livestate_host')
+        self.brokmodule.get_refs('livestate_service')
+        self.brokmodule.manage_brok(b)
+
+        actiondowntime = self.backend.get_all('actiondowntime')
+        self.assertEqual(len(actiondowntime['_items']), 1)
+        self.assertEqual(actiondowntime['_items'][0]['notified'], True)
+
+        services = self.backend.get_all('service')
+        self.assertEqual(len(services['_items']), 2)
+        self.assertEqual(services['_items'][1]['name'], 'http toto.com')
+        self.assertEqual(services['_items'][1]['host'], self.data_host['_id'])
+        self.assertEqual(services['_items'][1]['ls_downtimed'], True)

@@ -108,12 +108,23 @@ class AlignakBackendArbiter(BaseModule):
         logger.info("configuration reload check period: %s minutes", self.verify_modification)
 
         self.action_check = int(getattr(mod_conf, 'action_check', 15))
-        logger.info("actions check period: %s seconds", self.action_check)
-
+        logger.info(
+            "actions check period: %s seconds", self.action_check
+        )
+        self.daemons_state = int(getattr(mod_conf, 'daemons_state', 60))
+        logger.info(
+            "daemons state update period: %s seconds", self.daemons_state
+        )
         self.next_check = 0
         self.next_action_check = 0
         self.next_daemons_state = 0
-        self.time_loaded_conf = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+        # Configuration load/reload
+        self.backend_date_format = "%a, %d %b %Y %H:%M:%S GMT"
+        self.time_loaded_conf = datetime.utcnow().strftime(self.backend_date_format)
+        self.configuration_reload_required = False
+        self.configuration_reload_changelog = []
+
         self.configraw = {}
         self.highlevelrealm = {
             'level': 30000,
@@ -1008,7 +1019,7 @@ class AlignakBackendArbiter(BaseModule):
             logger.exception("Exception: %s", exp)
             self.backend_connected = False
 
-        self.time_loaded_conf = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
+        self.time_loaded_conf = datetime.utcnow().strftime(self.backend_date_format)
 
         now = time.time()
         logger.info("Alignak monitored system configuration loaded in %s seconds",
@@ -1017,7 +1028,7 @@ class AlignakBackendArbiter(BaseModule):
         # Schedule next configuration reload check in 10 minutes (need time to finish load config)
         self.next_check = int(now) + (60 * self.verify_modification)
         self.next_action_check = int(now) + self.action_check
-        self.next_daemons_state = int(now) + 60
+        self.next_daemons_state = int(now) + self.daemons_state
 
         logger.info("next configuration reload check in %s seconds ---",
                     (self.next_check - int(now)))
@@ -1028,7 +1039,9 @@ class AlignakBackendArbiter(BaseModule):
         return self.config
 
     def hook_tick(self, arbiter):
-        """Hook in arbiter used to check if configuration has changed in the backend since
+        # pylint: disable=too-many-nested-blocks
+        """
+        Hook in arbiter used to check if configuration has changed in the backend since
         last configuration loaded
 
         :param arbiter: alignak.daemons.arbiterdaemon.Arbiter
@@ -1038,6 +1051,13 @@ class AlignakBackendArbiter(BaseModule):
         try:
             now = int(time.time())
             if now > self.next_check:
+                logger.info("Check if system configuration changed in the backend...")
+                logger.info("Now is: %s", datetime.utcnow().strftime(self.backend_date_format))
+                logger.info("Last configuration loading time is: %s", self.time_loaded_conf)
+                # todo: we should find a way to declare in the backend schema
+                # that a resource endpoint is concerned with this feature. Something like:
+                #   'arbiter_reload_check': True,
+                #   'schema': {...}
                 logger.debug("Check if system configuration changed in the backend...")
                 resources = [
                     'realm', 'command', 'timeperiod',
@@ -1045,24 +1065,68 @@ class AlignakBackendArbiter(BaseModule):
                     'hostgroup', 'host', 'hostdependency', 'hostescalation',
                     'servicegroup', 'service', 'servicedependency', 'serviceescalation'
                 ]
-                reload_conf = False
+                self.configuration_reload_required = False
                 for resource in resources:
                     ret = self.backend.get(resource, {'where': '{"_updated":{"$gte": "' +
                                                                self.time_loaded_conf + '"}}'})
                     if ret['_meta']['total'] > 0:
                         logger.info(" - backend updated resource: %s, count: %d",
                                     resource, ret['_meta']['total'])
-                        reload_conf = True
-                if reload_conf:
-                    logger.info("Hey, we must reload configuration from the backend!")
-                    with open(arbiter.pidfile, 'r') as f:
-                        arbiterpid = f.readline()
-                    os.kill(int(arbiterpid), signal.SIGHUP)
+                        self.configuration_reload_required = True
+                        for updated in ret['_items']:
+                            logger.debug("  -> updated: %s", updated)
+                            exists = [log for log in self.configuration_reload_changelog
+                                      if log['resource'] == resource and
+                                      log['item']['_id'] == updated['_id'] and
+                                      log['item']['_updated'] == updated['_updated']]
+                            if not exists:
+                                self.configuration_reload_changelog.append({"resource": resource,
+                                                                            "item": updated})
+                if self.configuration_reload_required:
+                    logger.warning("Hey, we must reload configuration from the backend!")
+                    try:
+                        with open(arbiter.pidfile, 'r') as f:
+                            arbiter_pid = f.readline()
+                        os.kill(int(arbiter_pid), signal.SIGHUP)
+                        message = "The configuration reload notification was " \
+                                  "raised to the arbiter (pid=%s)." % arbiter_pid
+                        self.configuration_reload_changelog.append({"resource": "backend-log",
+                                                                    "item": {
+                                                                        "_updated": now,
+                                                                        "level": "INFO",
+                                                                        "message": message
+                                                                    }})
+                        logger.error(message)
+                    except IOError:
+                        message = "The arbiter pid file (%s) is not available. " \
+                                  "Configuration reload notification was not raised." \
+                                  % arbiter.pidfile
+                        self.configuration_reload_changelog.append({"resource": "backend-log",
+                                                                    "item": {
+                                                                        "_updated": now,
+                                                                        "level": "ERROR",
+                                                                        "message": message
+                                                                    }})
+                        logger.error(message)
+                    except OSError:
+                        message = "The arbiter pid (%s) stored in file (%s) is not for an " \
+                                  "existing process. " \
+                                  "Configuration reload notification was not raised." \
+                                  % (arbiter_pid, arbiter.pidfile)
+                        self.configuration_reload_changelog.append({"resource": "backend-log",
+                                                                    "item": {
+                                                                        "_updated": now,
+                                                                        "level": "ERROR",
+                                                                        "message": message
+                                                                    }})
+                        logger.error(message)
                 else:
                     logger.debug("No changes found")
                 self.next_check = now + (60 * self.verify_modification)
-                logger.debug("next configuration reload check in %s seconds ---",
-                             (self.next_check - now))
+                logger.debug(
+                    "next configuration reload check in %s seconds ---",
+                    (self.next_check - now)
+                )
 
             if now > self.next_action_check:
                 logger.debug("Check if acknowledgements are required...")
@@ -1079,9 +1143,11 @@ class AlignakBackendArbiter(BaseModule):
                 logger.debug("Update daemons state in the backend...")
                 self.update_daemons_state(arbiter)
 
-                self.next_daemons_state = now + 60
-                logger.debug("next update daemons state in %s seconds ---",
-                             (self.next_daemons_state - int(now)))
+                self.next_daemons_state = now + self.daemons_state
+                logger.debug(
+                    "next update daemons state in %s seconds ---",
+                    (self.next_daemons_state - int(now))
+                )
 
         except Exception as exp:
             logger.warning("hook_tick exception: %s", str(exp))

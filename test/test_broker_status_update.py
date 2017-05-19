@@ -149,23 +149,6 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         }
         cls.backend.post("realm", data)
 
-        # Start arbiter backend module
-        modconf = Module()
-        modconf.module_alias = "backend_arbiter"
-        modconf.username = "admin"
-        modconf.password = "admin"
-        modconf.api_url = 'http://127.0.0.1:5000'
-        cls.arbmodule = AlignakBackendArbiter(modconf)
-        cls.objects = cls.arbmodule.get_objects()
-
-        # Start broker module
-        modconf = Module()
-        modconf.module_alias = "backend_broker"
-        modconf.username = "admin"
-        modconf.password = "admin"
-        modconf.api_url = 'http://127.0.0.1:5000'
-        cls.brokmodule = AlignakBackendBroker(modconf)
-
     @classmethod
     def tearDownClass(cls):
         cls.p.kill()
@@ -173,13 +156,152 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
     def setUp(self):
         self.maxDiff = None
 
+        # Start arbiter backend module
+        modconf = Module()
+        modconf.module_alias = "backend_arbiter"
+        modconf.username = "admin"
+        modconf.password = "admin"
+        modconf.api_url = 'http://127.0.0.1:5000'
+        self.arbmodule = AlignakBackendArbiter(modconf)
+        self.objects = self.arbmodule.get_objects()
+
+        # Start broker module
+        modconf = Module()
+        modconf.module_alias = "backend_broker"
+        modconf.username = "admin"
+        modconf.password = "admin"
+        modconf.api_url = 'http://127.0.0.1:5000'
+        self.brokmodule = AlignakBackendBroker(modconf)
+
         # Set up the broker module
         self.brokmodule.get_refs('livestate_host')
         self.brokmodule.get_refs('livestate_service')
         self.brokmodule.get_refs('livestate_user')
 
-    def test_program_status_brok(self):
-        """Test with a brok for an host update - boolean properties
+    def test_00_refused_program_status_brok(self):
+        """Test with a bad formatted brok for the program status
+
+        :return: None
+        """
+        # Get alignak endpoint resources before the brok
+        name = u'my_alignak'
+        params = {'sort': '_id', 'where': '{"name": "%s"}' % name}
+        all_alignak = self.backend.get_all('alignak', params)
+        for alignak_cfg in all_alignak['_items']:
+            print("Alignak cfg: %s" % alignak_cfg)
+        # No alignak configuration resource
+        self.assertEqual(0, len(all_alignak['_items']))
+
+        # Get a BAD program status brok
+        brok_data = {
+            # Some general information
+
+            ### Missing alignak_name property !
+            # u'alignak_name': u'my_alignak',
+            u'instance_id': u'176064a1b30741d39452415097807ab0',
+            u'instance_name': u'scheduler-master',
+
+            # Some running information
+            u'program_start': 1493969754,
+            u'daemon_mode': 1,
+            u'pid': 68989,
+            u'last_alive': 1493970641,
+            u'last_command_check': 1493970641,
+            u'last_log_rotation': 1493970641,
+            u'is_running': 1,
+
+            # Some configuration parameters
+            u'process_performance_data': True,
+            u'passive_service_checks_enabled': True,
+            u'event_handlers_enabled': True,
+            u'command_file': u'',
+            u'global_host_event_handler': None,
+            u'interval_length': 60,
+            u'modified_host_attributes': 0,
+            u'check_external_commands': True,
+            u'failure_prediction_enabled': 0,
+            u'modified_service_attributes': 0,
+            u'passive_host_checks_enabled': True,
+            u'obsess_over_hosts': False,
+            u'global_service_event_handler': None,
+            u'notifications_enabled': True,
+            u'check_service_freshness': True,
+            u'check_host_freshness': True,
+            u'obsess_over_services': False,
+            u'flap_detection_enabled': True,
+            u'active_service_checks_enabled': True,
+            u'active_host_checks_enabled': True
+        }
+        brok = Brok({'type': 'update_program_status', 'data': brok_data})
+        brok.prepare()
+
+        # Send program status brok
+        self.brokmodule.manage_brok(brok)
+
+        # Get alignak endpoint resources after the brok
+        name = u'my_alignak'
+        params = {'sort': '_id', 'where': '{"name": "%s"}' % name}
+        all_alignak = self.backend.get_all('alignak', params)
+        # Still no alignak configuration resource
+        self.assertEqual(0, len(all_alignak['_items']))
+
+        # Get a GOOD program status brok
+        brok_data = {
+            # Some general information
+
+            u'alignak_name': u'my_alignak',
+            u'instance_id': u'176064a1b30741d39452415097807ab0',
+            u'instance_name': u'scheduler-master',
+
+            # Some running information
+            u'program_start': 1493969754,
+            u'daemon_mode': 1,
+            u'pid': 68989,
+            u'last_alive': 1493970641,
+            u'last_command_check': 1493970641,
+            u'last_log_rotation': 1493970641,
+            u'is_running': 1,
+
+            # Some configuration parameters
+            u'process_performance_data': True,
+            u'passive_service_checks_enabled': True,
+            u'event_handlers_enabled': True,
+            u'command_file': u'',
+            u'global_host_event_handler': None,
+            u'interval_length': 60,
+            u'modified_host_attributes': 0,
+            u'check_external_commands': True,
+            u'failure_prediction_enabled': 0,
+            u'modified_service_attributes': 0,
+            u'passive_host_checks_enabled': True,
+            u'obsess_over_hosts': False,
+            u'global_service_event_handler': None,
+            u'notifications_enabled': True,
+            u'check_service_freshness': True,
+            u'check_host_freshness': True,
+            u'obsess_over_services': False,
+            u'flap_detection_enabled': True,
+            u'active_service_checks_enabled': True,
+            u'active_host_checks_enabled': True
+        }
+        brok = Brok({'type': 'update_program_status', 'data': brok_data})
+        brok.prepare()
+
+        # The module has no default realm ... this should never happen !
+        self.brokmodule.default_realm = None
+
+        # Send program status brok
+        self.brokmodule.manage_brok(brok)
+
+        # Get alignak endpoint resources after the brok
+        name = u'my_alignak'
+        params = {'sort': '_id', 'where': '{"name": "%s"}' % name}
+        all_alignak = self.backend.get_all('alignak', params)
+        # Still no alignak configuration resource
+        self.assertEqual(0, len(all_alignak['_items']))
+
+    def test_01_program_status_brok(self):
+        """Test with a brok for the program status update
 
         :return: None
         """
@@ -598,7 +720,7 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
 
         return True
 
-    def test_brok_host_update_boolean(self):
+    def test_10_brok_host_update_boolean(self):
         """Test with a brok for an host update - boolean properties
 
         :return: None
@@ -656,7 +778,7 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
 
         return True
 
-    def test_brok_service_update_boolean(self):
+    def test_11_brok_service_update_boolean(self):
         """Test with a brok for an service update - boolean properties
 
         :return: None
@@ -712,7 +834,7 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         self.assertEqual(brok.data, brok_bis.data)
         return True
 
-    def test_brok_user_update_boolean(self):
+    def test_12_brok_user_update_boolean(self):
         """Test with a brok for a user update - boolean properties
 
         :return: None

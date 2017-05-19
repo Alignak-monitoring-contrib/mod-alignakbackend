@@ -460,7 +460,7 @@ class AlignakBackendBroker(BaseModule):
                 response = self.backend.patch(
                     'host/%s' % self.ref_live['host'][self.mapping['host'][name]]['_id'],
                     data, headers, True)
-                if response['_status'] == 'ERR':
+                if response['_status'] == 'ERR':  # pragma: no cover - should not happen
                     logger.error('%s', response['_issues'])
                     ret = False
                 else:
@@ -475,7 +475,7 @@ class AlignakBackendBroker(BaseModule):
                 response = self.backend.patch(
                     'service/%s' % self.ref_live['service'][self.mapping['service'][name]]['_id'],
                     data, headers, True)
-                if response['_status'] == 'ERR':
+                if response['_status'] == 'ERR':  # pragma: no cover - should not happen
                     logger.error('%s', response['_issues'])
                     ret = False
                 else:
@@ -594,7 +594,7 @@ class AlignakBackendBroker(BaseModule):
             try:
                 response = self.backend.patch('%s/%s' % (endpoint, item['_id']),
                                               differences, headers, True)
-                if response['_status'] == 'ERR':
+                if response['_status'] == 'ERR':  # pragma: no cover - should not happen
                     logger.warning("Update %s: %s failed, errors: %s.",
                                    endpoint, name, response['_issues'])
                 else:
@@ -679,7 +679,7 @@ class AlignakBackendBroker(BaseModule):
         if not all_alignak['_items']:
             try:
                 response = self.backend.post('alignak', brok.data)
-                if response['_status'] == 'ERR':
+                if response['_status'] == 'ERR':  # pragma: no cover - should not happen
                     logger.warning("Create alignak: %s failed, errors: %s.",
                                    name, response['_issues'])
                 else:
@@ -705,7 +705,7 @@ class AlignakBackendBroker(BaseModule):
             try:
                 response = self.backend.patch('alignak/%s' % (item['_id']),
                                               brok.data, headers, True)
-                if response['_status'] == 'ERR':
+                if response['_status'] == 'ERR':  # pragma: no cover - should not happen
                     logger.warning("Update alignak: %s failed, errors: %s.",
                                    name, response['_issues'])
                 else:
@@ -798,7 +798,7 @@ class AlignakBackendBroker(BaseModule):
             if brok.type in ['acknowledge_raise', 'acknowledge_expire',
                              'downtime_raise', 'downtime_expire']:
                 self.update_actions(brok)
-        except Exception as exp:
+        except Exception as exp:  # pragma: no cover - should not happen
             logger.exception("Manage brok exception: %s", exp)
 
     def update_actions(self, brok):

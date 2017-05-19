@@ -88,9 +88,7 @@ class AlignakBackendArbiter(BaseModule):
             self.backend_import = True
 
         self.client_processes = int(getattr(mod_conf, 'client_processes', 1))
-        logger.info(
-            "Number of processes used by backend client: %s", self.client_processes
-        )
+        logger.info("Number of processes used by backend client: %s", self.client_processes)
 
         self.url = getattr(mod_conf, 'api_url', 'http://localhost:5000')
         self.backend = Backend(self.url, self.client_processes)
@@ -109,11 +107,18 @@ class AlignakBackendArbiter(BaseModule):
 
         self.action_check = int(getattr(mod_conf, 'action_check', 15))
         logger.info("actions check period: %s seconds", self.action_check)
-
+        self.daemons_state = int(getattr(mod_conf, 'daemons_state', 60))
+        logger.info("daemons state update period: %s seconds", self.daemons_state)
         self.next_check = 0
         self.next_action_check = 0
         self.next_daemons_state = 0
-        self.time_loaded_conf = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+        # Configuration load/reload
+        self.backend_date_format = "%a, %d %b %Y %H:%M:%S GMT"
+        self.time_loaded_conf = datetime.utcnow().strftime(self.backend_date_format)
+        self.configuration_reload_required = False
+        self.configuration_reload_changelog = []
+
         self.configraw = {}
         self.highlevelrealm = {
             'level': 30000,
@@ -135,6 +140,12 @@ class AlignakBackendArbiter(BaseModule):
                        'servicedependencies': [],
                        'serviceescalations': [],
                        'triggers': []}
+        self.default_tp_always = None
+        self.default_tp_never = None
+        self.default_host_check_command = None
+        self.default_service_check_command = None
+        self.default_user = None
+
         self.alignak_configuration = {}
 
     # Common functions
@@ -338,6 +349,12 @@ class AlignakBackendArbiter(BaseModule):
             del command['notes']
             self.convert_lists(command)
 
+            # Set default host/service check commands
+            if command['command_name'] == "_internal_host_up":
+                self.default_host_check_command = command
+            if command['command_name'] == "_echo":
+                self.default_service_check_command = command
+
             logger.debug("- command: %s", command)
             self.config['commands'].append(command)
 
@@ -363,6 +380,12 @@ class AlignakBackendArbiter(BaseModule):
             self.clean_unusable_keys(timeperiod)
             del timeperiod['notes']
             self.convert_lists(timeperiod)
+
+            # Set default timeperiod
+            if timeperiod['timeperiod_name'] == "24x7":
+                self.default_tp_always = timeperiod
+            if timeperiod['timeperiod_name'] == "Never":
+                self.default_tp_never = timeperiod
 
             logger.debug("- timeperiod: %s", timeperiod)
             self.config['timeperiods'].append(timeperiod)
@@ -426,10 +449,14 @@ class AlignakBackendArbiter(BaseModule):
             # contactgroups
             self.multiple_relation(contact, 'contactgroups', 'contactgroups')
 
+            # todo: perharps those properties should have a default value in the backend?
             if 'host_notification_commands' not in contact:
                 contact['host_notification_commands'] = ''
             if 'service_notification_commands' not in contact:
                 contact['service_notification_commands'] = ''
+
+            # todo: how should it be possible to not have those properties in the backend?
+            # they are defined as required!
             if 'host_notification_period' not in contact:
                 contact['host_notification_period'] = \
                     self.config['timeperiods'][0]['timeperiod_name']
@@ -438,12 +465,17 @@ class AlignakBackendArbiter(BaseModule):
                 contact['service_notification_period'] = \
                     self.config['timeperiods'][0]['timeperiod_name']
                 contact['service_notifications_enabled'] = False
+
             for key, value in contact['customs'].iteritems():
                 contact[key] = value
             self.clean_unusable_keys(contact)
             del contact['notes']
             del contact['ui_preferences']
             self.convert_lists(contact)
+
+            # Set default user
+            if contact['contact_name'] == "admin":
+                self.default_user = contact
 
             logger.debug("- contact: %s", contact)
             self.config['contacts'].append(contact)
@@ -486,31 +518,41 @@ class AlignakBackendArbiter(BaseModule):
         """
         self.configraw['hosts'] = {}
         all_hosts = self.backend.get_all('host', {"where": '{"_is_template": false}'})
-        logger.info("Got %d hosts",
-                    len(all_hosts['_items']))
+        logger.info("Got %d hosts", len(all_hosts['_items']))
+
         for host in all_hosts['_items']:
             logger.info("- %s", host['name'])
             self.configraw['hosts'][host['_id']] = host['name']
             host[u'host_name'] = host['name']
             host[u'imported_from'] = u'alignak-backend'
+
+            # If default backend definition order is set, set as default alignak one
             if 'definition_order' in host and host['definition_order'] == 100:
                 host['definition_order'] = 50
-            # check_command
+
+            # Check command
             if 'check_command' in host:
-                if host['check_command'] is None:
-                    host['check_command'] = ''
-                elif host['check_command'] in self.configraw['commands']:
+                if host['check_command'] in self.configraw['commands']:
                     host['check_command'] = self.configraw['commands'][host['check_command']]
                 else:
-                    host['check_command'] = ''
-            # event_handler
+                    host['check_command'] = self.default_host_check_command['command_name']
+            else:
+                host['check_command'] = self.default_host_check_command['name']
+
+            # event handler
             if 'event_handler' in host:
-                if host['event_handler'] is None:
-                    host['event_handler'] = ''
-                elif host['event_handler'] in self.configraw['commands']:
+                if host['event_handler'] in self.configraw['commands']:
                     host['event_handler'] = self.configraw['commands'][host['event_handler']]
                 else:
                     del host['event_handler']
+
+            # snapshot command
+            if 'snapshot_command' in host:
+                if host['snapshot_command'] in self.configraw['commands']:
+                    host['snapshot_command'] = self.configraw['commands'][host['snapshot_command']]
+                else:
+                    del host['snapshot_command']
+
             for command_arg in ['check_command', 'event_handler']:
                 arg = command_arg + "_args"
                 if arg in host:
@@ -522,20 +564,32 @@ class AlignakBackendArbiter(BaseModule):
                     del host[arg]
                     logger.debug("Host %s, %s: '%s'",
                                  host['name'], command_arg, host[command_arg])
-            # poller_tag empty
-            if 'poller_tag' in host and host['poller_tag'] == '':
-                del host['poller_tag']
-            host[u'contacts'] = []
-            if 'users' in host:
-                host[u'contacts'] = host['users']
-            host[u'contact_groups'] = []
-            if 'usergroups' in host:
-                host[u'contact_groups'] = host['usergroups']
-            # check_period
-            self.single_relation(host, 'check_period', 'timeperiods')
+
+            # poller and reactionner tags are empty - Alignak defaults to the string 'None'
+            if not host['poller_tag']:
+                host['poller_tag'] = 'None'
+            if not host['reactionner_tag']:
+                host['reactionner_tag'] = 'None'
+
+            # Contacts
+            host[u'contacts'] = host['users']
+            host[u'contact_groups'] = host['usergroups']
+
+            # notification period - set default as 24x7
+            if 'notification_period' not in host or not host['notification_period']:
+                host['notification_period'] = self.default_tp_always['timeperiod_name']
+            # maintenance period - set default as Never
+            if 'maintenance_period' not in host or not host['maintenance_period']:
+                host['maintenance_period'] = self.default_tp_never['timeperiod_name']
+            # snapshot period - set default as Never
+            if 'snapshot_period' not in host or not host['snapshot_period']:
+                host['snapshot_period'] = self.default_tp_never['timeperiod_name']
+
             # realm
             self.single_relation(host, '_realm', 'realms')
             host['realm'] = host['_realm']
+            # check period
+            self.single_relation(host, 'check_period', 'timeperiods')
             # notification_period
             self.single_relation(host, 'notification_period', 'timeperiods')
             # maintenance_period
@@ -544,9 +598,12 @@ class AlignakBackendArbiter(BaseModule):
             self.single_relation(host, 'snapshot_period', 'timeperiods')
             # event_handler
             self.single_relation(host, 'event_handler', 'commands')
+
             # parents
+            # todo: why is it always an empty list ???
             # ## self.multiple_relation(host, 'parents', 'host_name')
             host[u'parents'] = ''
+
             # hostgroups
             self.multiple_relation(host, 'hostgroup_name', 'hostgroups')
             # contacts
@@ -557,10 +614,7 @@ class AlignakBackendArbiter(BaseModule):
             # ## self.multiple_relation(host, 'escalations', 'escalation_name')
             if 'escalations' in host:
                 del host['escalations']
-            if 'maintenance_period' in host and not host['maintenance_period']:
-                del host['maintenance_period']
-            if 'snapshot_period' in host and not host['snapshot_period']:
-                del host['snapshot_period']
+
             if 'alias' in host and host['alias'] == '':
                 del host['alias']
             if 'realm' in host:
@@ -568,6 +622,7 @@ class AlignakBackendArbiter(BaseModule):
                     del host['realm']
             for key, value in host['customs'].iteritems():
                 host[key] = value
+
             # Fix #9: inconsistent state when no retention module exists
             if 'ls_last_state' in host:
                 if host['ls_state'] == 'UNREACHABLE':
@@ -633,41 +688,44 @@ class AlignakBackendArbiter(BaseModule):
         params = {'sort': 'host', 'embedded': '{"escalations":1,"service_dependencies":1}',
                   "where": '{"_is_template": false}'}
         all_services = self.backend.get_all('service', params)
-        logger.info("Got %d services",
-                    len(all_services['_items']))
+        logger.info("Got %d services", len(all_services['_items']))
+
         for service in all_services['_items']:
             # Get host name from the previously loaded hosts list
             service['host_name'] = self.configraw['hosts'][service['host']]
             logger.info("- %s/%s", service['host_name'], service['name'])
             self.configraw['services'][service['_id']] = service['name']
             service['imported_from'] = u'alignak-backend'
+
+            # If default backend definition order is set, set as default alignak one
             if 'definition_order' in service and service['definition_order'] == 100:
                 service['definition_order'] = 50
             service['service_description'] = service['name']
             service['merge_host_contacts'] = service['merge_host_users']
             service['hostgroup_name'] = service['hostgroups']
-            service[u'contacts'] = []
-            if 'users' in service:
-                service[u'contacts'] = service['users']
-            service[u'contact_groups'] = []
-            if 'usergroups' in service:
-                service[u'contact_groups'] = service['usergroups']
-            # check_command
+
+            # Check command
             if 'check_command' in service:
-                if service['check_command'] is None:
-                    del service['check_command']
-                elif service['check_command'] in self.configraw['commands']:
+                if service['check_command'] in self.configraw['commands']:
                     service['check_command'] = self.configraw['commands'][service['check_command']]
                 else:
-                    del service['check_command']
-            # event_handler
+                    service['check_command'] = self.default_service_check_command['command_name']
+
+            # event handler
             if 'event_handler' in service:
-                if service['event_handler'] is None:
-                    service['event_handler'] = ''
-                elif service['event_handler'] in self.configraw['commands']:
+                if service['event_handler'] in self.configraw['commands']:
                     service['event_handler'] = self.configraw['commands'][service['event_handler']]
                 else:
                     del service['event_handler']
+
+            # snapshot command
+            if 'snapshot_command' in service:
+                if service['snapshot_command'] in self.configraw['commands']:
+                    service['snapshot_command'] = \
+                        self.configraw['commands'][service['snapshot_command']]
+                else:
+                    del service['snapshot_command']
+
             for command_arg in ['check_command', 'event_handler']:
                 arg = command_arg + "_args"
                 if arg in service:
@@ -679,9 +737,27 @@ class AlignakBackendArbiter(BaseModule):
                     del service[arg]
                 logger.debug("Service %s, %s: '%s'",
                              service['name'], command_arg, service[command_arg])
-            # poller_tag empty
-            if 'poller_tag' in service and service['poller_tag'] == '':
-                del service['poller_tag']
+
+            # poller and reactionner tags are empty - Alignak defaults to the string 'None'
+            if not service['poller_tag']:
+                service['poller_tag'] = 'None'
+            if not service['reactionner_tag']:
+                service['reactionner_tag'] = 'None'
+
+            # Contacts
+            service[u'contacts'] = service['users']
+            service[u'contact_groups'] = service['usergroups']
+
+            # notification period - set default as 24x7
+            if 'notification_period' not in service or not service['notification_period']:
+                service['notification_period'] = self.default_tp_always['timeperiod_name']
+            # maintenance period - set default as Never
+            if 'maintenance_period' not in service or not service['maintenance_period']:
+                service['maintenance_period'] = self.default_tp_never['timeperiod_name']
+            # snapshot period - set default as Never
+            if 'snapshot_period' not in service or not service['snapshot_period']:
+                service['snapshot_period'] = self.default_tp_never['timeperiod_name']
+
             # host_name
             self.single_relation(service, 'host_name', 'hosts')
             # check_period
@@ -709,14 +785,12 @@ class AlignakBackendArbiter(BaseModule):
             # service_dependencies
             # ## self.multiple_relation(service, 'service_dependencies', 'service_name')
             service['service_dependencies'] = ''
-            if 'maintenance_period' in service and not service['maintenance_period']:
-                del service['maintenance_period']
-            if 'snapshot_period' in service and not service['snapshot_period']:
-                del service['snapshot_period']
+
             if 'alias' in service and service['alias'] == '':
                 del service['alias']
             for key, value in service['customs'].iteritems():
                 service[key] = value
+
             # Fix #9: inconsistent state when no retention module exists
             if 'ls_last_state' in service:
                 if service['ls_state'] == 'UNKNOWN':
@@ -1008,7 +1082,7 @@ class AlignakBackendArbiter(BaseModule):
             logger.exception("Exception: %s", exp)
             self.backend_connected = False
 
-        self.time_loaded_conf = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
+        self.time_loaded_conf = datetime.utcnow().strftime(self.backend_date_format)
 
         now = time.time()
         logger.info("Alignak monitored system configuration loaded in %s seconds",
@@ -1017,7 +1091,7 @@ class AlignakBackendArbiter(BaseModule):
         # Schedule next configuration reload check in 10 minutes (need time to finish load config)
         self.next_check = int(now) + (60 * self.verify_modification)
         self.next_action_check = int(now) + self.action_check
-        self.next_daemons_state = int(now) + 60
+        self.next_daemons_state = int(now) + self.daemons_state
 
         logger.info("next configuration reload check in %s seconds ---",
                     (self.next_check - int(now)))
@@ -1028,6 +1102,7 @@ class AlignakBackendArbiter(BaseModule):
         return self.config
 
     def hook_tick(self, arbiter):
+        # pylint: disable=too-many-nested-blocks
         """Hook in arbiter used to check if configuration has changed in the backend since
         last configuration loaded
 
@@ -1038,6 +1113,13 @@ class AlignakBackendArbiter(BaseModule):
         try:
             now = int(time.time())
             if now > self.next_check:
+                logger.info("Check if system configuration changed in the backend...")
+                logger.info("Now is: %s", datetime.utcnow().strftime(self.backend_date_format))
+                logger.info("Last configuration loading time is: %s", self.time_loaded_conf)
+                # todo: we should find a way to declare in the backend schema
+                # that a resource endpoint is concerned with this feature. Something like:
+                #   'arbiter_reload_check': True,
+                #   'schema': {...}
                 logger.debug("Check if system configuration changed in the backend...")
                 resources = [
                     'realm', 'command', 'timeperiod',
@@ -1045,24 +1127,68 @@ class AlignakBackendArbiter(BaseModule):
                     'hostgroup', 'host', 'hostdependency', 'hostescalation',
                     'servicegroup', 'service', 'servicedependency', 'serviceescalation'
                 ]
-                reload_conf = False
+                self.configuration_reload_required = False
                 for resource in resources:
                     ret = self.backend.get(resource, {'where': '{"_updated":{"$gte": "' +
                                                                self.time_loaded_conf + '"}}'})
                     if ret['_meta']['total'] > 0:
                         logger.info(" - backend updated resource: %s, count: %d",
                                     resource, ret['_meta']['total'])
-                        reload_conf = True
-                if reload_conf:
-                    logger.info("Hey, we must reload configuration from the backend!")
-                    with open(arbiter.pidfile, 'r') as f:
-                        arbiterpid = f.readline()
-                    os.kill(int(arbiterpid), signal.SIGHUP)
+                        self.configuration_reload_required = True
+                        for updated in ret['_items']:
+                            logger.debug("  -> updated: %s", updated)
+                            exists = [log for log in self.configuration_reload_changelog
+                                      if log['resource'] == resource and
+                                      log['item']['_id'] == updated['_id'] and
+                                      log['item']['_updated'] == updated['_updated']]
+                            if not exists:
+                                self.configuration_reload_changelog.append({"resource": resource,
+                                                                            "item": updated})
+                if self.configuration_reload_required:
+                    logger.warning("Hey, we must reload configuration from the backend!")
+                    try:
+                        with open(arbiter.pidfile, 'r') as f:
+                            arbiter_pid = f.readline()
+                        os.kill(int(arbiter_pid), signal.SIGHUP)
+                        message = "The configuration reload notification was " \
+                                  "raised to the arbiter (pid=%s)." % arbiter_pid
+                        self.configuration_reload_changelog.append({"resource": "backend-log",
+                                                                    "item": {
+                                                                        "_updated": now,
+                                                                        "level": "INFO",
+                                                                        "message": message
+                                                                    }})
+                        logger.error(message)
+                    except IOError:
+                        message = "The arbiter pid file (%s) is not available. " \
+                                  "Configuration reload notification was not raised." \
+                                  % arbiter.pidfile
+                        self.configuration_reload_changelog.append({"resource": "backend-log",
+                                                                    "item": {
+                                                                        "_updated": now,
+                                                                        "level": "ERROR",
+                                                                        "message": message
+                                                                    }})
+                        logger.error(message)
+                    except OSError:
+                        message = "The arbiter pid (%s) stored in file (%s) is not for an " \
+                                  "existing process. " \
+                                  "Configuration reload notification was not raised." \
+                                  % (arbiter_pid, arbiter.pidfile)
+                        self.configuration_reload_changelog.append({"resource": "backend-log",
+                                                                    "item": {
+                                                                        "_updated": now,
+                                                                        "level": "ERROR",
+                                                                        "message": message
+                                                                    }})
+                        logger.error(message)
                 else:
                     logger.debug("No changes found")
                 self.next_check = now + (60 * self.verify_modification)
-                logger.debug("next configuration reload check in %s seconds ---",
-                             (self.next_check - now))
+                logger.debug(
+                    "next configuration reload check in %s seconds ---",
+                    (self.next_check - now)
+                )
 
             if now > self.next_action_check:
                 logger.debug("Check if acknowledgements are required...")
@@ -1079,9 +1205,11 @@ class AlignakBackendArbiter(BaseModule):
                 logger.debug("Update daemons state in the backend...")
                 self.update_daemons_state(arbiter)
 
-                self.next_daemons_state = now + 60
-                logger.debug("next update daemons state in %s seconds ---",
-                             (self.next_daemons_state - int(now)))
+                self.next_daemons_state = now + self.daemons_state
+                logger.debug(
+                    "next update daemons state in %s seconds ---",
+                    (self.next_daemons_state - int(now))
+                )
 
         except Exception as exp:
             logger.warning("hook_tick exception: %s", str(exp))

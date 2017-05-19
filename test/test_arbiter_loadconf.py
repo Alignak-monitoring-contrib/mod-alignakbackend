@@ -233,7 +233,7 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
         reference = [
             {
                 u'definition_order': 50,
-                u'service_notifications_enabled': True,
+                u'service_notifications_enabled': False,
                 u'can_submit_commands': True,
                 u'can_update_livestate': True,
                 'contact_name': u'admin',
@@ -251,7 +251,7 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'imported_from': u'alignak-backend',
                 u'notificationways': u'',
                 u'host_notification_period': u'24x7',
-                u'host_notifications_enabled': True,
+                u'host_notifications_enabled': False,
                 'host_notification_commands': '',
                 u'service_notification_period': u'24x7',
                 u'min_business_impact': 0,

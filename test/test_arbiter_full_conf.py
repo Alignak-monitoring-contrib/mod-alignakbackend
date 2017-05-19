@@ -8,6 +8,8 @@ import subprocess
 import json
 import unittest2
 from alignak_module_backend.arbiter.module import AlignakBackendArbiter
+from alignak_module_backend.broker.module import AlignakBackendBroker
+
 from alignak.objects.module import Module
 from alignak.objects.realm import Realm
 from alignak.objects.command import Command
@@ -23,6 +25,14 @@ from alignak.objects.servicegroup import Servicegroup
 from alignak.objects.servicedependency import Servicedependency
 from alignak.objects.serviceescalation import Serviceescalation
 from alignak_backend_client.client import Backend
+
+from alignak.brok import Brok
+
+class Arbiter():
+    """Fake Arbiter class, only for tests..."""
+    def __init__(self, verify_only=False, arbiter_name=None):
+        self.verify_only = verify_only
+        self.arbiter_name = arbiter_name
 
 
 class TestArbiterFullConfiguration(unittest2.TestCase):
@@ -73,6 +83,170 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
         """
         subprocess.call(['uwsgi', '--stop', '/tmp/uwsgi.pid'])
         time.sleep(2)
+
+    def test_alignak_configuration_errors(self):
+        """Test alignak configuration reading - exception cases
+
+        :return:
+        """
+        # exception cases - no backend connection
+        self.arbmodule.backend_connected = False
+        assert {} == self.arbmodule.get_alignak_configuration()
+
+        # exception cases - arbiter in verify mode and bypass is set
+        fake_arb = Arbiter(True)
+        self.arbmodule.hook_read_configuration(fake_arb)
+        self.arbmodule.backend_connected = True
+        self.arbmodule.bypass_verify_mode = True
+        assert {} == self.arbmodule.get_alignak_configuration()
+
+        # exception cases - backend import is active
+        fake_arb = Arbiter()
+        self.arbmodule.hook_read_configuration(fake_arb)
+        self.arbmodule.backend_import = True
+        self.arbmodule.backend_connected = True
+        assert {} == self.arbmodule.get_alignak_configuration()
+
+    def test_alignak_configuration(self):
+        """Test alignak configuration reading
+
+        :return:
+        """
+        # Start broker module
+        modconf = Module()
+        modconf.module_alias = "backend_broker"
+        modconf.username = "admin"
+        modconf.password = "admin"
+        modconf.api_url = 'http://127.0.0.1:5000'
+        self.brokmodule = AlignakBackendBroker(modconf)
+
+        # Get a program status brok
+        brok_data = {
+            # Some general information
+            u'alignak_name': u'my_alignak',
+            u'instance_id': u'176064a1b30741d39452415097807ab0',
+            u'instance_name': u'scheduler-master',
+
+            # Some running information
+            u'program_start': 1493969754,
+            u'daemon_mode': 1,
+            u'pid': 68989,
+            u'last_alive': 1493970641,
+            u'last_command_check': 1493970641,
+            u'last_log_rotation': 1493970641,
+            u'is_running': 1,
+
+            # Some configuration parameters
+            u'process_performance_data': True,
+            u'passive_service_checks_enabled': True,
+            u'event_handlers_enabled': True,
+            u'command_file': u'',
+            u'global_host_event_handler': None,
+            u'interval_length': 60,
+            u'modified_host_attributes': 0,
+            u'check_external_commands': True,
+            u'failure_prediction_enabled': 0,
+            u'modified_service_attributes': 0,
+            u'passive_host_checks_enabled': True,
+            u'obsess_over_hosts': False,
+            u'global_service_event_handler': None,
+            u'notifications_enabled': True,
+            u'check_service_freshness': True,
+            u'check_host_freshness': True,
+            u'obsess_over_services': False,
+            u'flap_detection_enabled': True,
+            u'active_service_checks_enabled': True,
+            u'active_host_checks_enabled': True
+        }
+        brok = Brok({'type': 'update_program_status', 'data': brok_data})
+        brok.prepare()
+
+        # Send program status brok
+        self.brokmodule.manage_brok(brok)
+        # This has created an `alignak` resource...
+
+        # Now we call the Arbiter hook function to get this created configuration
+        # Will get all the `alignak` resources because no arbiter name is defined ...
+        fake_arb = Arbiter()
+        self.arbmodule.hook_read_configuration(fake_arb)
+        configuration = self.arbmodule.get_alignak_configuration()
+        print("Configuration: %s" % configuration)
+        expected = brok_data.copy()
+        print("Expected: %s" % expected)
+        expected[u'name'] = expected.pop('alignak_name')
+        # Some fields are valued as default by the backend
+        configuration.pop(u'_created')
+        configuration.pop(u'_updated')
+        configuration.pop(u'_id')
+        configuration.pop(u'_etag')
+        configuration.pop(u'_realm')
+        configuration.pop(u'_sub_realm')
+        configuration.pop(u'_links')
+        expected[u'alias'] = u''
+        expected[u'notes'] = u''
+        expected[u'notes_url'] = u''
+        self.assertEqual(configuration, expected)
+
+        # Get another program status brok
+        brok_data = {
+            # Some general information
+            u'alignak_name': u'my_alignak_2',
+            u'instance_id': u'176064a1b30741d39452415097807ab0',
+            u'instance_name': u'scheduler-master',
+
+            # Some running information
+            u'program_start': 1493969754,
+            u'daemon_mode': 1,
+            u'pid': 68989,
+            u'last_alive': 1493970641,
+            u'last_command_check': 1493970641,
+            u'last_log_rotation': 1493970641,
+            u'is_running': 1,
+
+            # Some configuration parameters
+            u'process_performance_data': True,
+            u'passive_service_checks_enabled': True,
+            u'event_handlers_enabled': True,
+            u'command_file': u'',
+            u'global_host_event_handler': None,
+            u'interval_length': 60,
+            u'modified_host_attributes': 0,
+            u'check_external_commands': True,
+            u'failure_prediction_enabled': 0,
+            u'modified_service_attributes': 0,
+            u'passive_host_checks_enabled': True,
+            u'obsess_over_hosts': False,
+            u'global_service_event_handler': None,
+            u'notifications_enabled': True,
+            u'check_service_freshness': True,
+            u'check_host_freshness': True,
+            u'obsess_over_services': False,
+            u'flap_detection_enabled': True,
+            u'active_service_checks_enabled': True,
+            u'active_host_checks_enabled': True
+        }
+        brok = Brok({'type': 'update_program_status', 'data': brok_data})
+        brok.prepare()
+
+        # Send program status brok
+        self.brokmodule.manage_brok(brok)
+        # This has created an `alignak` resource...
+
+        # Now we call the Arbiter hook function to get this created configuration
+        # Get the configuration for a specific arbiter / alignak
+        # It will be the first one created
+        fake_arb = Arbiter(arbiter_name='my_alignak')
+        self.arbmodule.hook_read_configuration(fake_arb)
+        configuration = self.arbmodule.get_alignak_configuration()
+        # Some fields are valued as default by the backend
+        configuration.pop(u'_created')
+        configuration.pop(u'_updated')
+        configuration.pop(u'_id')
+        configuration.pop(u'_etag')
+        configuration.pop(u'_realm')
+        configuration.pop(u'_sub_realm')
+        configuration.pop(u'_links')
+        self.assertEqual(configuration, expected)
 
     def test_commands(self):
         self.assertEqual(len(self.objects['commands']), 105)
@@ -150,8 +324,8 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
                     self.assertIn(member, [u'Italy', u'France'])
 
     def test_services(self):
-        # mohierf: I got 76 locally but 74 on Travis ... :/
-        self.assertEqual(len(self.objects['services']), 74)
+        # As of #80, ... 94
+        self.assertEqual(len(self.objects['services']), 94)
         for serv in self.objects['services']:
             print("Got service: %s" % serv)
             for key, value in serv.iteritems():

@@ -56,8 +56,7 @@ class AlignakBackendBroker(BaseModule):
     """
 
     def __init__(self, mod_conf):
-        """
-        Module initialization
+        """Module initialization
 
         mod_conf is a dictionary that contains:
         - all the variables declared in the module configuration file
@@ -75,9 +74,9 @@ class AlignakBackendBroker(BaseModule):
         logger.debug("received configuration: %s", mod_conf.__dict__)
 
         self.client_processes = int(getattr(mod_conf, 'client_processes', 1))
-        logger.info(
-            "Number of processes used by backend client: %s", self.client_processes
-        )
+        logger.info("Number of processes used by backend client: %s", self.client_processes)
+
+        self.default_realm = None
 
         self.url = getattr(mod_conf, 'api_url', 'http://localhost:5000')
         self.backend = Backend(self.url, self.client_processes)
@@ -95,7 +94,8 @@ class AlignakBackendBroker(BaseModule):
         }
         self.mapping = {
             'host': {},
-            'service': {}
+            'service': {},
+            'user': {}
         }
         self.hosts = {}
         self.services = {}
@@ -114,8 +114,7 @@ class AlignakBackendBroker(BaseModule):
         time.sleep(1)
 
     def getToken(self, username, password, generatetoken):
-        """
-        Authenticate and get the token
+        """Authenticate and get the token
 
         :param username: login name
         :type username: str
@@ -137,12 +136,17 @@ class AlignakBackendBroker(BaseModule):
             logger.exception("Exception: %s", exp)
             self.backend_connected = False
 
-    def backendConnection(self):
-        """
-        Backend connection to check live state update is allowed
+    def backendConnection(self, default_realm='All'):
+        """Backend connection to check live state update is allowed
 
         :return: True/False
         """
+        if not self.default_realm:
+            params = {'where': '{"name":"%s"}' % default_realm}
+            realms = self.backend.get('realm', params=params)
+            for realm in realms['_items']:
+                self.default_realm = realm['_id']
+
         params = {'where': '{"token":"%s"}' % self.backend.token}
         users = self.backend.get('user', params)
         for item in users['_items']:
@@ -153,9 +157,9 @@ class AlignakBackendBroker(BaseModule):
 
     def get_refs(self, type_data):
         """
-        Get the _id in the backend for hosts and services
+        Get the _id in the backend for hosts, services and users
 
-        :param type_data: livestate type to get: livestate_host or livestate_service
+        :param type_data: livestate type to get: livestate_host, livestate_service, livestate_user
         :type type_data: str
         :return: None
         """
@@ -192,8 +196,8 @@ class AlignakBackendBroker(BaseModule):
             }
             content = self.backend.get_all('service', params)
             for item in content['_items']:
-                self.mapping['service'][''.join([hosts[item['host']],
-                                                 item['name']])] = item['_id']
+                self.mapping['service']['__'.join([hosts[item['host']],
+                                                   item['name']])] = item['_id']
 
                 self.ref_live['service'][item['_id']] = {
                     '_id': item['_id'],
@@ -203,8 +207,71 @@ class AlignakBackendBroker(BaseModule):
                     'initial_state_type': item['ls_state_type']
                 }
             self.loaded_services = True
+        elif type_data == 'livestate_user':
+            params = {
+                'projection': '{"name":1,"_realm":1}',
+                'where': '{"_is_template":false}'
+            }
+            content = self.backend.get_all('user', params)
+            for item in content['_items']:
+                self.mapping['user'][item['name']] = item['_id']
 
-    def update(self, data, obj_type):
+                self.ref_live['host'][item['_id']] = {
+                    '_id': item['_id'],
+                    '_etag': item['_etag'],
+                    '_realm': item['_realm']
+                }
+            self.loaded_hosts = True
+
+    def update_next_check(self, data, obj_type):
+        """Update livestate host and service next check timestamp
+
+        :param data: dictionary of data from scheduler
+        :type data: dict
+        :param obj_type: type of data (host | service)
+        :type obj_type: str
+        :return: Counters of updated or add data to alignak backend
+        :rtype: dict
+        """
+        start_time = time.time()
+        counters = {
+            'livestate_host': 0,
+            'livestate_service': 0,
+            'log_host': 0,
+            'log_service': 0
+        }
+        logger.debug("Update next check: %s, %s", obj_type, data)
+
+        if obj_type == 'host':
+            if data['host_name'] in self.mapping['host']:
+                # Received data for an host:
+                data_to_update = {
+                    'ls_next_check': data['next_chk']
+                }
+
+                # Update live state
+                ret = self.send_to_backend('livestate_host', data['host_name'], data_to_update)
+                if ret:
+                    counters['livestate_host'] += 1
+                logger.debug("Updated host live state data: %s", data_to_update)
+        elif obj_type == 'service':
+            service_name = '__'.join([data['host_name'], data['service_description']])
+            if service_name in self.mapping['service']:
+                # Received data for an host:
+                data_to_update = {
+                    'ls_next_check': data['next_chk']
+                }
+
+                # Update live state
+                ret = self.send_to_backend('livestate_service', service_name, data_to_update)
+                if ret:
+                    counters['livestate_service'] += 1
+                logger.debug("Updated service live state data: %s", data_to_update)
+        if (counters['livestate_host'] + counters['livestate_service']) > 0:
+            logger.debug("--- %s seconds ---", (time.time() - start_time))
+        return counters
+
+    def update_livestate(self, data, obj_type):
         """
         Update livestate_host and livestate_service
 
@@ -222,8 +289,7 @@ class AlignakBackendBroker(BaseModule):
             'log_host': 0,
             'log_service': 0
         }
-
-        logger.debug("Got data to update: %s - %s", obj_type, data)
+        logger.debug("Update livestate: %s - %s", obj_type, data)
 
         if obj_type == 'host':
             if data['host_name'] in self.mapping['host']:
@@ -257,7 +323,8 @@ class AlignakBackendBroker(BaseModule):
 
                 h_id = self.mapping['host'][data['host_name']]
                 if 'initial_state' in self.ref_live['host'][h_id]:
-                    data_to_update['ls_last_state'] = self.ref_live['host'][h_id]['initial_state']
+                    data_to_update['ls_last_state'] = \
+                        self.ref_live['host'][h_id]['initial_state']
                     data_to_update['ls_last_state_type'] = \
                         self.ref_live['host'][h_id]['initial_state_type']
                     del self.ref_live['host'][h_id]['initial_state']
@@ -292,7 +359,7 @@ class AlignakBackendBroker(BaseModule):
                 if ret:
                     counters['log_host'] += 1
         elif obj_type == 'service':
-            service_name = ''.join([data['host_name'], data['service_description']])
+            service_name = '__'.join([data['host_name'], data['service_description']])
             if service_name in self.mapping['service']:
                 # Received data for a service:
                 data_to_update = {
@@ -381,6 +448,7 @@ class AlignakBackendBroker(BaseModule):
             logger.error("Alignak backend connection is not available. "
                          "Skipping objects update.")
             return
+        logger.info("Send to backend: %s, %s", type_data, data)
 
         headers = {
             'Content-Type': 'application/json',
@@ -437,6 +505,215 @@ class AlignakBackendBroker(BaseModule):
                 ret = False
         return ret
 
+    def update_status(self, brok):
+        # pylint: disable=too-many-locals
+        """We manage the status change for a backend host/service/contact
+
+        :param brok: the brok
+        :type brok:
+        :return: None
+        """
+        if 'contact_name' in brok.data:
+            contact_name = brok.data['contact_name']
+            if brok.data['contact_name'] not in self.mapping['user']:
+                logger.warning("Got a brok for an unknown user: '%s'", contact_name)
+                return
+            endpoint = 'user'
+            name = contact_name
+            item_id = self.mapping['user'][name]
+        else:
+            host_name = brok.data['host_name']
+            if brok.data['host_name'] not in self.mapping['host']:
+                logger.warning("Got a brok for an unknown host: '%s'", host_name)
+                return
+            endpoint = 'host'
+            name = host_name
+            item_id = self.mapping['host'][name]
+            if 'service_description' in brok.data:
+                service_name = '__'.join([host_name, brok.data['service_description']])
+                endpoint = 'service'
+                name = service_name
+                item_id = self.mapping['service'][name]
+                if service_name not in self.mapping['service']:
+                    logger.warning("Got a brok for an unknown service: '%s'", service_name)
+                    return
+
+        # Sort brok properties
+        sorted_brok_properties = sorted(brok.data)
+        logger.debug("Update status %s: %s", endpoint, sorted(brok.data))
+
+        # Search the concerned element
+        item = self.backend.get(endpoint + '/' + item_id)
+        logger.debug("Found %s: %s", endpoint, sorted(item))
+
+        differences = {}
+        for key in sorted_brok_properties:
+            value = brok.data[key]
+            # Filter livestate keys...
+            if "ls_%s" % key in item:
+                logger.debug("Filtered live state: %s", key)
+                continue
+
+            # Filter linked objects...
+            if key in ['parents', 'parent_dependencies',
+                       'check_command', 'event_handler', 'snapshot_command', 'check_period',
+                       'maintenance_period', 'snapshot_period', 'notification_period',
+                       'host_notification_period', 'service_notification_period',
+                       'host_notification_commands', 'service_notification_commands',
+                       'contacts', 'contact_groups', 'hostgroups',
+                       'checkmodulations']:
+                logger.debug("Filtered linked object: %s", key)
+                continue
+
+            if key not in item:
+                logger.debug("Not existing: %s", key)
+                continue
+
+            if item[key] != value:
+                if isinstance(value, bool):
+                    logger.debug("Different (%s): '%s' != '%s'!", key, item[key], value)
+                    differences.update({key: value})
+                elif not item[key] and not value:
+                    logger.info("Different but empty fields (%s): '%s' != "
+                                "'%s' (brok), types: %s / %s",
+                                key, item[key], value, type(item[key]), type(value))
+                else:
+                    logger.debug("Different (%s): '%s' != '%s'!", key, item[key], value)
+                    differences.update({key: value})
+            else:
+                logger.debug("Identical (%s): '%s'.", key, value)
+
+        update = False
+        if differences:
+            logger.info("Some modifications exist: %s.", differences)
+
+            headers = {
+                'Content-Type': 'application/json',
+                'If-Match': item['_etag']
+            }
+            try:
+                response = self.backend.patch('%s/%s' % (endpoint, item['_id']),
+                                              differences, headers, True)
+                if response['_status'] == 'ERR':
+                    logger.warning("Update %s: %s failed, errors: %s.",
+                                   endpoint, name, response['_issues'])
+                else:
+                    update = True
+                    logger.info("Updated %s: %s.", endpoint, name)
+            except BackendException as exp:  # pragma: no cover - should not happen
+                logger.error("Update %s '%s' failed", endpoint, name)
+                logger.error("Data: %s", differences)
+                logger.exception("Exception: %s", exp)
+
+        return update
+
+    def update_program_status(self, brok):
+        """Manage the whole program status change
+
+        `program_status` brok is raised on program start whereas `update_program_status` brok
+        is raised on every scheduler loop.
+
+        `program_status` and `update_program_status` broks may contain:
+        {
+            # Some general information
+            u'alignak_name': u'arbiter-master',
+            u'instance_id': u'176064a1b30741d39452415097807ab0',
+            u'instance_name': u'scheduler-master',
+
+            # Some running information
+            u'program_start': 1493969754,
+            u'daemon_mode': 1,
+            u'pid': 68989,
+            u'last_alive': 1493970641,
+            u'last_command_check': 1493970641,
+            u'last_log_rotation': 1493970641,
+            u'is_running': 1,
+
+            # Some configuration parameters
+            u'process_performance_data': True,
+            u'passive_service_checks_enabled': True,
+            u'event_handlers_enabled': True,
+            u'command_file': u'',
+            u'global_host_event_handler': None,
+            u'interval_length': 60,
+            u'modified_host_attributes': 0,
+            u'check_external_commands': True,
+            u'failure_prediction_enabled': 0,
+            u'modified_service_attributes': 0,
+            u'passive_host_checks_enabled': True,
+            u'obsess_over_hosts': False,
+            u'global_service_event_handler': None,
+            u'notifications_enabled': True,
+            u'check_service_freshness': True,
+            u'check_host_freshness': True,
+            u'obsess_over_services': False,
+            u'flap_detection_enabled': True,
+            u'active_service_checks_enabled': True,
+            u'active_host_checks_enabled': True
+        }
+
+        :param brok: the brok
+        :type brok:
+        :return: None
+        """
+        if 'alignak_name' not in brok.data:
+            logger.warning("Missing alignak_name in the brok data, "
+                           "the program status cannot be updated. "
+                           "Your Alignak framework version is too old to support this feature.")
+            return
+        if not self.default_realm:
+            logger.warning("Missing Alignak backend default realm, "
+                           "the program status cannot be updated. "
+                           "Your Alignak backend is in a very bad state!")
+            return
+
+        name = brok.data.pop('alignak_name')
+        brok.data['name'] = name
+        brok.data['_realm'] = self.default_realm
+
+        params = {'sort': '_id', 'where': '{"name": "%s"}' % name}
+        all_alignak = self.backend.get_all('alignak', params)
+        logger.debug("Got %d Alignak configurations for %s", len(all_alignak['_items']), name)
+
+        headers = {'Content-Type': 'application/json'}
+        if not all_alignak['_items']:
+            try:
+                response = self.backend.post('alignak', brok.data)
+                if response['_status'] == 'ERR':
+                    logger.warning("Create alignak: %s failed, errors: %s.",
+                                   name, response['_issues'])
+                else:
+                    logger.info("Created alignak: %s.", name)
+            except BackendException:  # pragma: no cover - should not happen
+                logger.error("Create alignak '%s' failed", name)
+                logger.error("Data: %s", brok.data)
+        else:
+            item = all_alignak['_items'][0]
+            for key in item:
+                if key not in brok.data:
+                    continue
+                if item[key] == brok.data[key]:
+                    brok.data.pop(key)
+                    continue
+                logger.debug("- updating: %s = %s", key, brok.data[key])
+
+            if not brok.data:
+                logger.debug("Nothing to update")
+                return
+
+            headers['If-Match'] = item['_etag']
+            try:
+                response = self.backend.patch('alignak/%s' % (item['_id']),
+                                              brok.data, headers, True)
+                if response['_status'] == 'ERR':
+                    logger.warning("Update alignak: %s failed, errors: %s.",
+                                   name, response['_issues'])
+                else:
+                    logger.debug("Updated alignak: %s. %s", name, response)
+            except BackendException:
+                logger.error("Update alignak '%s' failed", name)
+                logger.error("Data: %s", brok.data)
+
     def manage_brok(self, brok):
         """
         We get the data to manage
@@ -450,19 +727,76 @@ class AlignakBackendBroker(BaseModule):
             return
 
         try:
-            logger.debug("Received a brok :%s", brok.type)
+            endpoint = ''
+            name = ''
+            # Temporary: get concerned item for tracking received broks
+            if 'contact_name' in brok.data:
+                contact_name = brok.data['contact_name']
+                if brok.data['contact_name'] not in self.mapping['user']:
+                    logger.debug("Got a brok %s for an unknown user: '%s' (%s)",
+                                 brok.type, contact_name, brok.data)
+                    return
+                endpoint = 'user'
+                name = contact_name
+            else:
+                if 'host_name' in brok.data:
+                    host_name = brok.data['host_name']
+                    if brok.data['host_name'] not in self.mapping['host']:
+                        logger.debug("Got a brok %s for an unknown host: '%s' (%s)",
+                                     brok.type, host_name, brok.data)
+                        return
+                    endpoint = 'host'
+                    name = host_name
+                    if 'service_description' in brok.data:
+                        service_name = '__'.join([host_name, brok.data['service_description']])
+                        endpoint = 'service'
+                        name = service_name
+                        if service_name not in self.mapping['service']:
+                            logger.debug("Got a brok %s for an unknown service: '%s' (%s)",
+                                         brok.type, service_name, brok.data)
+                            return
+            if name:
+                logger.debug("Received a brok: %s, for %s '%s'", brok.type, endpoint, name)
+            else:
+                logger.debug("Received a brok: %s", brok.type)
+            logger.debug("Brok data: %s", brok.data)
+
+            if brok.type in ['program_status', 'update_program_status']:
+                logger.debug("Got %s brok: %s", brok.type, brok.data)
+                self.update_program_status(brok)
+
+            if brok.type == 'host_next_schedule':
+                logger.debug("Got host next schedule brok: %s", brok.data)
+                self.update_next_check(brok.data, 'host')
+            if brok.type == 'service_next_schedule':
+                logger.debug("Got service next schedule brok: %s", brok.data)
+                self.update_next_check(brok.data, 'service')
+
+            if brok.type == 'update_service_status':
+                logger.debug("Got service update status brok: %s", brok.data)
+                self.update_status(brok)
+            if brok.type == 'update_host_status':
+                logger.debug("Got host update status brok: %s", brok.data)
+                self.update_status(brok)
+            if brok.type == 'update_contact_status':
+                logger.debug("Got contact update status brok: %s", brok.data)
+                self.update_status(brok)
+
             if brok.type == 'new_conf':
                 logger.info("Got configuration")
+                self.get_refs('livestate_user')
                 self.get_refs('livestate_host')
                 self.get_refs('livestate_service')
                 logger.info("Hosts/services references reloaded")
 
             if brok.type == 'host_check_result':
-                self.update(brok.data, 'host')
-            elif brok.type == 'service_check_result':
-                self.update(brok.data, 'service')
-            elif brok.type in ['acknowledge_raise', 'acknowledge_expire', 'downtime_raise',
-                               'downtime_raise']:
+                self.update_livestate(brok.data, 'host')
+
+            if brok.type == 'service_check_result':
+                self.update_livestate(brok.data, 'service')
+
+            if brok.type in ['acknowledge_raise', 'acknowledge_expire',
+                             'downtime_raise', 'downtime_expire']:
                 self.update_actions(brok)
         except Exception as exp:
             logger.exception("Manage brok exception: %s", exp)
@@ -474,11 +808,15 @@ class AlignakBackendBroker(BaseModule):
         :type brok:
         :return: None
         """
-        if brok.data['host'] not in self.mapping['host']:
+        host_name = brok.data['host']
+        if host_name not in self.mapping['host']:
+            logger.warning("Got a brok for an unknown host: '%s'", host_name)
             return
+        service_name = ''
         if 'service' in brok.data:
-            service_name = ''.join([brok.data['host'], brok.data['service']])
+            service_name = '__'.join([host_name, brok.data['service']])
             if service_name not in self.mapping['service']:
+                logger.warning("Got a brok for an unknown service: '%s'", service_name)
                 return
 
         data_to_update = {}
@@ -497,7 +835,7 @@ class AlignakBackendBroker(BaseModule):
         where = {
             'processed': True,
             'notified': False,
-            'host': self.mapping['host'][brok.data['host']],
+            'host': self.mapping['host'][host_name],
             'comment': brok.data['comment'],
             'service': None
         }
@@ -508,7 +846,7 @@ class AlignakBackendBroker(BaseModule):
             where['service'] = self.mapping['service'][service_name]
         else:
             # it's a host
-            self.send_to_backend('livestate_host', brok.data['host'], data_to_update)
+            self.send_to_backend('livestate_host', host_name, data_to_update)
 
         params = {
             'where': json.dumps(where)

@@ -1114,8 +1114,8 @@ class AlignakBackendArbiter(BaseModule):
             now = int(time.time())
             if now > self.next_check:
                 logger.info("Check if system configuration changed in the backend...")
-                logger.info("Now is: %s", datetime.utcnow().strftime(self.backend_date_format))
-                logger.info("Last configuration loading time is: %s", self.time_loaded_conf)
+                logger.debug("Now is: %s", datetime.utcnow().strftime(self.backend_date_format))
+                logger.debug("Last configuration loading time is: %s", self.time_loaded_conf)
                 # todo: we should find a way to declare in the backend schema
                 # that a resource endpoint is concerned with this feature. Something like:
                 #   'arbiter_reload_check': True,

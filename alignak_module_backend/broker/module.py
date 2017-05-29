@@ -448,7 +448,7 @@ class AlignakBackendBroker(BaseModule):
             logger.error("Alignak backend connection is not available. "
                          "Skipping objects update.")
             return
-        logger.info("Send to backend: %s, %s", type_data, data)
+        logger.debug("Send to backend: %s, %s", type_data, data)
 
         headers = {
             'Content-Type': 'application/json',

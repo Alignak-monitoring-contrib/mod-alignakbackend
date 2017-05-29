@@ -684,9 +684,10 @@ class AlignakBackendBroker(BaseModule):
                                    name, response['_issues'])
                 else:
                     logger.info("Created alignak: %s.", name)
-            except BackendException:  # pragma: no cover - should not happen
+            except BackendException as exp:  # pragma: no cover - should not happen
                 logger.error("Create alignak '%s' failed", name)
                 logger.error("Data: %s", brok.data)
+                logger.exception("Exception: %s", exp)
         else:
             item = all_alignak['_items'][0]
             for key in item:
@@ -710,9 +711,10 @@ class AlignakBackendBroker(BaseModule):
                                    name, response['_issues'])
                 else:
                     logger.debug("Updated alignak: %s. %s", name, response)
-            except BackendException:
+            except BackendException as exp:  # pragma: no cover - should not happen
                 logger.error("Update alignak '%s' failed", name)
                 logger.error("Data: %s", brok.data)
+                logger.exception("Exception: %s", exp)
 
     def manage_brok(self, brok):
         """

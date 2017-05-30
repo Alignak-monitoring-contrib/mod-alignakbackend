@@ -133,7 +133,7 @@ class AlignakBackendBroker(BaseModule):
         except BackendException as exp:  # pragma: no cover - should not happen
             logger.warning("Alignak backend is not available for login. "
                            "No backend connection.")
-            logger.exception("Exception: %s", exp)
+            logger.debug("Exception: %s", exp)
             self.backend_connected = False
 
     def backendConnection(self, default_realm='All'):
@@ -714,7 +714,7 @@ class AlignakBackendBroker(BaseModule):
             except BackendException as exp:  # pragma: no cover - should not happen
                 logger.error("Update alignak '%s' failed", name)
                 logger.error("Data: %s", brok.data)
-                logger.exception("Exception: %s", exp)
+                logger.exception("Exception: %s / %s", exp, exp.response)
 
     def manage_brok(self, brok):
         """

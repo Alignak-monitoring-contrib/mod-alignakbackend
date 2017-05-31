@@ -133,7 +133,7 @@ class AlignakBackendBroker(BaseModule):
         except BackendException as exp:  # pragma: no cover - should not happen
             logger.warning("Alignak backend is not available for login. "
                            "No backend connection.")
-            logger.exception("Exception: %s", exp)
+            logger.debug("Exception: %s", exp)
             self.backend_connected = False
 
     def backendConnection(self, default_realm='All'):
@@ -448,7 +448,7 @@ class AlignakBackendBroker(BaseModule):
             logger.error("Alignak backend connection is not available. "
                          "Skipping objects update.")
             return
-        logger.info("Send to backend: %s, %s", type_data, data)
+        logger.debug("Send to backend: %s, %s", type_data, data)
 
         headers = {
             'Content-Type': 'application/json',
@@ -684,9 +684,10 @@ class AlignakBackendBroker(BaseModule):
                                    name, response['_issues'])
                 else:
                     logger.info("Created alignak: %s.", name)
-            except BackendException:  # pragma: no cover - should not happen
+            except BackendException as exp:  # pragma: no cover - should not happen
                 logger.error("Create alignak '%s' failed", name)
                 logger.error("Data: %s", brok.data)
+                logger.exception("Exception: %s", exp)
         else:
             item = all_alignak['_items'][0]
             for key in item:
@@ -710,9 +711,10 @@ class AlignakBackendBroker(BaseModule):
                                    name, response['_issues'])
                 else:
                     logger.debug("Updated alignak: %s. %s", name, response)
-            except BackendException:
+            except BackendException as exp:  # pragma: no cover - should not happen
                 logger.error("Update alignak '%s' failed", name)
                 logger.error("Data: %s", brok.data)
+                logger.exception("Exception: %s / %s", exp, exp.response)
 
     def manage_brok(self, brok):
         """

@@ -116,7 +116,7 @@ class AlignakBackendScheduler(BaseModule):
         except BackendException as exp:  # pragma: no cover - should not happen
             logger.warning("Alignak backend is not available for login. "
                            "No backend connection.")
-            logger.exception("Exception: %s", exp)
+            logger.debug("Exception: %s", exp)
             self.backend_connected = False
 
     def hook_load_retention(self, scheduler):

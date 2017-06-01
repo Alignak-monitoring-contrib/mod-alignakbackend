@@ -337,6 +337,312 @@ class TestBrokerCommon(unittest2.TestCase):
         self.assertEqual(r['_items'][0]['hosts_acknowledged'], 0)
         self.assertEqual(r['_items'][0]['hosts_in_downtime'], 0)
 
+    def test_03_2_manage_brok_host(self):
+        """Test host livestate is updated with an alignak brok (from real broks)"""
+        self.brokmodule.get_refs('livestate_host')
+        self.assertEqual(len(self.brokmodule.ref_live['host']), 1)
+
+        # Initial host state as created in the backend
+        params = {'where': '{"name": "srv001"}'}
+        r = self.backend.get('host', params)
+        self.assertEqual(len(r['_items']), 1)
+        number = 0
+        for index, item in enumerate(r['_items']):
+            self.assertEqual(item['ls_state'], 'UNREACHABLE')       # UNREACHABLE
+            self.assertEqual(item['ls_state_type'], 'HARD')         # SOFT
+            self.assertEqual(item['ls_state_id'], 3)
+
+            self.assertEqual(item['ls_acknowledged'], False)
+            self.assertEqual(item['ls_acknowledgement_type'], 1)
+            self.assertEqual(item['ls_downtimed'], False)
+
+            self.assertEqual(item['ls_impact'], 0)
+
+            self.assertEqual(item['ls_last_check'], 0)
+            self.assertEqual(item['ls_last_state'], 'OK')           # UNREACHABLE
+            self.assertEqual(item['ls_last_state_type'], 'HARD')    # SOFT
+            self.assertEqual(item['ls_last_state_changed'], 0)
+            self.assertEqual(item['ls_next_check'], 0)
+
+            self.assertEqual(item['ls_output'], '')
+            self.assertEqual(item['ls_long_output'], '')
+            self.assertEqual(item['ls_perf_data'], '')
+
+            self.assertEqual(item['ls_current_attempt'], 0)
+            self.assertEqual(item['ls_attempt'], 0)
+            self.assertEqual(item['ls_max_attempts'], 0)
+            self.assertEqual(item['ls_latency'], 0.0)
+            self.assertEqual(item['ls_execution_time'], 0.0)
+
+            self.assertEqual(item['ls_passive_check'], False)
+
+            self.assertEqual(item['ls_last_hard_state_changed'], 0)
+
+            self.assertEqual(item['ls_last_time_up'], 0)
+            self.assertEqual(item['ls_last_time_down'], 0)
+            self.assertEqual(item['ls_last_time_unknown'], 0)
+            self.assertEqual(item['ls_last_time_unreachable'], 0)
+            number += 1
+        self.assertEqual(1, number)
+
+        # --- #1 - Post a real host UP brok
+        data = {
+            u'last_time_unreachable': 0, u'last_problem_id': 0, u'retry_interval': 0,
+            u'last_event_id': 0, u'problem_has_been_acknowledged': False,
+            u'command_name': u'_internal_host_up', u'last_state': u'UNREACHABLE',
+            u'latency': 0.9299669266, u'last_state_type': u'HARD',
+            u'last_hard_state_change': 1496234084, u'last_time_up': 1496234084,
+            u'percent_state_change': 0.0, u'state': u'UP', u'last_chk': 1496234083,
+            u'last_state_id': 0, u'end_time': 0, u'timeout': 0, u'current_event_id': 17,
+            u'execution_time': 0, u'start_time': 0, u'return_code': 0, u'state_type': u'HARD',
+            u'state_id': 0, u'in_checking': False, u'early_timeout': 0,
+            u'in_scheduled_downtime': False, u'attempt': 1, u'state_type_id': 1,
+            u'acknowledgement_type': 1, u'last_state_change': 1496234084.930904,
+            u'last_time_down': 0, 'instance_id': u'7de9f30b2e9649dd98d5d5be8ebe6e3b',
+            u'long_output': u'Host assumed to be UP', u'current_problem_id': 0,
+            u'host_name': u'srv001', u'check_interval': 5, u'output': u'Host assumed to be UP',
+            u'has_been_checked': 1, u'perf_data': u''
+        }
+        b = Brok({'data': data, 'type': 'host_check_result'}, False)
+        b.prepare()
+        self.brokmodule.manage_brok(b)
+
+        # Updated host state
+        params = {'where': '{"name": "srv001"}'}
+        r = self.backend.get('host', params)
+        self.assertEqual(len(r['_items']), 1)
+        number = 0
+        for index, item in enumerate(r['_items']):
+            self.assertEqual(item['ls_state'], 'UP')                    # !
+            self.assertEqual(item['ls_state_type'], 'HARD')
+            self.assertEqual(item['ls_state_id'], 0)                    # !
+
+            self.assertEqual(item['ls_acknowledged'], False)
+            self.assertEqual(item['ls_acknowledgement_type'], 1)
+            self.assertEqual(item['ls_downtimed'], False)
+
+            self.assertEqual(item['ls_impact'], 0)
+
+            self.assertEqual(item['ls_last_check'], 1496234083)         # !
+            self.assertEqual(item['ls_last_state'], 'UNREACHABLE')      # !
+            self.assertEqual(item['ls_last_state_type'], 'HARD')
+            self.assertEqual(item['ls_last_state_changed'], 1496234084) # !
+            self.assertEqual(item['ls_next_check'], 0)
+
+            self.assertEqual(item['ls_output'], 'Host assumed to be UP')
+            self.assertEqual(item['ls_long_output'], 'Host assumed to be UP')
+            self.assertEqual(item['ls_perf_data'], '')
+
+            self.assertEqual(item['ls_current_attempt'], 0)
+            self.assertEqual(item['ls_attempt'], 1)                     # !
+            self.assertEqual(item['ls_max_attempts'], 0)
+            self.assertEqual(item['ls_latency'], 0.9299669266)          # !
+            self.assertEqual(item['ls_execution_time'], 0.0)
+
+            self.assertEqual(item['ls_passive_check'], False)
+
+            self.assertEqual(item['ls_last_hard_state_changed'], 1496234084)    # !
+
+            self.assertEqual(item['ls_last_time_up'], 1496234084)               # !
+            self.assertEqual(item['ls_last_time_down'], 0)
+            self.assertEqual(item['ls_last_time_unknown'], 0)
+            self.assertEqual(item['ls_last_time_unreachable'], 0)
+            number += 1
+        self.assertEqual(1, number)
+
+        # --- #2 - Post a real host UP brok
+        data = {
+            u'last_time_unreachable': 0, u'last_problem_id': 0, u'retry_interval': 0,
+            u'last_event_id': 0, u'problem_has_been_acknowledged': False,
+            u'command_name': u'_internal_host_up', u'last_state': u'UP', u'latency': 0.8838100433,
+            u'last_state_type': u'HARD', u'last_hard_state_change': 1496234084,
+            u'last_time_up': 1496237384, u'percent_state_change': 0.0, u'state': u'UP',
+            u'last_chk': 1496237383, u'last_state_id': 0, u'end_time': 0, u'timeout': 0,
+            u'current_event_id': 17, u'execution_time': 0, u'start_time': 0, u'return_code': 0,
+            u'state_type': u'HARD', u'state_id': 0, u'in_checking': False, u'early_timeout': 0,
+            u'in_scheduled_downtime': False, u'attempt': 1, u'state_type_id': 1,
+            u'acknowledgement_type': 1, u'last_state_change': 1496234084.930904,
+            u'last_time_down': 0, 'instance_id': u'7de9f30b2e9649dd98d5d5be8ebe6e3b',
+            u'long_output': u'Host assumed to be UP', u'current_problem_id': 0,
+            u'host_name': u'srv001', u'check_interval': 5, u'output': u'Host assumed to be UP',
+            u'has_been_checked': 1, u'perf_data': u''
+        }
+        b = Brok({'data': data, 'type': 'host_check_result'}, False)
+        b.prepare()
+        self.brokmodule.manage_brok(b)
+
+        # Updated host state
+        params = {'where': '{"name": "srv001"}'}
+        r = self.backend.get('host', params)
+        self.assertEqual(len(r['_items']), 1)
+        number = 0
+        for index, item in enumerate(r['_items']):
+            self.assertEqual(item['ls_state'], 'UP')
+            self.assertEqual(item['ls_state_type'], 'HARD')
+            self.assertEqual(item['ls_state_id'], 0)
+
+            self.assertEqual(item['ls_acknowledged'], False)
+            self.assertEqual(item['ls_acknowledgement_type'], 1)
+            self.assertEqual(item['ls_downtimed'], False)
+
+            self.assertEqual(item['ls_impact'], 0)
+
+            self.assertEqual(item['ls_last_check'], 1496237383)         # !
+            self.assertEqual(item['ls_last_state'], 'UP')               # !
+            self.assertEqual(item['ls_last_state_type'], 'HARD')
+            self.assertEqual(item['ls_last_state_changed'], 1496234084) # !
+            self.assertEqual(item['ls_next_check'], 0)
+
+            self.assertEqual(item['ls_output'], 'Host assumed to be UP')
+            self.assertEqual(item['ls_long_output'], 'Host assumed to be UP')
+            self.assertEqual(item['ls_perf_data'], '')
+
+            self.assertEqual(item['ls_current_attempt'], 0)
+            self.assertEqual(item['ls_attempt'], 1)                     # !
+            self.assertEqual(item['ls_max_attempts'], 0)
+            self.assertEqual(item['ls_latency'], 0.8838100433)          # !
+            self.assertEqual(item['ls_execution_time'], 0.0)
+
+            self.assertEqual(item['ls_passive_check'], False)
+
+            self.assertEqual(item['ls_last_hard_state_changed'], 1496234084)    # !
+
+            self.assertEqual(item['ls_last_time_up'], 1496237384)               # !
+            self.assertEqual(item['ls_last_time_down'], 0)
+            self.assertEqual(item['ls_last_time_unknown'], 0)
+            self.assertEqual(item['ls_last_time_unreachable'], 0)
+            number += 1
+        self.assertEqual(1, number)
+
+        # --- #3 - Post a real host UP brok
+        data = {
+            u'last_time_unreachable': 0, u'last_problem_id': 0, u'retry_interval': 0,
+            u'last_event_id': 0, u'problem_has_been_acknowledged': False,
+            u'command_name': u'_internal_host_up', u'last_state': u'UP', u'latency': 0.8838100433,
+            u'last_state_type': u'HARD', u'last_hard_state_change': 1496234084,
+            u'last_time_up': 1496237384, u'percent_state_change': 0.0, u'state': u'UP',
+            u'last_chk': 1496237383, u'last_state_id': 0, u'end_time': 0, u'timeout': 0,
+            u'current_event_id': 17, u'execution_time': 0, u'start_time': 0, u'return_code': 0,
+            u'state_type': u'HARD', u'state_id': 0, u'in_checking': False, u'early_timeout': 0,
+            u'in_scheduled_downtime': False, u'attempt': 1, u'state_type_id': 1,
+            u'acknowledgement_type': 1, u'last_state_change': 1496234084.930904,
+            u'last_time_down': 0, 'instance_id': u'7de9f30b2e9649dd98d5d5be8ebe6e3b',
+            u'long_output': u'Host assumed to be UP', u'current_problem_id': 0,
+            u'host_name': u'srv001', u'check_interval': 5, u'output': u'Host assumed to be UP',
+            u'has_been_checked': 1, u'perf_data': u''
+        }
+        b = Brok({'data': data, 'type': 'host_check_result'}, False)
+        b.prepare()
+        self.brokmodule.manage_brok(b)
+
+        # Updated host state
+        params = {'where': '{"name": "srv001"}'}
+        r = self.backend.get('host', params)
+        self.assertEqual(len(r['_items']), 1)
+        number = 0
+        for index, item in enumerate(r['_items']):
+            self.assertEqual(item['ls_state'], 'UP')
+            self.assertEqual(item['ls_state_type'], 'HARD')
+            self.assertEqual(item['ls_state_id'], 0)
+
+            self.assertEqual(item['ls_acknowledged'], False)
+            self.assertEqual(item['ls_acknowledgement_type'], 1)
+            self.assertEqual(item['ls_downtimed'], False)
+
+            self.assertEqual(item['ls_impact'], 0)
+
+            self.assertEqual(item['ls_last_check'], 1496237383)         # !
+            self.assertEqual(item['ls_last_state'], 'UP')               # !
+            self.assertEqual(item['ls_last_state_type'], 'HARD')
+            self.assertEqual(item['ls_last_state_changed'], 1496234084) # !
+            self.assertEqual(item['ls_next_check'], 0)
+
+            self.assertEqual(item['ls_output'], 'Host assumed to be UP')
+            self.assertEqual(item['ls_long_output'], 'Host assumed to be UP')
+            self.assertEqual(item['ls_perf_data'], '')
+
+            self.assertEqual(item['ls_current_attempt'], 0)
+            self.assertEqual(item['ls_attempt'], 1)                     # !
+            self.assertEqual(item['ls_max_attempts'], 0)
+            self.assertEqual(item['ls_latency'], 0.8838100433)          # !
+            self.assertEqual(item['ls_execution_time'], 0.0)
+
+            self.assertEqual(item['ls_passive_check'], False)
+
+            self.assertEqual(item['ls_last_hard_state_changed'], 1496234084)    # !
+
+            self.assertEqual(item['ls_last_time_up'], 1496237384)               # !
+            self.assertEqual(item['ls_last_time_down'], 0)
+            self.assertEqual(item['ls_last_time_unknown'], 0)
+            self.assertEqual(item['ls_last_time_unreachable'], 0)
+            number += 1
+        self.assertEqual(1, number)
+
+        # --- #4 - Post a real host DOWN brok
+        data = {
+            u'last_time_unreachable': 0, u'last_problem_id': 0, u'retry_interval': 0,
+            u'last_event_id': 0, u'problem_has_been_acknowledged': False,
+            u'command_name': u'check_nrpe_alive', u'last_state': u'UP',
+            u'latency': 1.491920948, u'last_state_type': u'HARD',
+            u'last_hard_state_change': 1496240268, u'last_time_up': 0, u'percent_state_change': 4.1,
+            u'state': u'DOWN', u'last_chk': 1496240268, u'last_state_id': 0, u'end_time': 0,
+            u'timeout': 0, u'current_event_id': 31, u'execution_time': 0.1163659096,
+            u'start_time': 0, u'return_code': 3, u'state_type': u'HARD', u'state_id': 1,
+            u'in_checking': False, u'early_timeout': 0, u'in_scheduled_downtime': False,
+            u'attempt': 0, u'state_type_id': 1, u'acknowledgement_type': 1,
+            u'last_state_change': 1496234084.0, u'last_time_down': 1496240268,
+            'instance_id': u'16d0a854a3a5479fbfe0c9155392ca64',
+            u'long_output': u'Host is DOWN', u'current_problem_id': 0, u'host_name': u'srv001',
+            u'check_interval': 5, u'output': u'Host is DOWN', u'has_been_checked': 1,
+            u'perf_data': u''
+        }
+        b = Brok({'data': data, 'type': 'host_check_result'}, False)
+        b.prepare()
+        self.brokmodule.manage_brok(b)
+
+        # Updated host state
+        params = {'where': '{"name": "srv001"}'}
+        r = self.backend.get('host', params)
+        self.assertEqual(len(r['_items']), 1)
+        number = 0
+        for index, item in enumerate(r['_items']):
+            self.assertEqual(item['ls_state'], 'DOWN')                  # !
+            self.assertEqual(item['ls_state_type'], 'HARD')
+            self.assertEqual(item['ls_state_id'], 1)
+
+            self.assertEqual(item['ls_acknowledged'], False)
+            self.assertEqual(item['ls_acknowledgement_type'], 1)
+            self.assertEqual(item['ls_downtimed'], False)
+
+            self.assertEqual(item['ls_impact'], 0)
+
+            self.assertEqual(item['ls_last_check'], 1496240268)         # !
+            self.assertEqual(item['ls_last_state'], 'UP')               # !
+            self.assertEqual(item['ls_last_state_type'], 'HARD')
+            self.assertEqual(item['ls_last_state_changed'], 1496234084) # !
+            self.assertEqual(item['ls_next_check'], 0)
+
+            self.assertEqual(item['ls_output'], 'Host is DOWN')
+            self.assertEqual(item['ls_long_output'], 'Host is DOWN')
+            self.assertEqual(item['ls_perf_data'], '')
+
+            self.assertEqual(item['ls_current_attempt'], 0)
+            self.assertEqual(item['ls_attempt'], 0)                     # !
+            self.assertEqual(item['ls_max_attempts'], 0)
+            self.assertEqual(item['ls_latency'], 1.491920948)          # !
+            self.assertEqual(item['ls_execution_time'], 0.1163659096)
+
+            self.assertEqual(item['ls_passive_check'], False)
+
+            self.assertEqual(item['ls_last_hard_state_changed'], 1496240268)    # !
+
+            self.assertEqual(item['ls_last_time_up'], 0)               # !
+            self.assertEqual(item['ls_last_time_down'], 1496240268)
+            self.assertEqual(item['ls_last_time_unknown'], 0)
+            self.assertEqual(item['ls_last_time_unreachable'], 0)
+            number += 1
+        self.assertEqual(1, number)
+
     def test_04_manage_brok_service(self):
         """Test service livestate is updated with an alignak brok"""
         self.brokmodule.get_refs('livestate_host')

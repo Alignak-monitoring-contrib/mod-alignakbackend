@@ -33,7 +33,10 @@ from alignak.external_command import ExternalCommand
 
 from alignak_backend_client.client import Backend, BackendException
 
-logger = logging.getLogger('alignak.module')  # pylint: disable=C0103
+# Set the backend client library log to ERROR level
+logging.getLogger("alignak_backend_client.client").setLevel(logging.ERROR)
+
+logger = logging.getLogger('alignak.module')  # pylint: disable=invalid-name
 
 # pylint: disable=C0103
 properties = {
@@ -94,9 +97,13 @@ class AlignakBackendArbiter(BaseModule):
         self.backend = Backend(self.url, self.client_processes)
         self.backend.token = getattr(mod_conf, 'token', '')
         self.backend_connected = False
-        if self.backend.token == '':
-            self.getToken(getattr(mod_conf, 'username', ''), getattr(mod_conf, 'password', ''),
-                          getattr(mod_conf, 'allowgeneratetoken', False))
+        self.backend_errors_count = 0
+        self.backend_username = getattr(mod_conf, 'username', '')
+        self.backend_password = getattr(mod_conf, 'password', '')
+        self.backend_generate = getattr(mod_conf, 'allowgeneratetoken', False)
+
+        if not self.backend.token:
+            self.getToken()
 
         self.bypass_verify_mode = int(getattr(mod_conf, 'bypass_verify_mode', 0)) == 1
         logger.info("bypass objects loading when Arbiter is in verify mode: %s",
@@ -166,15 +173,9 @@ class AlignakBackendArbiter(BaseModule):
         """
         self.my_arbiter = arbiter
 
-    def getToken(self, username, password, generatetoken):
+    def getToken(self):
         """Authenticate and get the token
 
-        :param username: login name
-        :type username: str
-        :param password: password
-        :type password: str
-        :param generatetoken: if True allow generate token, otherwise not generate
-        :type generatetoken: bool
         :return: None
         """
         if self.backend_import:
@@ -184,16 +185,34 @@ class AlignakBackendArbiter(BaseModule):
             return
 
         generate = 'enabled'
-        if not generatetoken:
+        if not self.backend_generate:
             generate = 'disabled'
 
         try:
-            self.backend_connected = self.backend.login(username, password, generate)
+            self.backend_connected = self.backend.login(self.backend_username,
+                                                        self.backend_password,
+                                                        generate)
+            self.token = self.backend.token
+            self.backend_errors_count = 0
         except BackendException as exp:  # pragma: no cover - should not happen
-            logger.warning("Alignak backend is not available for login. "
-                           "No backend connection.")
-            logger.debug("Exception: %s", exp)
             self.backend_connected = False
+            self.backend_errors_count += 1
+            logger.warning("Alignak backend is not available for login. "
+                           "No backend connection, attempt: %d", self.backend_errors_count)
+            logger.debug("Exception: %s", exp)
+
+    def raise_backend_alert(self, errors_count=10):
+        """Raise a backend alert
+
+        :return: True if the backend is not connected and the error count
+        is greater than a defined threshold
+        """
+        logger.debug("Check backend connection, connected: %s, errors count: %d",
+                     self.backend_connected, self.backend_errors_count)
+        if not self.backend_connected and self.backend_errors_count > errors_count:
+            return True
+
+        return False
 
     def single_relation(self, resource, mapping, ctype):
         """Convert single embedded data to name of relation_data
@@ -989,10 +1008,12 @@ class AlignakBackendArbiter(BaseModule):
         self.alignak_configuration = {}
 
         if not self.backend_connected:
-            logger.error("Alignak backend connection is not available. "
-                         "Skipping Alignak configuration load and provide "
-                         "an empty configuration to the Arbiter.")
-            return self.alignak_configuration
+            self.getToken()
+            if self.raise_backend_alert(errors_count=1):
+                logger.error("Alignak backend connection is not available. "
+                             "Skipping Alignak configuration load and provide "
+                             "an empty configuration to the Arbiter.")
+                return self.alignak_configuration
 
         if self.my_arbiter and self.my_arbiter.verify_only:
             logger.info("My Arbiter is in verify only mode")
@@ -1022,10 +1043,10 @@ class AlignakBackendArbiter(BaseModule):
                 self.alignak_configuration.update(alignak_cfg)
 
                 logger.debug("- configuration: %s", alignak_cfg)
-        except BackendException as exp:  # pragma: no cover - should not happen
+        except BackendException as exp:
             logger.warning("Alignak backend is not available for reading configuration. "
                            "Backend communication error.")
-            logger.exception("Exception: %s", exp)
+            logger.debug("Exception: %s", exp)
             self.backend_connected = False
 
         self.time_loaded_conf = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
@@ -1044,9 +1065,11 @@ class AlignakBackendArbiter(BaseModule):
         """
 
         if not self.backend_connected:
-            logger.error("Alignak backend connection is not available. "
-                         "Skipping objects load and provide an empty list to the Arbiter.")
-            return self.config
+            self.getToken()
+            if self.raise_backend_alert(errors_count=1):
+                logger.error("Alignak backend connection is not available. "
+                             "Skipping objects load and provide an empty list to the Arbiter.")
+                return self.config
 
         if self.my_arbiter and self.my_arbiter.verify_only:
             logger.info("my Arbiter is in verify only mode")
@@ -1110,6 +1133,14 @@ class AlignakBackendArbiter(BaseModule):
         :type arbiter: object
         :return: None
         """
+        if not self.backend_connected:
+            self.getToken()
+            if self.raise_backend_alert(errors_count=10):
+                logger.warning("Alignak backend connection is not available. "
+                               "Periodical actions are disabled: configuration change checking, "
+                               "ack/downtime/forced check, and daemons state updates.")
+                return
+
         try:
             now = int(time.time())
             if now > self.next_check:
@@ -1201,6 +1232,7 @@ class AlignakBackendArbiter(BaseModule):
                 self.next_action_check = now + self.action_check
                 logger.debug("next actions check in %s seconds ---",
                              (self.next_action_check - int(now)))
+
             if now > self.next_daemons_state:
                 logger.debug("Update daemons state in the backend...")
                 self.update_daemons_state(arbiter)
@@ -1210,10 +1242,9 @@ class AlignakBackendArbiter(BaseModule):
                     "next update daemons state in %s seconds ---",
                     (self.next_daemons_state - int(now))
                 )
-
         except Exception as exp:
             logger.warning("hook_tick exception: %s", str(exp))
-            logger.exception("Exception: %s", exp)
+            logger.debug("Exception: %s", exp)
 
     @staticmethod
     def convert_date_timestamp(mydate):
@@ -1232,6 +1263,9 @@ class AlignakBackendArbiter(BaseModule):
 
         :return: None
         """
+        if not self.backend_connected:
+            return
+
         all_ack = self.backend.get_all('actionacknowledge',
                                        {'where': '{"processed": false}',
                                         'embedded': '{"host": 1, "service": 1, "user": 1}'})
@@ -1272,6 +1306,9 @@ class AlignakBackendArbiter(BaseModule):
 
         :return: None
         """
+        if not self.backend_connected:
+            return
+
         all_downt = self.backend.get_all('actiondowntime',
                                          {'where': '{"processed": false}',
                                           'embedded': '{"host": 1, "service": 1, '
@@ -1315,6 +1352,9 @@ class AlignakBackendArbiter(BaseModule):
 
         :return: None
         """
+        if not self.backend_connected:
+            return
+
         all_fcheck = self.backend.get_all('actionforcecheck',
                                           {'where': '{"processed": false}',
                                            'embedded': '{"host": 1, "service": 1}'})
@@ -1341,6 +1381,9 @@ class AlignakBackendArbiter(BaseModule):
         :param arbiter:
         :return:
         """
+        if not self.backend_connected:
+            return
+
         if not self.daemonlist['arbiter']:
             all_daemons = self.backend.get_all('alignakdaemon')
             for item in all_daemons['_items']:

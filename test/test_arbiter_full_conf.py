@@ -84,29 +84,6 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
         subprocess.call(['uwsgi', '--stop', '/tmp/uwsgi.pid'])
         time.sleep(2)
 
-    def test_alignak_configuration_errors(self):
-        """Test alignak configuration reading - exception cases
-
-        :return:
-        """
-        # exception cases - no backend connection
-        self.arbmodule.backend_connected = False
-        assert {} == self.arbmodule.get_alignak_configuration()
-
-        # exception cases - arbiter in verify mode and bypass is set
-        fake_arb = Arbiter(True)
-        self.arbmodule.hook_read_configuration(fake_arb)
-        self.arbmodule.backend_connected = True
-        self.arbmodule.bypass_verify_mode = True
-        assert {} == self.arbmodule.get_alignak_configuration()
-
-        # exception cases - backend import is active
-        fake_arb = Arbiter()
-        self.arbmodule.hook_read_configuration(fake_arb)
-        self.arbmodule.backend_import = True
-        self.arbmodule.backend_connected = True
-        assert {} == self.arbmodule.get_alignak_configuration()
-
     def test_alignak_configuration(self):
         """Test alignak configuration reading
 
@@ -141,7 +118,7 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
             u'passive_service_checks_enabled': True,
             u'event_handlers_enabled': True,
             u'command_file': u'',
-            u'global_host_event_handler': None,
+            u'global_host_event_handler': 'None',
             u'interval_length': 60,
             u'modified_host_attributes': 0,
             u'check_external_commands': True,
@@ -149,7 +126,7 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
             u'modified_service_attributes': 0,
             u'passive_host_checks_enabled': True,
             u'obsess_over_hosts': False,
-            u'global_service_event_handler': None,
+            u'global_service_event_handler': 'None',
             u'notifications_enabled': True,
             u'check_service_freshness': True,
             u'check_host_freshness': True,
@@ -208,7 +185,7 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
             u'passive_service_checks_enabled': True,
             u'event_handlers_enabled': True,
             u'command_file': u'',
-            u'global_host_event_handler': None,
+            u'global_host_event_handler': 'None',
             u'interval_length': 60,
             u'modified_host_attributes': 0,
             u'check_external_commands': True,
@@ -216,7 +193,7 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
             u'modified_service_attributes': 0,
             u'passive_host_checks_enabled': True,
             u'obsess_over_hosts': False,
-            u'global_service_event_handler': None,
+            u'global_service_event_handler': 'None',
             u'notifications_enabled': True,
             u'check_service_freshness': True,
             u'check_host_freshness': True,

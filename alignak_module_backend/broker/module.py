@@ -29,7 +29,7 @@ import logging
 from alignak.basemodule import BaseModule
 from alignak_backend_client.client import Backend, BackendException
 
-logger = logging.getLogger('alignak.module')  # pylint: disable=C0103
+logger = logging.getLogger('alignak.module')  # pylint: disable=invalid-name
 
 # pylint: disable=C0103
 properties = {
@@ -82,9 +82,13 @@ class AlignakBackendBroker(BaseModule):
         self.backend = Backend(self.url, self.client_processes)
         self.backend.token = getattr(mod_conf, 'token', '')
         self.backend_connected = False
-        if self.backend.token == '':
-            self.getToken(getattr(mod_conf, 'username', ''), getattr(mod_conf, 'password', ''),
-                          getattr(mod_conf, 'allowgeneratetoken', False))
+        self.backend_errors_count = 0
+        self.backend_username = getattr(mod_conf, 'username', '')
+        self.backend_password = getattr(mod_conf, 'password', '')
+        self.backend_generate = getattr(mod_conf, 'allowgeneratetoken', False)
+
+        if not self.backend.token:
+            self.getToken()
 
         self.logged_in = self.backendConnection()
 
@@ -113,34 +117,53 @@ class AlignakBackendBroker(BaseModule):
         logger.info("In loop")
         time.sleep(1)
 
-    def getToken(self, username, password, generatetoken):
+    def getToken(self):
         """Authenticate and get the token
 
-        :param username: login name
-        :type username: str
-        :param password: password
-        :type password: str
-        :param generatetoken: if True allow generate token, otherwise not generate
-        :type generatetoken: bool
         :return: None
         """
         generate = 'enabled'
-        if not generatetoken:
+        if not self.backend_generate:
             generate = 'disabled'
 
         try:
-            self.backend_connected = self.backend.login(username, password, generate)
+            self.backend_connected = self.backend.login(self.backend_username,
+                                                        self.backend_password,
+                                                        generate)
+            self.token = self.backend.token
+            self.backend_errors_count = 0
         except BackendException as exp:  # pragma: no cover - should not happen
-            logger.warning("Alignak backend is not available for login. "
-                           "No backend connection.")
-            logger.debug("Exception: %s", exp)
             self.backend_connected = False
+            self.backend_errors_count += 1
+            logger.warning("Alignak backend is not available for login. "
+                           "No backend connection, attempt: %d", self.backend_errors_count)
+            logger.debug("Exception: %s", exp)
+
+    def raise_backend_alert(self, errors_count=10):
+        """Raise a backend alert
+
+        :return: True if the backend is not connected and the error count
+        is greater than a defined threshold
+        """
+        logger.debug("Check backend connection, connected: %s, errors count: %d",
+                     self.backend_connected, self.backend_errors_count)
+        if not self.backend_connected and self.backend_errors_count > errors_count:
+            return True
+
+        return False
 
     def backendConnection(self, default_realm='All'):
         """Backend connection to check live state update is allowed
 
         :return: True/False
         """
+        if not self.backend_connected:
+            self.getToken()
+            if self.raise_backend_alert(errors_count=1):
+                logger.error("Alignak backend connection is not available. "
+                             "Checking if livestate update is allowed is not possible.")
+                return False
+
         if not self.default_realm:
             params = {'where': '{"name":"%s"}' % default_realm}
             realms = self.backend.get('realm', params=params)
@@ -469,6 +492,7 @@ class AlignakBackendBroker(BaseModule):
                 logger.error('Patch livestate for host %s error', self.mapping['host'][name])
                 logger.error('Data: %s', data)
                 logger.exception("Exception: %s", exp)
+                self.backend_connected = False
         elif type_data == 'livestate_service':
             headers['If-Match'] = self.ref_live['service'][self.mapping['service'][name]]['_etag']
             try:
@@ -485,6 +509,7 @@ class AlignakBackendBroker(BaseModule):
                 logger.error('Patch livestate for service %s error', self.mapping['service'][name])
                 logger.error('Data: %s', data)
                 logger.exception("Exception: %s", exp)
+                self.backend_connected = False
         elif type_data == 'log_host':
             try:
                 response = self.backend.post('logcheckresult', data)
@@ -492,6 +517,7 @@ class AlignakBackendBroker(BaseModule):
                 logger.error('Post logcheckresult for host %s error', self.mapping['host'][name])
                 logger.error('Data: %s', data)
                 logger.exception("Exception: %s", exp)
+                self.backend_connected = False
                 ret = False
         elif type_data == 'log_service':
             try:
@@ -502,6 +528,7 @@ class AlignakBackendBroker(BaseModule):
                 logger.error('Data: %s', data)
                 logger.exception("Exception: %s", exp)
                 logger.error('Error detail: %s, %s, %s', exp.code, exp.message, exp.response)
+                self.backend_connected = False
                 ret = False
         return ret
 
@@ -604,6 +631,7 @@ class AlignakBackendBroker(BaseModule):
                 logger.error("Update %s '%s' failed", endpoint, name)
                 logger.error("Data: %s", differences)
                 logger.exception("Exception: %s", exp)
+                self.backend_connected = False
 
         return update
 
@@ -688,6 +716,8 @@ class AlignakBackendBroker(BaseModule):
                 logger.error("Create alignak '%s' failed", name)
                 logger.error("Data: %s", brok.data)
                 logger.exception("Exception: %s", exp)
+                self.backend_connected = False
+
         else:
             item = all_alignak['_items'][0]
             for key in item:
@@ -715,6 +745,7 @@ class AlignakBackendBroker(BaseModule):
                 logger.error("Update alignak '%s' failed", name)
                 logger.error("Data: %s", brok.data)
                 logger.exception("Exception: %s / %s", exp, exp.response)
+                self.backend_connected = False
 
     def manage_brok(self, brok):
         """
@@ -722,11 +753,11 @@ class AlignakBackendBroker(BaseModule):
 
         :param brok: Brok object
         :type brok: object
-        :return: None
+        :return: False if broks were not managed by the module
         """
         if not self.logged_in:
             logger.debug("Not logged-in, ignoring broks...")
-            return
+            return False
 
         try:
             endpoint = ''
@@ -800,8 +831,12 @@ class AlignakBackendBroker(BaseModule):
             if brok.type in ['acknowledge_raise', 'acknowledge_expire',
                              'downtime_raise', 'downtime_expire']:
                 self.update_actions(brok)
+
+            return True
         except Exception as exp:  # pragma: no cover - should not happen
             logger.exception("Manage brok exception: %s", exp)
+
+        return False
 
     def update_actions(self, brok):
         """We manage the acknowledge and downtime broks

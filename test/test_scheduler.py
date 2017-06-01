@@ -99,7 +99,7 @@ class TestScheduler(unittest2.TestCase):
         data['_realm'] = cls.realm_all
         cls.data_srv_http = cls.backend.post("service", data)
 
-        # Start broker module
+        # Start scheduler module
         modconf = Module()
         modconf.module_alias = "backend_scheduler"
         modconf.username = "admin"

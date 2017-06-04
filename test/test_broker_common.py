@@ -228,10 +228,54 @@ class TestBrokerCommon(unittest2.TestCase):
                'srv001__http toto.com': self.data_srv_http['_id']}
         self.assertEqual(self.brokmodule.mapping['service'], ref)
 
-    def test_03_manage_brok_host(self):
+    def test_03_1_manage_brok_host(self):
         """Test host livestate is updated with an alignak brok"""
         self.brokmodule.get_refs('livestate_host')
         self.assertEqual(len(self.brokmodule.ref_live['host']), 1)
+
+        # Initial host state as created in the backend
+        # ------
+        params = {'where': '{"name": "srv001"}'}
+        r = self.backend.get('host', params)
+        self.assertEqual(len(r['_items']), 1)
+        number = 0
+        for index, item in enumerate(r['_items']):
+            self.assertEqual(item['ls_state'], 'UNREACHABLE')
+            self.assertEqual(item['ls_state_type'], 'HARD')
+            self.assertEqual(item['ls_state_id'], 3)
+
+            self.assertEqual(item['ls_acknowledged'], False)
+            self.assertEqual(item['ls_acknowledgement_type'], 1)
+            self.assertEqual(item['ls_downtimed'], False)
+
+            self.assertEqual(item['ls_impact'], 0)
+
+            self.assertEqual(item['ls_last_check'], 0)
+            self.assertEqual(item['ls_last_state'], 'UNREACHABLE')
+            self.assertEqual(item['ls_last_state_type'], 'HARD')
+            self.assertEqual(item['ls_last_state_changed'], 0)
+            self.assertEqual(item['ls_next_check'], 0)
+
+            self.assertEqual(item['ls_output'], '')
+            self.assertEqual(item['ls_long_output'], '')
+            self.assertEqual(item['ls_perf_data'], '')
+
+            self.assertEqual(item['ls_current_attempt'], 0)
+            self.assertEqual(item['ls_attempt'], 0)
+            self.assertEqual(item['ls_max_attempts'], 0)
+            self.assertEqual(item['ls_latency'], 0.0)
+            self.assertEqual(item['ls_execution_time'], 0.0)
+
+            self.assertEqual(item['ls_passive_check'], False)
+
+            self.assertEqual(item['ls_last_hard_state_changed'], 0)
+
+            self.assertEqual(item['ls_last_time_up'], 0)
+            self.assertEqual(item['ls_last_time_down'], 0)
+            self.assertEqual(item['ls_last_time_unknown'], 0)
+            self.assertEqual(item['ls_last_time_unreachable'], 0)
+            number += 1
+        self.assertEqual(1, number)
 
         # Simulate an host UP brok
         data = json.loads(open('cfg/brok_host_srv001_up.json').read())
@@ -342,15 +386,16 @@ class TestBrokerCommon(unittest2.TestCase):
         self.brokmodule.get_refs('livestate_host')
         self.assertEqual(len(self.brokmodule.ref_live['host']), 1)
 
-        # Initial host state as created in the backend
+        # Initial host state as left by the former test
+        # ------
         params = {'where': '{"name": "srv001"}'}
         r = self.backend.get('host', params)
         self.assertEqual(len(r['_items']), 1)
         number = 0
         for index, item in enumerate(r['_items']):
-            self.assertEqual(item['ls_state'], 'UNREACHABLE')       # UNREACHABLE
-            self.assertEqual(item['ls_state_type'], 'HARD')         # SOFT
-            self.assertEqual(item['ls_state_id'], 3)
+            self.assertEqual(item['ls_state'], 'DOWN')
+            self.assertEqual(item['ls_state_type'], 'SOFT')
+            self.assertEqual(item['ls_state_id'], 2)
 
             self.assertEqual(item['ls_acknowledged'], False)
             self.assertEqual(item['ls_acknowledgement_type'], 1)
@@ -358,28 +403,28 @@ class TestBrokerCommon(unittest2.TestCase):
 
             self.assertEqual(item['ls_impact'], 0)
 
-            self.assertEqual(item['ls_last_check'], 0)
-            self.assertEqual(item['ls_last_state'], 'OK')           # UNREACHABLE
-            self.assertEqual(item['ls_last_state_type'], 'HARD')    # SOFT
-            self.assertEqual(item['ls_last_state_changed'], 0)
-            self.assertEqual(item['ls_next_check'], 0)
+            self.assertEqual(item['ls_last_check'], 1444427104)
+            self.assertEqual(item['ls_last_state'], 'UP')
+            self.assertEqual(item['ls_last_state_type'], 'HARD')
+            self.assertEqual(item['ls_last_state_changed'], 1444427108)
+            self.assertEqual(item['ls_next_check'], 1444428104)
 
-            self.assertEqual(item['ls_output'], '')
+            self.assertEqual(item['ls_output'], 'CRITICAL - Plugin timed out after 10 seconds')
             self.assertEqual(item['ls_long_output'], '')
             self.assertEqual(item['ls_perf_data'], '')
 
             self.assertEqual(item['ls_current_attempt'], 0)
             self.assertEqual(item['ls_attempt'], 0)
             self.assertEqual(item['ls_max_attempts'], 0)
-            self.assertEqual(item['ls_latency'], 0.0)
-            self.assertEqual(item['ls_execution_time'], 0.0)
+            self.assertEqual(item['ls_latency'], 0.2317881584)
+            self.assertEqual(item['ls_execution_time'], 3.1496069431000002)
 
             self.assertEqual(item['ls_passive_check'], False)
 
-            self.assertEqual(item['ls_last_hard_state_changed'], 0)
+            self.assertEqual(item['ls_last_hard_state_changed'], 1444427108)
 
             self.assertEqual(item['ls_last_time_up'], 0)
-            self.assertEqual(item['ls_last_time_down'], 0)
+            self.assertEqual(item['ls_last_time_down'], 1444427108)
             self.assertEqual(item['ls_last_time_unknown'], 0)
             self.assertEqual(item['ls_last_time_unreachable'], 0)
             number += 1
@@ -424,10 +469,10 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_impact'], 0)
 
             self.assertEqual(item['ls_last_check'], 1496234083)         # !
-            self.assertEqual(item['ls_last_state'], 'UNREACHABLE')      # !
-            self.assertEqual(item['ls_last_state_type'], 'HARD')
+            self.assertEqual(item['ls_last_state'], 'DOWN')      # !
+            self.assertEqual(item['ls_last_state_type'], 'SOFT')
             self.assertEqual(item['ls_last_state_changed'], 1496234084) # !
-            self.assertEqual(item['ls_next_check'], 0)
+            self.assertEqual(item['ls_next_check'], 1444428104)
 
             self.assertEqual(item['ls_output'], 'Host assumed to be UP')
             self.assertEqual(item['ls_long_output'], 'Host assumed to be UP')
@@ -491,7 +536,7 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_last_state'], 'UP')               # !
             self.assertEqual(item['ls_last_state_type'], 'HARD')
             self.assertEqual(item['ls_last_state_changed'], 1496234084) # !
-            self.assertEqual(item['ls_next_check'], 0)
+            self.assertEqual(item['ls_next_check'], 1444428104)
 
             self.assertEqual(item['ls_output'], 'Host assumed to be UP')
             self.assertEqual(item['ls_long_output'], 'Host assumed to be UP')
@@ -555,7 +600,7 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_last_state'], 'UP')               # !
             self.assertEqual(item['ls_last_state_type'], 'HARD')
             self.assertEqual(item['ls_last_state_changed'], 1496234084) # !
-            self.assertEqual(item['ls_next_check'], 0)
+            self.assertEqual(item['ls_next_check'], 1444428104)
 
             self.assertEqual(item['ls_output'], 'Host assumed to be UP')
             self.assertEqual(item['ls_long_output'], 'Host assumed to be UP')
@@ -620,7 +665,7 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_last_state'], 'UP')               # !
             self.assertEqual(item['ls_last_state_type'], 'HARD')
             self.assertEqual(item['ls_last_state_changed'], 1496234084) # !
-            self.assertEqual(item['ls_next_check'], 0)
+            self.assertEqual(item['ls_next_check'], 1444428104)
 
             self.assertEqual(item['ls_output'], 'Host is DOWN')
             self.assertEqual(item['ls_long_output'], 'Host is DOWN')

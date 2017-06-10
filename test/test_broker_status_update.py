@@ -215,7 +215,7 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
             u'passive_service_checks_enabled': True,
             u'event_handlers_enabled': True,
             u'command_file': u'',
-            u'global_host_event_handler': 'None',
+            u'global_host_event_handler': None,
             u'interval_length': 60,
             u'modified_host_attributes': 0,
             u'check_external_commands': True,
@@ -267,7 +267,7 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
             u'passive_service_checks_enabled': True,
             u'event_handlers_enabled': True,
             u'command_file': u'',
-            u'global_host_event_handler': 'None',
+            u'global_host_event_handler': None,
             u'interval_length': 60,
             u'modified_host_attributes': 0,
             u'check_external_commands': True,
@@ -335,7 +335,7 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
             u'passive_service_checks_enabled': True,
             u'event_handlers_enabled': True,
             u'command_file': u'',
-            u'global_host_event_handler': 'None',
+            u'global_host_event_handler': None,
             u'interval_length': 60,
             u'modified_host_attributes': 0,
             u'check_external_commands': True,
@@ -381,6 +381,8 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         expected[u'notes'] = u''
         expected[u'notes_url'] = u''
         expected[u'_realm'] = self.realm_all
+        expected[u'global_host_event_handler'] = str(expected[u'global_host_event_handler'])
+        expected[u'global_service_event_handler'] = u'None'
         self.assertEqual(expected, alignak)
 
         # --- 1
@@ -406,7 +408,7 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
             u'passive_service_checks_enabled': True,
             u'event_handlers_enabled': True,
             u'command_file': u'',
-            u'global_host_event_handler': 'None',
+            u'global_host_event_handler': None,
             u'interval_length': 60,
             u'modified_host_attributes': 0,
             u'check_external_commands': True,
@@ -451,6 +453,8 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         expected[u'notes'] = u''
         expected[u'notes_url'] = u''
         expected[u'_realm'] = self.realm_all
+        expected[u'global_host_event_handler'] = str(expected[u'global_host_event_handler'])
+        expected[u'global_service_event_handler'] = u'None'
         self.assertEqual(expected, alignak)
 
         # --- 2
@@ -476,7 +480,7 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
             u'passive_service_checks_enabled': True,
             u'event_handlers_enabled': True,
             u'command_file': u'',
-            u'global_host_event_handler': 'None',
+            u'global_host_event_handler': None,
             u'interval_length': 60,
             u'modified_host_attributes': 0,
             u'check_external_commands': True,
@@ -526,6 +530,8 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         expected[u'notes'] = u''
         expected[u'notes_url'] = u''
         expected[u'_realm'] = self.realm_all
+        expected[u'global_host_event_handler'] = str(expected[u'global_host_event_handler'])
+        expected[u'global_service_event_handler'] = u'None'
         self.assertEqual(expected, alignak)
 
         # --- 3
@@ -551,7 +557,7 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
             u'passive_service_checks_enabled': True,
             u'event_handlers_enabled': True,
             u'command_file': u'',
-            u'global_host_event_handler': 'None',
+            u'global_host_event_handler': None,
             u'interval_length': 60,
             u'modified_host_attributes': 0,
             u'check_external_commands': True,
@@ -600,6 +606,8 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         expected[u'notes'] = u''
         expected[u'notes_url'] = u''
         expected[u'_realm'] = self.realm_all
+        expected[u'global_host_event_handler'] = str(expected[u'global_host_event_handler'])
+        expected[u'global_service_event_handler'] = u'None'
         self.assertEqual(expected, alignak)
 
         # --- 4
@@ -625,7 +633,7 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
             u'passive_service_checks_enabled': True,
             u'event_handlers_enabled': True,
             u'command_file': u'',
-            u'global_host_event_handler': 'None',
+            u'global_host_event_handler': None,
             u'interval_length': 60,
             u'modified_host_attributes': 0,
             u'check_external_commands': True,
@@ -677,6 +685,8 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         expected[u'notes'] = u''
         expected[u'notes_url'] = u''
         expected[u'_realm'] = self.realm_all
+        expected[u'global_host_event_handler'] = str(expected[u'global_host_event_handler'])
+        expected[u'global_service_event_handler'] = u'None'
         self.assertEqual(expected, alignak)
 
     def check_host_brok(self, prop, value):

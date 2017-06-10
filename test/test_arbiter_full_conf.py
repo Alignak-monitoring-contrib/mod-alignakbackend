@@ -118,7 +118,7 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
             u'passive_service_checks_enabled': True,
             u'event_handlers_enabled': True,
             u'command_file': u'',
-            u'global_host_event_handler': 'None',
+            u'global_host_event_handler': None,
             u'interval_length': 60,
             u'modified_host_attributes': 0,
             u'check_external_commands': True,
@@ -126,7 +126,7 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
             u'modified_service_attributes': 0,
             u'passive_host_checks_enabled': True,
             u'obsess_over_hosts': False,
-            u'global_service_event_handler': 'None',
+            u'global_service_event_handler': None,
             u'notifications_enabled': True,
             u'check_service_freshness': True,
             u'check_host_freshness': True,
@@ -162,6 +162,8 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
         expected[u'alias'] = u''
         expected[u'notes'] = u''
         expected[u'notes_url'] = u''
+        expected[u'global_host_event_handler'] = str(expected[u'global_host_event_handler'])
+        expected[u'global_service_event_handler'] = u'None'
         self.assertEqual(configuration, expected)
 
         # Get another program status brok

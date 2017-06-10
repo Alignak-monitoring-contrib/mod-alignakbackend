@@ -695,6 +695,16 @@ class AlignakBackendBroker(BaseModule):
                            "Your Alignak backend is in a very bad state!")
             return
 
+        # Set event handlers as strings - simple protectection
+        if 'global_host_event_handler' in brok.data and \
+                not isinstance(brok.data['global_host_event_handler'], basestring):
+            brok.data['global_host_event_handler'] = str(brok.data['global_host_event_handler'])
+
+        if 'global_service_event_handler' in brok.data and \
+                not isinstance(brok.data['global_service_event_handler'], basestring):
+            brok.data['global_service_event_handler'] = \
+                str(brok.data['global_service_event_handler'])
+
         name = brok.data.pop('alignak_name')
         brok.data['name'] = name
         brok.data['_realm'] = self.default_realm

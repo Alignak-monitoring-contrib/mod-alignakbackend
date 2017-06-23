@@ -582,7 +582,7 @@ class AlignakBackendBroker(BaseModule):
                 continue
 
             # Filter noisy keys...
-            if key in ["display_name"]:
+            if key in ["display_name", "tags"]:
                 logger.debug("Filtered noisy key: %s", key)
                 continue
 

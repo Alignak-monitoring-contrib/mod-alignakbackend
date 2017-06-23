@@ -56,8 +56,7 @@ class AlignakBackendScheduler(BaseModule):
     """
 
     def __init__(self, mod_conf):
-        """
-        Module initialization
+        """Module initialization
 
         mod_conf is a dictionary that contains:
         - all the variables declared in the module configuration file
@@ -100,8 +99,7 @@ class AlignakBackendScheduler(BaseModule):
         time.sleep(1)
 
     def getToken(self):
-        """
-        Authenticate and get the token
+        """Authenticate and get the token
 
         :return: None
         """
@@ -186,7 +184,7 @@ class AlignakBackendScheduler(BaseModule):
 
         data_to_save = scheduler.get_retention_data()
 
-        # clean hosts we will re-upload the retention
+        # clean hosts we will update the retention data
         response = self.backend.get_all('retentionhost')
         for host in response['_items']:
             if host['host'] in data_to_save['hosts']:
@@ -200,10 +198,11 @@ class AlignakBackendScheduler(BaseModule):
                     logger.exception("Backend exception: %s", exp)
                     self.backend_connected = False
 
-        # Add all hosts after
+        # Add then store the hosts retention data
         for host in data_to_save['hosts']:
             data_to_save['hosts'][host]['host'] = host
             try:
+                logger.debug('Host retention data: %s', data_to_save['hosts'][host])
                 self.backend.post('retentionhost', data=data_to_save['hosts'][host])
             except BackendException as exp:  # pragma: no cover - should not happen
                 logger.error('Post retentionhost error')
@@ -213,7 +212,7 @@ class AlignakBackendScheduler(BaseModule):
                 return
         logger.info('%d hosts saved in retention', len(data_to_save['hosts']))
 
-        # clean services we will re-upload the retention
+        # clean services we will update the retention data
         response = self.backend.get_all('retentionservice')
         for service in response['_items']:
             if (service['service'][0], service['service'][1]) in data_to_save['services']:
@@ -227,10 +226,11 @@ class AlignakBackendScheduler(BaseModule):
                     logger.exception("Backend exception: %s", exp)
                     self.backend_connected = False
 
-        # Add all services after
+        # Add then store the services retention data
         for service in data_to_save['services']:
             data_to_save['services'][service]['service'] = service
             try:
+                logger.debug('Service retention data: %s', data_to_save['services'][service])
                 self.backend.post('retentionservice', data=data_to_save['services'][service])
             except BackendException as exp:  # pragma: no cover - should not happen
                 logger.error('Post retentionservice error')

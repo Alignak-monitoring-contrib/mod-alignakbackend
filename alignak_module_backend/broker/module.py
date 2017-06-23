@@ -581,6 +581,11 @@ class AlignakBackendBroker(BaseModule):
                 logger.debug("Filtered live state: %s", key)
                 continue
 
+            # Filter noisy keys...
+            if key in ["display_name"]:
+                logger.debug("Filtered noisy key: %s", key)
+                continue
+
             # Filter linked objects...
             if key in ['parents', 'parent_dependencies',
                        'check_command', 'event_handler', 'snapshot_command', 'check_period',
@@ -612,7 +617,8 @@ class AlignakBackendBroker(BaseModule):
 
         update = False
         if differences:
-            logger.info("Some modifications exist: %s.", differences)
+            logger.info("%s / %s, some modifications exist: %s.",
+                        endpoint, item['name'], differences)
 
             headers = {
                 'Content-Type': 'application/json',

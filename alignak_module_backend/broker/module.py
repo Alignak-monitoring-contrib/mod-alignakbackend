@@ -280,7 +280,7 @@ class AlignakBackendBroker(BaseModule):
         elif obj_type == 'service':
             service_name = '__'.join([data['host_name'], data['service_description']])
             if service_name in self.mapping['service']:
-                # Received data for an host:
+                # Received data for a service:
                 data_to_update = {
                     'ls_next_check': data['next_chk']
                 }
@@ -778,7 +778,7 @@ class AlignakBackendBroker(BaseModule):
                 if brok.data['contact_name'] not in self.mapping['user']:
                     logger.debug("Got a brok %s for an unknown user: '%s' (%s)",
                                  brok.type, contact_name, brok.data)
-                    return
+                    return False
                 endpoint = 'user'
                 name = contact_name
             else:
@@ -787,7 +787,7 @@ class AlignakBackendBroker(BaseModule):
                     if brok.data['host_name'] not in self.mapping['host']:
                         logger.debug("Got a brok %s for an unknown host: '%s' (%s)",
                                      brok.type, host_name, brok.data)
-                        return
+                        return False
                     endpoint = 'host'
                     name = host_name
                     if 'service_description' in brok.data:
@@ -797,7 +797,7 @@ class AlignakBackendBroker(BaseModule):
                         if service_name not in self.mapping['service']:
                             logger.debug("Got a brok %s for an unknown service: '%s' (%s)",
                                          brok.type, service_name, brok.data)
-                            return
+                            return False
             if name:
                 logger.debug("Received a brok: %s, for %s '%s'", brok.type, endpoint, name)
             else:

@@ -281,7 +281,7 @@ class TestBrokerCommon(unittest2.TestCase):
         data = json.loads(open('cfg/brok_host_srv001_up.json').read())
         b = Brok({'data': data, 'type': 'host_check_result'}, False)
         b.prepare()
-        self.brokmodule.manage_brok(b)
+        assert self.brokmodule.manage_brok(b) is True
 
         params = {'where': '{"name": "srv001"}'}
         r = self.backend.get('host', params)
@@ -313,7 +313,7 @@ class TestBrokerCommon(unittest2.TestCase):
         data = json.loads(open('cfg/brok_host_srv001_next_check.json').read())
         b = Brok({'data': data, 'type': 'host_next_schedule'}, False)
         b.prepare()
-        self.brokmodule.manage_brok(b)
+        assert self.brokmodule.manage_brok(b) is True
 
         params = {'where': '{"name": "srv001"}'}
         r = self.backend.get('host', params)
@@ -361,7 +361,7 @@ class TestBrokerCommon(unittest2.TestCase):
         data = json.loads(open('cfg/brok_host_srv001_down.json').read())
         b = Brok({'data': data, 'type': 'host_check_result'}, False)
         b.prepare()
-        self.brokmodule.manage_brok(b)
+        assert self.brokmodule.manage_brok(b) is True
 
         params = {'where': '{"name": "srv001"}'}
         r = self.backend.get('host', params)
@@ -464,13 +464,14 @@ class TestBrokerCommon(unittest2.TestCase):
         }
         b = Brok({'data': data, 'type': 'host_check_result'}, False)
         b.prepare()
-        self.brokmodule.manage_brok(b)
+        assert self.brokmodule.manage_brok(b) is True
 
         # Updated host state
         params = {'where': '{"name": "srv001"}'}
         r = self.backend.get('host', params)
         self.assertEqual(len(r['_items']), 1)
         number = 0
+        new_updated = 0
         for index, item in enumerate(r['_items']):
             self.assertEqual(item['ls_state'], 'UP')                    # !
             self.assertEqual(item['ls_state_type'], 'HARD')
@@ -506,8 +507,12 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_last_time_down'], 0)
             self.assertEqual(item['ls_last_time_unknown'], 0)
             self.assertEqual(item['ls_last_time_unreachable'], 0)
+            new_updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
+        print("Updated: %s" % new_updated)
+        # The item do not have its _updated field changed!
+        self.assertEqual(updated, new_updated)
 
         # --- #2 - Post a real host UP brok
         data = {
@@ -528,7 +533,7 @@ class TestBrokerCommon(unittest2.TestCase):
         }
         b = Brok({'data': data, 'type': 'host_check_result'}, False)
         b.prepare()
-        self.brokmodule.manage_brok(b)
+        assert self.brokmodule.manage_brok(b) is True
 
         # Updated host state
         params = {'where': '{"name": "srv001"}'}
@@ -570,8 +575,12 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_last_time_down'], 0)
             self.assertEqual(item['ls_last_time_unknown'], 0)
             self.assertEqual(item['ls_last_time_unreachable'], 0)
+            new_updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
+        print("Updated: %s" % new_updated)
+        # The item do not have its _updated field changed!
+        self.assertEqual(updated, new_updated)
 
         # --- #3 - Post a real host UP brok
         data = {
@@ -592,7 +601,7 @@ class TestBrokerCommon(unittest2.TestCase):
         }
         b = Brok({'data': data, 'type': 'host_check_result'}, False)
         b.prepare()
-        self.brokmodule.manage_brok(b)
+        assert self.brokmodule.manage_brok(b) is True
 
         # Updated host state
         params = {'where': '{"name": "srv001"}'}
@@ -634,8 +643,12 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_last_time_down'], 0)
             self.assertEqual(item['ls_last_time_unknown'], 0)
             self.assertEqual(item['ls_last_time_unreachable'], 0)
+            new_updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
+        print("Updated: %s" % new_updated)
+        # The item do not have its _updated field changed!
+        self.assertEqual(updated, new_updated)
 
         # --- #4 - Post a real host DOWN brok
         data = {
@@ -657,7 +670,7 @@ class TestBrokerCommon(unittest2.TestCase):
         }
         b = Brok({'data': data, 'type': 'host_check_result'}, False)
         b.prepare()
-        self.brokmodule.manage_brok(b)
+        assert self.brokmodule.manage_brok(b) is True
 
         # Updated host state
         params = {'where': '{"name": "srv001"}'}
@@ -699,8 +712,12 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_last_time_down'], 1496240268)
             self.assertEqual(item['ls_last_time_unknown'], 0)
             self.assertEqual(item['ls_last_time_unreachable'], 0)
+            new_updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
+        print("Updated: %s" % new_updated)
+        # The item do not have its _updated field changed!
+        self.assertEqual(updated, new_updated)
 
     def test_04_manage_brok_service(self):
         """Test service livestate is updated with an alignak brok"""
@@ -713,12 +730,13 @@ class TestBrokerCommon(unittest2.TestCase):
         data = json.loads(open('cfg/brok_service_ping_ok.json').read())
         b = Brok({'data': data, 'type': 'service_check_result'}, False)
         b.prepare()
-        self.brokmodule.manage_brok(b)
+        assert self.brokmodule.manage_brok(b) is True
 
         params = {'where': '{"name": "ping"}'}
         r = self.backend.get('service', params)
         self.assertEqual(len(r['_items']), 1)
         number = 0
+        updated = 0
         for index, item in enumerate(r['_items']):
             self.assertEqual(item['ls_state'], 'OK')
             self.assertEqual(item['ls_state_id'], 0)
@@ -735,19 +753,22 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_downtimed'], False)
             self.assertEqual(item['ls_execution_time'], 3.1496069431000002)
             self.assertEqual(item['ls_latency'], 0.2317881584)
+            updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
+        print("Updated: %s" % updated)
 
         # Simulate a service next scheduler brok
         data = json.loads(open('cfg/brok_service_ping_next_check.json').read())
         b = Brok({'data': data, 'type': 'service_next_schedule'}, False)
         b.prepare()
-        self.brokmodule.manage_brok(b)
+        assert self.brokmodule.manage_brok(b) is True
 
         params = {'where': '{"name": "ping"}'}
         r = self.backend.get('service', params)
         self.assertEqual(len(r['_items']), 1)
         number = 0
+        new_updated = 0
         for index, item in enumerate(r['_items']):
             self.assertEqual(item['ls_state'], 'OK')
             self.assertEqual(item['ls_state_id'], 0)
@@ -766,8 +787,12 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_latency'], 0.2317881584)
             # Next check !
             self.assertEqual(item['ls_next_check'], 1473598375)
+            new_updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
+        print("Updated: %s" % new_updated)
+        # The item do not have its _updated field changed!
+        self.assertEqual(updated, new_updated)
 
         r = self.backend.get('service')
         self.assertEqual(len(r['_items']), 2)
@@ -785,3 +810,95 @@ class TestBrokerCommon(unittest2.TestCase):
         self.assertEqual(r['_items'][0]['services_unknown_soft'], 0)
         self.assertEqual(r['_items'][0]['services_acknowledged'], 0)
         self.assertEqual(r['_items'][0]['services_in_downtime'], 0)
+
+        # --- Post a real service check result brok
+        for i in range(0,9):
+            data = {            u'last_time_unreachable': 1498188961, u'last_problem_id': 2, u'retry_interval': 0,
+                u'last_event_id': 2, u'problem_has_been_acknowledged': False, u'last_time_critical': 0,
+                u'last_time_warning': 1498132868, u'command_name': u'_echo', u'last_state': u'OK',
+                u'latency': 0, u'current_event_id': 11, u'last_state_type': u'HARD',
+                u'last_hard_state_change': 1498190476, u'percent_state_change': 34.3, u'state': u'OK',
+                u'last_chk': 1498191517, u'last_state_id': 0, u'host_name': u'srv001',
+                u'timeout': 0, u'last_time_unknown': 0, u'execution_time': 0.0, u'start_time': 0,
+                u'return_code': 0, u'state_type': u'HARD', u'state_id': 0,
+                u'service_description': u'ping', u'in_checking': False, u'early_timeout': 0,
+                u'in_scheduled_downtime': False, u'attempt': 1, u'state_type_id': 1,
+                u'acknowledgement_type': 1, u'last_state_change': 1498190476.866557,
+                'instance_id': u'936d0f5e6c10471f8d23fbe62a384f24', u'long_output': u'',
+                u'current_problem_id': 0, u'last_time_ok': 1498191518, u'check_interval': 5,
+                u'output': u'OK: uptime: 16:42h, boot: 2017-06-22 11:35:44 (UTC)',
+                u'has_been_checked': 1, u'perf_data': u"'uptime'=60173s;2100;90000", u'end_time': 0
+            }
+            b = Brok({'data': data, 'type': 'service_check_result'}, False)
+            b.prepare()
+            assert self.brokmodule.manage_brok(b) is True
+
+            params = {'where': '{"name": "ping"}'}
+            r = self.backend.get('service', params)
+            self.assertEqual(len(r['_items']), 1)
+            number = 0
+            new_updated = 0
+            for index, item in enumerate(r['_items']):
+                self.assertEqual(item['ls_state'], 'OK')
+                self.assertEqual(item['ls_state_id'], 0)
+                self.assertEqual(item['ls_state_type'], 'HARD')
+                self.assertEqual(item['ls_last_check'], 1498191517)
+                self.assertEqual(item['ls_last_state'], 'OK')
+                self.assertEqual(item['ls_last_state_type'], 'HARD')
+                self.assertEqual(item['ls_last_state_changed'], 1498190476)
+                self.assertEqual(item['ls_output'], 'OK: uptime: 16:42h, boot: 2017-06-22 11:35:44 (UTC)')
+                self.assertEqual(item['ls_long_output'], '')
+                self.assertEqual(item['ls_perf_data'], "'uptime'=60173s;2100;90000")
+                self.assertEqual(item['ls_acknowledged'], False)
+                self.assertEqual(item['ls_downtimed'], False)
+                self.assertEqual(item['ls_execution_time'], 0.0)
+                self.assertEqual(item['ls_latency'], 0.0)
+                # Next check !
+                self.assertEqual(item['ls_next_check'], 1473598375)
+                new_updated = item['_updated']
+                number += 1
+            self.assertEqual(1, number)
+            print("Updated: %s" % new_updated)
+            # The item do not have its _updated field changed!
+            self.assertEqual(updated, new_updated)
+
+        # --- Post a real service next check brok
+        for i in range(0,9):
+            data = {
+                'instance_id': u'c54d19e52f5d46fb976d373ee4bae3c9',
+                u'service_description': u'ping', u'next_chk': 1498197600,
+                u'in_checking': True, u'host_name': u'srv001'
+            }
+            b = Brok({'data': data, 'type': 'service_next_schedule'}, False)
+            b.prepare()
+            assert self.brokmodule.manage_brok(b) is True
+
+            params = {'where': '{"name": "ping"}'}
+            r = self.backend.get('service', params)
+            self.assertEqual(len(r['_items']), 1)
+            number = 0
+            new_updated = 0
+            for index, item in enumerate(r['_items']):
+                self.assertEqual(item['ls_state'], 'OK')
+                self.assertEqual(item['ls_state_id'], 0)
+                self.assertEqual(item['ls_state_type'], 'HARD')
+                self.assertEqual(item['ls_last_check'], 1498191517)
+                self.assertEqual(item['ls_last_state'], 'OK')
+                self.assertEqual(item['ls_last_state_type'], 'HARD')
+                self.assertEqual(item['ls_last_state_changed'], 1498190476)
+                self.assertEqual(item['ls_output'], 'OK: uptime: 16:42h, boot: 2017-06-22 11:35:44 (UTC)')
+                self.assertEqual(item['ls_long_output'], '')
+                self.assertEqual(item['ls_perf_data'], "'uptime'=60173s;2100;90000")
+                self.assertEqual(item['ls_acknowledged'], False)
+                self.assertEqual(item['ls_downtimed'], False)
+                self.assertEqual(item['ls_execution_time'], 0.0)
+                self.assertEqual(item['ls_latency'], 0.0)
+                # Next check !
+                self.assertEqual(item['ls_next_check'], 1498197600)
+                new_updated = item['_updated']
+                number += 1
+            self.assertEqual(1, number)
+            print("Updated: %s" % new_updated)
+            # The item do not have its _updated field changed!
+            self.assertEqual(updated, new_updated)
+

@@ -322,7 +322,7 @@ class AlignakBackendArbiter(BaseModule):
         logger.info("Got %d realms",
                     len(all_realms['_items']))
         for realm in all_realms['_items']:
-            logger.info("- %s", realm['name'])
+            logger.debug("- %s", realm['name'])
             self.configraw['realms'][realm['_id']] = realm['name']
             # we store the relation name => id because will use it for add / update alignak daemon
             # state in the backend
@@ -354,7 +354,7 @@ class AlignakBackendArbiter(BaseModule):
         logger.info("Got %d commands",
                     len(all_commands['_items']))
         for command in all_commands['_items']:
-            logger.info("- %s", command['name'])
+            logger.debug("- %s", command['name'])
             self.configraw['commands'][command['_id']] = command['name']
             command['imported_from'] = u'alignak-backend'
             if 'definition_order' in command and command['definition_order'] == 100:
@@ -387,7 +387,7 @@ class AlignakBackendArbiter(BaseModule):
         logger.info("Got %d timeperiods",
                     len(all_timeperiods['_items']))
         for timeperiod in all_timeperiods['_items']:
-            logger.info("- %s", timeperiod['name'])
+            logger.debug("- %s", timeperiod['name'])
             self.configraw['timeperiods'][timeperiod['_id']] = timeperiod['name']
             timeperiod['imported_from'] = u'alignak-backend'
             if 'definition_order' in timeperiod and timeperiod['definition_order'] == 100:
@@ -419,7 +419,7 @@ class AlignakBackendArbiter(BaseModule):
         logger.info("Got %d contactgroups",
                     len(all_contactgroups['_items']))
         for contactgroup in all_contactgroups['_items']:
-            logger.info("- %s", contactgroup['name'])
+            logger.debug("- %s", contactgroup['name'])
             self.configraw['contactgroups'][contactgroup['_id']] = contactgroup['name']
 
         for contactgroup in all_contactgroups['_items']:
@@ -450,7 +450,7 @@ class AlignakBackendArbiter(BaseModule):
         logger.info("Got %d contacts",
                     len(all_contacts['_items']))
         for contact in all_contacts['_items']:
-            logger.info("- %s", contact['name'])
+            logger.debug("- %s", contact['name'])
             self.configraw['contacts'][contact['_id']] = contact['name']
             contact['imported_from'] = u'alignak-backend'
             if 'definition_order' in contact and contact['definition_order'] == 100:
@@ -490,6 +490,8 @@ class AlignakBackendArbiter(BaseModule):
             self.clean_unusable_keys(contact)
             del contact['notes']
             del contact['ui_preferences']
+            del contact['can_update_livestate']
+            del contact['skill_level']
             self.convert_lists(contact)
 
             # Set default user
@@ -509,7 +511,7 @@ class AlignakBackendArbiter(BaseModule):
         logger.info("Got %d hostgroups",
                     len(all_hostgroups['_items']))
         for hostgroup in all_hostgroups['_items']:
-            logger.info("- %s", hostgroup['name'])
+            logger.debug("- %s", hostgroup['name'])
             self.configraw['hostgroups'][hostgroup['_id']] = hostgroup['name']
 
         for hostgroup in all_hostgroups['_items']:
@@ -540,7 +542,7 @@ class AlignakBackendArbiter(BaseModule):
         logger.info("Got %d hosts", len(all_hosts['_items']))
 
         for host in all_hosts['_items']:
-            logger.info("- %s", host['name'])
+            logger.debug("- %s", host['name'])
             self.configraw['hosts'][host['_id']] = host['name']
             host[u'host_name'] = host['name']
             host[u'imported_from'] = u'alignak-backend'
@@ -671,7 +673,7 @@ class AlignakBackendArbiter(BaseModule):
         logger.info("Got %d servicegroups",
                     len(all_servicegroups['_items']))
         for servicegroup in all_servicegroups['_items']:
-            logger.info("- %s", servicegroup['name'])
+            logger.debug("- %s", servicegroup['name'])
             self.configraw['servicegroups'][servicegroup['_id']] = servicegroup['name']
 
         for servicegroup in all_servicegroups['_items']:
@@ -712,7 +714,7 @@ class AlignakBackendArbiter(BaseModule):
         for service in all_services['_items']:
             # Get host name from the previously loaded hosts list
             service['host_name'] = self.configraw['hosts'][service['host']]
-            logger.info("- %s/%s", service['host_name'], service['name'])
+            logger.debug("- %s/%s", service['host_name'], service['name'])
             self.configraw['services'][service['_id']] = service['name']
             service['imported_from'] = u'alignak-backend'
 
@@ -842,7 +844,7 @@ class AlignakBackendArbiter(BaseModule):
         logger.info("Got %d hostdependencies",
                     len(all_hostdependencies['_items']))
         for hostdependency in all_hostdependencies['_items']:
-            logger.info("- %s", hostdependency['name'])
+            logger.debug("- %s", hostdependency['name'])
             self.configraw['hostdependencies'][hostdependency['_id']] = hostdependency['name']
             hostdependency['imported_from'] = u'alignak-backend'
             if 'definition_order' in hostdependency and hostdependency['definition_order'] == 100:
@@ -879,7 +881,7 @@ class AlignakBackendArbiter(BaseModule):
         logger.info("Got %d hostescalations",
                     len(all_hostescalations['_items']))
         for hostescalation in all_hostescalations['_items']:
-            logger.info("- %s", hostescalation['name'])
+            logger.debug("- %s", hostescalation['name'])
             self.configraw['hostescalations'][hostescalation['_id']] = hostescalation['name']
             # hostescalation['hostescalation_name'] = hostescalation['name']
             hostescalation['imported_from'] = u'alignak-backend'
@@ -915,7 +917,7 @@ class AlignakBackendArbiter(BaseModule):
         logger.info("Got %d servicedependencies",
                     len(all_servicedependencies['_items']))
         for servicedependency in all_servicedependencies['_items']:
-            logger.info("- %s", servicedependency['name'])
+            logger.debug("- %s", servicedependency['name'])
             self.configraw['servicedependencies'][servicedependency['_id']] = \
                 servicedependency['name']
             servicedependency['imported_from'] = u'alignak-backend'
@@ -968,7 +970,7 @@ class AlignakBackendArbiter(BaseModule):
         logger.info("Got %d serviceescalations",
                     len(all_serviceescalations['_items']))
         for serviceescalation in all_serviceescalations['_items']:
-            logger.info("- %s", serviceescalation['name'])
+            logger.debug("- %s", serviceescalation['name'])
             self.configraw['serviceescalations'][serviceescalation['_id']] = \
                 serviceescalation['name']
             # serviceescalation['serviceescalation_name'] = serviceescalation['name']

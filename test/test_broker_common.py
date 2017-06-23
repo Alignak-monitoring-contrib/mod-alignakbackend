@@ -287,6 +287,7 @@ class TestBrokerCommon(unittest2.TestCase):
         r = self.backend.get('host', params)
         self.assertEqual(len(r['_items']), 1)
         number = 0
+        updated = 0
         for index, item in enumerate(r['_items']):
             self.assertEqual(item['ls_state'], 'UP')
             self.assertEqual(item['ls_state_id'], 1)
@@ -303,8 +304,10 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_downtimed'], False)
             self.assertEqual(item['ls_execution_time'], 3.1496069431000002)
             self.assertEqual(item['ls_latency'], 0.2317881584)
+            updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
+        print("Updated: %s" % updated)
 
         # Simulate an host next check brok
         data = json.loads(open('cfg/brok_host_srv001_next_check.json').read())
@@ -316,6 +319,7 @@ class TestBrokerCommon(unittest2.TestCase):
         r = self.backend.get('host', params)
         self.assertEqual(len(r['_items']), 1)
         number = 0
+        new_updated = 0
         for index, item in enumerate(r['_items']):
             self.assertEqual(item['ls_state'], 'UP')
             self.assertEqual(item['ls_state_id'], 1)
@@ -334,8 +338,12 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_latency'], 0.2317881584)
             # Next check !
             self.assertEqual(item['ls_next_check'], 1444428104)
+            new_updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
+        print("Updated: %s" % new_updated)
+        # The item do not have its _updated field changed!
+        self.assertEqual(updated, new_updated)
 
         r = self.backend.get('livesynthesis')
         self.assertEqual(len(r['_items']), 1)
@@ -366,8 +374,12 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_state_type'], 'SOFT')
             self.assertEqual(item['ls_output'], 'CRITICAL - Plugin timed out after 10 seconds')
             self.assertEqual(item['ls_perf_data'], '')
+            new_updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
+        print("Updated: %s" % new_updated)
+        # The item do not have its _updated field changed!
+        self.assertEqual(updated, new_updated)
 
         r = self.backend.get('livesynthesis')
         self.assertEqual(len(r['_items']), 1)
@@ -392,6 +404,7 @@ class TestBrokerCommon(unittest2.TestCase):
         r = self.backend.get('host', params)
         self.assertEqual(len(r['_items']), 1)
         number = 0
+        updated = 0
         for index, item in enumerate(r['_items']):
             self.assertEqual(item['ls_state'], 'DOWN')
             self.assertEqual(item['ls_state_type'], 'SOFT')
@@ -427,6 +440,7 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_last_time_down'], 1444427108)
             self.assertEqual(item['ls_last_time_unknown'], 0)
             self.assertEqual(item['ls_last_time_unreachable'], 0)
+            updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
 

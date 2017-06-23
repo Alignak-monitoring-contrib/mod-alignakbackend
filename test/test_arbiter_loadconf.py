@@ -236,7 +236,7 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'definition_order': 50,
                 u'service_notifications_enabled': False,
                 u'can_submit_commands': True,
-                u'can_update_livestate': True,
+                # u'can_update_livestate': True,
                 'contact_name': u'admin',
                 'service_notification_commands': '',
                 u'service_notification_options': u'w,u,c,r,f,s',
@@ -259,14 +259,14 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'email': u'',
                 u'alias': u'Administrator',
                 u'host_notification_options': u'd,u,r,f,s',
-                u'skill_level': 2
+                # u'skill_level': 2
             },
             # the test created user has default notifications (eg. enabled)
             {
                 u'definition_order': 50,
-                u'service_notifications_enabled': True,
+                u'service_notifications_enabled': False,
                 u'can_submit_commands': False,
-                u'can_update_livestate': False,
+                # u'can_update_livestate': False,
                 'contact_name': u'jeronimo',
                 'service_notification_commands': '',
                 u'service_notification_options': u'w,u,c,r,f,s',
@@ -282,14 +282,14 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'imported_from': u'alignak-backend',
                 u'notificationways': u'',
                 u'host_notification_period': u'24x7',
-                u'host_notifications_enabled': True,
+                u'host_notifications_enabled': False,
                 'host_notification_commands': '',
                 u'service_notification_period': u'24x7',
                 u'min_business_impact': 0,
                 u'email': u'',
                 u'alias': u'',
                 u'host_notification_options': u'd,u,r,f,s',
-                u'skill_level': 0
+                # u'skill_level': 0
             }
         ]
         self.assertItemsEqual(reference, self.objects['contacts'])

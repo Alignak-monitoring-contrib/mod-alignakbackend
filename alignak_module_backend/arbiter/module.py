@@ -706,8 +706,7 @@ class AlignakBackendArbiter(BaseModule):
         :return: None
         """
         self.configraw['services'] = {}
-        params = {'sort': 'host', 'embedded': '{"escalations":1,"service_dependencies":1}',
-                  "where": '{"_is_template": false}'}
+        params = {"where": '{"_is_template": false}'}
         all_services = self.backend.get_all('service', params)
         logger.info("Got %d services", len(all_services['_items']))
 

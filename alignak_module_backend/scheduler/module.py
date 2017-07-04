@@ -158,6 +158,8 @@ class AlignakBackendScheduler(BaseModule):
             for key in ['_created', '_etag', '_id', '_links', '_updated', 'host']:
                 del host[key]
             all_data['hosts'][hostname] = host
+        logger.info('%d hosts loaded from retention', len(all_data['hosts']))
+
         response = self.backend.get_all('retentionservice')
         for service in response['_items']:
             # clean unusable keys
@@ -165,6 +167,7 @@ class AlignakBackendScheduler(BaseModule):
             for key in ['_created', '_etag', '_id', '_links', '_updated', 'service']:
                 del service[key]
             all_data['services'][servicename] = service
+        logger.info('%d services loaded from retention', len(all_data['services']))
 
         scheduler.restore_retention_data(all_data)
 

@@ -112,6 +112,19 @@ class TestBrokerConnection(unittest2.TestCase):
         self.assertFalse(broker_module.backendConnection())
         self.assertFalse(broker_module.logged_in)
 
+    def test_02_connection_accepted(self):
+        # Start broker module with admin user token
+        modconf = Module()
+        modconf.module_alias = "backend_broker"
+        # modconf.username = "admin"
+        # modconf.password = "admin"
+        modconf.token = self.user_admin["token"]
+        modconf.api_url = 'http://127.0.0.1:5000'
+        broker_module = AlignakBackendBroker(modconf)
+
+        self.assertTrue(broker_module.backendConnection())
+        self.assertTrue(broker_module.logged_in)
+
 
 class TestBrokerCommon(unittest2.TestCase):
 
@@ -141,6 +154,11 @@ class TestBrokerCommon(unittest2.TestCase):
         realms = cls.backend.get_all('realm')
         for cont in realms['_items']:
             cls.realm_all = cont['_id']
+
+        users = cls.backend.get_all('user')
+        for user in users['_items']:
+            if user['name'] == 'admin':
+                cls.admin_user = user
 
         # add commands
         data = json.loads(open('cfg/command_ping.json').read())
@@ -182,7 +200,14 @@ class TestBrokerCommon(unittest2.TestCase):
 
     def test_01_get_refs_host(self):
         """Get hosts references"""
+        # Default reload protection delay
+        self.assertEqual(self.brokmodule.load_protect_delay, 3600)
+
+        now = int(time.time())
+        # First call loads the corresponding objects
         self.brokmodule.get_refs('livestate_host')
+        # Stored loaded hosts timestamp
+        self.assertEqual(self.brokmodule.loaded_hosts, now)
 
         self.assertEqual(len(self.brokmodule.ref_live['host']), 1)
         self.assertEqual(
@@ -201,9 +226,22 @@ class TestBrokerCommon(unittest2.TestCase):
         r = self.backend.get('host', params)
         self.assertEqual(len(r['_items']), 1)
 
+        # A call some seconds later the first one do not reload the objects
+        time.sleep(3)
+        self.brokmodule.get_refs('livestate_host')
+        # Stored loaded host timestamp did not changed
+        self.assertEqual(self.brokmodule.loaded_hosts, now)
+
     def test_02_get_refs_service(self):
         """Get services references"""
+        # Default reload protection delay
+        self.assertEqual(self.brokmodule.load_protect_delay, 3600)
+
+        now = int(time.time())
+        # First call loads the corresponding objects
         self.brokmodule.get_refs('livestate_service')
+        # Stored loaded services timestamp
+        self.assertEqual(self.brokmodule.loaded_services, now)
 
         self.assertEqual(len(self.brokmodule.ref_live['service']), 2)
         self.assertEqual(
@@ -227,6 +265,38 @@ class TestBrokerCommon(unittest2.TestCase):
         ref = {'srv001__ping': self.data_srv_ping['_id'],
                'srv001__http toto.com': self.data_srv_http['_id']}
         self.assertEqual(self.brokmodule.mapping['service'], ref)
+
+        # A call some seconds later the first one do not reload the objects
+        time.sleep(3)
+        self.brokmodule.get_refs('livestate_service')
+        # Stored loaded host timestamp did not changed
+        self.assertEqual(self.brokmodule.loaded_services, now)
+
+    def test_03_get_refs_users(self):
+        """Get users references"""
+        # Default reload protection delay
+        self.assertEqual(self.brokmodule.load_protect_delay, 3600)
+
+        now = int(time.time())
+        # First call loads the corresponding objects
+        self.brokmodule.get_refs('livestate_user')
+        # Stored loaded users timestamp
+        self.assertEqual(self.brokmodule.loaded_users, now)
+
+        self.assertEqual(len(self.brokmodule.ref_live['user']), 1)
+        self.assertEqual(
+            self.brokmodule.ref_live['user'][self.admin_user['_id']]['_realm'],
+            self.admin_user['_realm']
+        )
+
+        ref = {'admin': self.admin_user['_id']}
+        self.assertEqual(self.brokmodule.mapping['user'], ref)
+
+        # A call some seconds later the first one do not reload the objects
+        time.sleep(3)
+        self.brokmodule.get_refs('livestate_user')
+        # Stored loaded host timestamp did not changed
+        self.assertEqual(self.brokmodule.loaded_users, now)
 
     def test_03_1_manage_brok_host(self):
         """Test host livestate is updated with an alignak brok"""
@@ -484,8 +554,8 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_impact'], 0)
 
             self.assertEqual(item['ls_last_check'], 1496234083)         # !
-            self.assertEqual(item['ls_last_state'], 'DOWN')      # !
-            self.assertEqual(item['ls_last_state_type'], 'SOFT')
+            self.assertEqual(item['ls_last_state'], 'UNREACHABLE')      # !
+            self.assertEqual(item['ls_last_state_type'], 'HARD')
             self.assertEqual(item['ls_last_state_changed'], 1496234084) # !
             self.assertEqual(item['ls_next_check'], 1444428104)
 
@@ -902,3 +972,102 @@ class TestBrokerCommon(unittest2.TestCase):
             # The item do not have its _updated field changed!
             self.assertEqual(updated, new_updated)
 
+
+class TestBrokerToken(unittest2.TestCase):
+    """
+    Same test class as the TestBrokerCommon, but the module is connecting
+    with a user token rather than a user login.
+
+    Only keep one test to confirm connection is really valid!
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        # Set test mode for alignak backend
+        os.environ['TEST_ALIGNAK_BACKEND'] = '1'
+        os.environ['ALIGNAK_BACKEND_MONGO_DBNAME'] = 'alignak-module-backend-test'
+
+        # Delete used mongo DBs
+        print ("Deleting Alignak backend DB...")
+        exit_code = subprocess.call(
+            shlex.split(
+                'mongo %s --eval "db.dropDatabase()"' % os.environ[
+                    'ALIGNAK_BACKEND_MONGO_DBNAME'])
+        )
+        assert exit_code == 0
+
+        cls.p = subprocess.Popen(['uwsgi', '--plugin', 'python', '-w', 'alignakbackend:app',
+                                  '--socket', '0.0.0.0:5000',
+                                  '--protocol=http', '--enable-threads', '--pidfile',
+                                  '/tmp/uwsgi.pid'])
+        time.sleep(3)
+
+        cls.backend = Backend('http://127.0.0.1:5000')
+        cls.backend.login("admin", "admin", "force")
+        # admin user
+        users = cls.backend.get_all('user')
+        cls.user_admin = users['_items'][0]
+
+        realms = cls.backend.get_all('realm')
+        for realm in realms['_items']:
+            cls.realm_all = realm['_id']
+
+        # add commands
+        data = json.loads(open('cfg/command_ping.json').read())
+        data['_realm'] = cls.realm_all
+        data_cmd_ping = cls.backend.post("command", data)
+        data = json.loads(open('cfg/command_http.json').read())
+        data['_realm'] = cls.realm_all
+        data_cmd_http = cls.backend.post("command", data)
+        # add host
+        data = json.loads(open('cfg/host_srv001.json').read())
+        data['check_command'] = data_cmd_ping['_id']
+        del data['realm']
+        data['_realm'] = cls.realm_all
+        cls.data_host = cls.backend.post("host", data)
+        # add 2 services
+        data = json.loads(open('cfg/service_srv001_ping.json').read())
+        data['host'] = cls.data_host['_id']
+        data['check_command'] = data_cmd_ping['_id']
+        data['_realm'] = cls.realm_all
+        cls.data_srv_ping = cls.backend.post("service", data)
+
+        data = json.loads(open('cfg/service_srv001_http.json').read())
+        data['host'] = cls.data_host['_id']
+        data['check_command'] = data_cmd_http['_id']
+        data['_realm'] = cls.realm_all
+        cls.data_srv_http = cls.backend.post("service", data)
+
+        # Start broker module
+        modconf = Module()
+        modconf.module_alias = "backend_broker"
+        # modconf.username = "admin"
+        # modconf.password = "admin"
+        modconf.token = cls.user_admin["token"]
+        modconf.api_url = 'http://127.0.0.1:5000'
+        cls.brokmodule = AlignakBackendBroker(modconf)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.p.kill()
+
+    def test_01_get_refs_host(self):
+        """Get hosts references"""
+        self.brokmodule.get_refs('livestate_host')
+
+        self.assertEqual(len(self.brokmodule.ref_live['host']), 1)
+        self.assertEqual(
+            self.brokmodule.ref_live['host'][self.data_host['_id']]['initial_state'],'UNREACHABLE'
+        )
+        self.assertEqual(
+            self.brokmodule.ref_live['host'][self.data_host['_id']]['initial_state_type'], 'HARD'
+        )
+
+        ref = {'srv001': self.data_host['_id']}
+        self.assertEqual(self.brokmodule.mapping['host'], ref)
+
+        params = {
+            'where': '{"name": "srv001"}'
+        }
+        r = self.backend.get('host', params)
+        self.assertEqual(len(r['_items']), 1)

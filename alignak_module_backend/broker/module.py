@@ -88,23 +88,32 @@ class AlignakBackendBroker(BaseModule):
         self.backend_generate = getattr(mod_conf, 'allowgeneratetoken', False)
 
         if not self.backend.token:
+            logger.warning("no user token configured. "
+                           "It is recommended to set a user token rather than a user login "
+                           "in the configuration. Trying to get a token from the provided "
+                           "user login information...")
             self.getToken()
+        else:
+            self.backend_connected = True
 
         self.logged_in = self.backendConnection()
 
         self.ref_live = {
             'host': {},
-            'service': {}
+            'service': {},
+            'user': {}
         }
         self.mapping = {
             'host': {},
             'service': {},
             'user': {}
         }
-        self.hosts = {}
-        self.services = {}
-        self.loaded_hosts = False
-        self.loaded_services = False
+
+        # Objects reference
+        self.load_protect_delay = int(getattr(mod_conf, 'load_protect_delay', '3600'))
+        self.loaded_hosts = 0
+        self.loaded_services = 0
+        self.loaded_users = 0
 
     # Common functions
     def do_loop_turn(self):
@@ -130,6 +139,8 @@ class AlignakBackendBroker(BaseModule):
             self.backend_connected = self.backend.login(self.backend_username,
                                                         self.backend_password,
                                                         generate)
+            if not self.backend_connected:
+                logger.warning("Backend login failed")
             self.token = self.backend.token
             self.backend_errors_count = 0
         except BackendException as exp:  # pragma: no cover - should not happen
@@ -147,7 +158,7 @@ class AlignakBackendBroker(BaseModule):
         """
         logger.debug("Check backend connection, connected: %s, errors count: %d",
                      self.backend_connected, self.backend_errors_count)
-        if not self.backend_connected and self.backend_errors_count > errors_count:
+        if not self.backend_connected and self.backend_errors_count >= errors_count:
             return True
 
         return False
@@ -164,11 +175,20 @@ class AlignakBackendBroker(BaseModule):
                              "Checking if livestate update is allowed is not possible.")
                 return False
 
+        if not self.backend_connected:
+            return False
+
         if not self.default_realm:
-            params = {'where': '{"name":"%s"}' % default_realm}
-            realms = self.backend.get('realm', params=params)
-            for realm in realms['_items']:
-                self.default_realm = realm['_id']
+            try:
+                params = {'where': '{"name":"%s"}' % default_realm}
+                realms = self.backend.get('realm', params=params)
+                for realm in realms['_items']:
+                    self.default_realm = realm['_id']
+            except BackendException:
+                self.backend_connected = False
+                self.backend_errors_count += 1
+                logger.warning("Alignak backend connection fails. Check and fix your configuration")
+                return False
 
         params = {'where': '{"token":"%s"}' % self.backend.token}
         users = self.backend.get('user', params)
@@ -186,7 +206,9 @@ class AlignakBackendBroker(BaseModule):
         :type type_data: str
         :return: None
         """
-        if type_data == 'livestate_host':
+        now = int(time.time())
+        if type_data == 'livestate_host' \
+                and self.loaded_hosts < now - self.load_protect_delay:
             params = {
                 'projection': '{"name":1,"ls_state":1,"ls_state_type":1,"_realm":1}',
                 'where': '{"_is_template":false}'
@@ -202,8 +224,9 @@ class AlignakBackendBroker(BaseModule):
                     'initial_state': item['ls_state'],
                     'initial_state_type': item['ls_state_type']
                 }
-            self.loaded_hosts = True
-        elif type_data == 'livestate_service':
+            self.loaded_hosts = now
+        elif type_data == 'livestate_service' \
+                and self.loaded_services < now - self.load_protect_delay:
             params = {
                 'projection': '{"name":1}',
                 'where': '{"_is_template":false}'
@@ -229,8 +252,9 @@ class AlignakBackendBroker(BaseModule):
                     'initial_state': item['ls_state'],
                     'initial_state_type': item['ls_state_type']
                 }
-            self.loaded_services = True
-        elif type_data == 'livestate_user':
+            self.loaded_services = now
+        elif type_data == 'livestate_user' \
+                and self.loaded_users < now - self.load_protect_delay:
             params = {
                 'projection': '{"name":1,"_realm":1}',
                 'where': '{"_is_template":false}'
@@ -239,15 +263,18 @@ class AlignakBackendBroker(BaseModule):
             for item in content['_items']:
                 self.mapping['user'][item['name']] = item['_id']
 
-                self.ref_live['host'][item['_id']] = {
+                self.ref_live['user'][item['_id']] = {
                     '_id': item['_id'],
                     '_etag': item['_etag'],
                     '_realm': item['_realm']
                 }
-            self.loaded_hosts = True
+            self.loaded_users = now
 
     def update_next_check(self, data, obj_type):
         """Update livestate host and service next check timestamp
+
+        {'instance_id': u'475dc864674943b4aa4cbc966f7cc737', u'service_description': u'nsca_disk',
+        u'next_chk': 0, u'in_checking': True, u'host_name': u'ek3022fdj-00011'}
 
         :param data: dictionary of data from scheduler
         :type data: dict
@@ -771,6 +798,9 @@ class AlignakBackendBroker(BaseModule):
         :type brok: object
         :return: False if broks were not managed by the module
         """
+        if not self.logged_in:
+            self.logged_in = self.backendConnection()
+
         if not self.logged_in:
             logger.debug("Not logged-in, ignoring broks...")
             return False

@@ -103,7 +103,13 @@ class AlignakBackendArbiter(BaseModule):
         self.backend_generate = getattr(mod_conf, 'allowgeneratetoken', False)
 
         if not self.backend.token:
+            logger.warning("no user token configured. "
+                           "It is recommended to set a user token rather than a user login "
+                           "in the configuration. Trying to get a token from the provided "
+                           "user login information...")
             self.getToken()
+        else:
+            self.backend_connected = True
 
         self.bypass_verify_mode = int(getattr(mod_conf, 'bypass_verify_mode', 0)) == 1
         logger.info("bypass objects loading when Arbiter is in verify mode: %s",
@@ -192,6 +198,8 @@ class AlignakBackendArbiter(BaseModule):
             self.backend_connected = self.backend.login(self.backend_username,
                                                         self.backend_password,
                                                         generate)
+            if not self.backend_connected:
+                logger.warning("Backend login failed")
             self.token = self.backend.token
             self.backend_errors_count = 0
         except BackendException as exp:  # pragma: no cover - should not happen
@@ -209,7 +217,7 @@ class AlignakBackendArbiter(BaseModule):
         """
         logger.debug("Check backend connection, connected: %s, errors count: %d",
                      self.backend_connected, self.backend_errors_count)
-        if not self.backend_connected and self.backend_errors_count > errors_count:
+        if not self.backend_connected and self.backend_errors_count >= errors_count:
             return True
 
         return False
@@ -1050,6 +1058,7 @@ class AlignakBackendArbiter(BaseModule):
                            "Backend communication error.")
             logger.debug("Exception: %s", exp)
             self.backend_connected = False
+            return self.alignak_configuration
 
         self.time_loaded_conf = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
 
@@ -1113,7 +1122,7 @@ class AlignakBackendArbiter(BaseModule):
         logger.info("Alignak monitored system configuration loaded in %s seconds",
                     (now - start_time))
 
-        # Schedule next configuration reload check in 10 minutes (need time to finish load config)
+        # Schedule next configuration reload check
         self.next_check = int(now) + (60 * self.verify_modification)
         self.next_action_check = int(now) + self.action_check
         self.next_daemons_state = int(now) + self.daemons_state

@@ -163,21 +163,19 @@ class AlignakBackendScheduler(BaseModule):
 
         # Get data from the backend
         try:
-            response = self.backend.get_all('retentionhost')
+            response = self.backend.get_all('alignakretention')
             for host in response['_items']:
                 # clean unusable keys
                 hostname = host['host']
-                for key in ['_created', '_etag', '_id', '_links', '_updated', 'host']:
+                if 'retention_services' in host:
+                    for service in host['retention_services']:
+                        all_data['services'][(host['host'], service)] = \
+                            host['retention_services'][service]
+                for key in ['_created', '_etag', '_id', '_links', '_updated', 'host',
+                            'retention_services', '_user']:
                     del host[key]
                 all_data['hosts'][hostname] = host
             logger.info('%d hosts loaded from retention', len(all_data['hosts']))
-            response = self.backend.get_all('retentionservice')
-            for service in response['_items']:
-                # clean unusable keys
-                servicename = (service['service'][0], service['service'][1])
-                for key in ['_created', '_etag', '_id', '_links', '_updated', 'service']:
-                    del service[key]
-                all_data['services'][servicename] = service
             logger.info('%d services loaded from retention', len(all_data['services']))
 
             scheduler.restore_retention_data(all_data)
@@ -205,62 +203,52 @@ class AlignakBackendScheduler(BaseModule):
 
         try:
             data_to_save = scheduler.get_retention_data()
+            start_time = time.time()
 
-            # clean hosts we will update the retention data
-            response = self.backend.get_all('retentionhost')
+            # get list of retention_data
+            response = self.backend.get_all('alignakretention')
+            db_hosts = {}
             for host in response['_items']:
-                if host['host'] in data_to_save['hosts']:
-                    delheaders = {'If-Match': host['_etag']}
-                    try:
-                        self.backend.delete('/'.join(['retentionhost', host['_id']]),
-                                            headers=delheaders)
-                    except BackendException as exp:  # pragma: no cover - should not happen
-                        logger.error('Delete retentionhost error')
-                        logger.error('Response: %s', exp.response)
-                        logger.exception("Backend exception: %s", exp)
-                        self.backend_connected = False
+                db_hosts[host['host']] = host
 
-            # Add then store the hosts retention data
+            # add services in the hosts
             for host in data_to_save['hosts']:
+                data_to_save['hosts'][host]['retention_services'] = {}
                 data_to_save['hosts'][host]['host'] = host
-                try:
-                    logger.debug('Host retention data: %s', data_to_save['hosts'][host])
-                    self.backend.post('retentionhost', data=data_to_save['hosts'][host])
-                except BackendException as exp:  # pragma: no cover - should not happen
-                    logger.error('Post retentionhost error')
-                    logger.error('Response: %s', exp.response)
-                    logger.exception("Exception: %s", exp)
-                    self.backend_connected = False
-                    return
+            for service in data_to_save['services']:
+                data_to_save['hosts'][service[0]]['retention_services'][service[1]] = \
+                    data_to_save['services'][service]
+
+            for host in data_to_save['hosts']:
+                if host in db_hosts:
+                    # if host in retention_data, PUT
+                    headers = {'Content-Type': 'application/json'}
+                    headers['If-Match'] = db_hosts[host]['_etag']
+                    try:
+                        logger.debug('Host retention data: %s', data_to_save['hosts'][host])
+                        self.backend.put('alignakretention/%s' % (db_hosts[host]['_id']),
+                                         data_to_save['hosts'][host], headers, True)
+                    except BackendException as exp:  # pragma: no cover - should not happen
+                        logger.error('Put alignakretention error')
+                        logger.error('Response: %s', exp.response)
+                        logger.exception("Exception: %s", exp)
+                        self.backend_connected = False
+                        return
+                else:
+                    # if not host in retention_data, POST
+                    try:
+                        logger.debug('Host retention data: %s', data_to_save['hosts'][host])
+                        self.backend.post('alignakretention', data=data_to_save['hosts'][host])
+                    except BackendException as exp:  # pragma: no cover - should not happen
+                        logger.error('Post alignakretention error')
+                        logger.error('Response: %s', exp.response)
+                        logger.exception("Exception: %s", exp)
+                        self.backend_connected = False
+                        return
             logger.info('%d hosts saved in retention', len(data_to_save['hosts']))
 
-            # clean services we will update the retention data
-            response = self.backend.get_all('retentionservice')
-            for service in response['_items']:
-                if (service['service'][0], service['service'][1]) in data_to_save['services']:
-                    delheaders = {'If-Match': service['_etag']}
-                    try:
-                        self.backend.delete('/'.join(['retentionservice', service['_id']]),
-                                            headers=delheaders)
-                    except BackendException as exp:  # pragma: no cover - should not happen
-                        logger.error('Delete retentionservice error')
-                        logger.error('Response: %s', exp.response)
-                        logger.exception("Backend exception: %s", exp)
-                        self.backend_connected = False
-
-            # Add then store the services retention data
-            for service in data_to_save['services']:
-                data_to_save['services'][service]['service'] = service
-                try:
-                    logger.debug('Service retention data: %s', data_to_save['services'][service])
-                    self.backend.post('retentionservice', data=data_to_save['services'][service])
-                except BackendException as exp:  # pragma: no cover - should not happen
-                    logger.error('Post retentionservice error')
-                    logger.error('Response: %s', exp.response)
-                    logger.exception("Exception: %s", exp)
-                    self.backend_connected = False
-                    return
-            logger.info('%d services saved in retention', len(data_to_save['services']))
+            now = time.time()
+            logger.info("Retention saved in %s seconds", (now - start_time))
         except BackendException:
             self.backend_connected = False
             self.backend_errors_count += 1

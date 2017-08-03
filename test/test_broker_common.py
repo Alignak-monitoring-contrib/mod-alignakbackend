@@ -201,7 +201,7 @@ class TestBrokerCommon(unittest2.TestCase):
     def test_01_get_refs_host(self):
         """Get hosts references"""
         # Default reload protection delay
-        self.assertEqual(self.brokmodule.load_protect_delay, 3600)
+        self.assertEqual(self.brokmodule.load_protect_delay, 300)
 
         now = int(time.time())
         # First call loads the corresponding objects
@@ -235,7 +235,7 @@ class TestBrokerCommon(unittest2.TestCase):
     def test_02_get_refs_service(self):
         """Get services references"""
         # Default reload protection delay
-        self.assertEqual(self.brokmodule.load_protect_delay, 3600)
+        self.assertEqual(self.brokmodule.load_protect_delay, 300)
 
         now = int(time.time())
         # First call loads the corresponding objects
@@ -275,7 +275,7 @@ class TestBrokerCommon(unittest2.TestCase):
     def test_03_get_refs_users(self):
         """Get users references"""
         # Default reload protection delay
-        self.assertEqual(self.brokmodule.load_protect_delay, 3600)
+        self.assertEqual(self.brokmodule.load_protect_delay, 300)
 
         now = int(time.time())
         # First call loads the corresponding objects

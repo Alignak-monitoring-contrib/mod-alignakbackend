@@ -110,7 +110,7 @@ class AlignakBackendBroker(BaseModule):
         }
 
         # Objects reference
-        self.load_protect_delay = int(getattr(mod_conf, 'load_protect_delay', '3600'))
+        self.load_protect_delay = int(getattr(mod_conf, 'load_protect_delay', '300'))
         self.loaded_hosts = 0
         self.loaded_services = 0
         self.loaded_users = 0
@@ -862,11 +862,33 @@ class AlignakBackendBroker(BaseModule):
                 self.update_status(brok)
 
             if brok.type == 'new_conf':
-                logger.info("Got configuration")
+                logger.info("Got a new configuration, reloading objects...")
+                loaded = self.loaded_users
                 self.get_refs('livestate_user')
+                if self.loaded_users > loaded:
+                    logger.info("- users references reloaded")
+                else:
+                    logger.warning("- users references not reloaded. "
+                                   "Last reload is too recent; set the 'load_protect_delay' "
+                                   "parameter accordingly.")
+
+                loaded = self.loaded_hosts
                 self.get_refs('livestate_host')
+                if self.loaded_hosts > loaded:
+                    logger.info("- hosts references reloaded")
+                else:
+                    logger.warning("- hosts references not reloaded. "
+                                   "Last reload is too recent; set the 'load_protect_delay' "
+                                   "parameter accordingly.")
+
+                loaded = self.loaded_services
                 self.get_refs('livestate_service')
-                logger.info("Hosts/services references reloaded")
+                if self.loaded_services > loaded:
+                    logger.info("- services references reloaded")
+                else:
+                    logger.warning("- services references not reloaded. "
+                                   "Last reload is too recent; set the 'load_protect_delay' "
+                                   "parameter accordingly.")
 
             if brok.type == 'host_check_result':
                 self.update_livestate(brok.data, 'host')

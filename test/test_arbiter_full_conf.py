@@ -240,7 +240,7 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
                 self.assertTrue(Hostescalation.properties[key])
 
     def test_contacts(self):
-        self.assertEqual(len(self.objects['contacts']), 10)
+        self.assertEqual(len(self.objects['contacts']), 8)
         for cont in self.objects['contacts']:
             for key, value in cont.iteritems():
                 # problem in alignak because not defined

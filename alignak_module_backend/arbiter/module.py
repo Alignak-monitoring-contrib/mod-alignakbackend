@@ -454,7 +454,8 @@ class AlignakBackendArbiter(BaseModule):
         :return: None
         """
         self.configraw['contacts'] = {}
-        all_contacts = self.backend.get_all('user')
+        params = {"where": '{"_is_template": false}'}
+        all_contacts = self.backend.get_all('user', params)
         logger.info("Got %d contacts",
                     len(all_contacts['_items']))
         for contact in all_contacts['_items']:

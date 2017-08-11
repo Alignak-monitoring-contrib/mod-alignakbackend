@@ -1200,7 +1200,7 @@ class AlignakBackendArbiter(BaseModule):
                                                                         "level": "INFO",
                                                                         "message": message
                                                                     }})
-                        logger.error(message)
+                        logger.info(message)
                     except IOError:
                         message = "The arbiter pid file (%s) is not available. " \
                                   "Configuration reload notification was not raised." \

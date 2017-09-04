@@ -122,6 +122,7 @@ class AlignakBackendArbiter(BaseModule):
         logger.info("actions check period: %s seconds", self.action_check)
         self.daemons_state = int(getattr(mod_conf, 'daemons_state', 60))
         logger.info("daemons state update period: %s seconds", self.daemons_state)
+        self.retention_actived = int(getattr(mod_conf, 'retention_actived', 1))
         self.next_check = 0
         self.next_action_check = 0
         self.next_daemons_state = 0
@@ -654,7 +655,7 @@ class AlignakBackendArbiter(BaseModule):
                 host[key] = value
 
             # Fix #9: inconsistent state when no retention module exists
-            if 'ls_last_state' in host:
+            if not self.retention_actived and 'ls_last_state' in host:
                 if host['ls_state'] == 'UNREACHABLE':
                     host['initial_state'] = 'u'
                 if host['ls_state'] == 'DOWN':
@@ -821,7 +822,7 @@ class AlignakBackendArbiter(BaseModule):
                 service[key] = value
 
             # Fix #9: inconsistent state when no retention module exists
-            if 'ls_last_state' in service:
+            if not self.retention_actived and 'ls_last_state' in service:
                 if service['ls_state'] == 'UNKNOWN':
                     service['initial_state'] = 'u'
                 if service['ls_state'] == 'CRITICAL':

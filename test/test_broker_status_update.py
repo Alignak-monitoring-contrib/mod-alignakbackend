@@ -219,15 +219,12 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
             u'interval_length': 60,
             u'modified_host_attributes': 0,
             u'check_external_commands': True,
-            u'failure_prediction_enabled': 0,
             u'modified_service_attributes': 0,
             u'passive_host_checks_enabled': True,
-            u'obsess_over_hosts': False,
             u'global_service_event_handler': 'None',
             u'notifications_enabled': True,
             u'check_service_freshness': True,
             u'check_host_freshness': True,
-            u'obsess_over_services': False,
             u'flap_detection_enabled': True,
             u'active_service_checks_enabled': True,
             u'active_host_checks_enabled': True
@@ -271,15 +268,12 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
             u'interval_length': 60,
             u'modified_host_attributes': 0,
             u'check_external_commands': True,
-            u'failure_prediction_enabled': 0,
             u'modified_service_attributes': 0,
             u'passive_host_checks_enabled': True,
-            u'obsess_over_hosts': False,
             u'global_service_event_handler': 'None',
             u'notifications_enabled': True,
             u'check_service_freshness': True,
             u'check_host_freshness': True,
-            u'obsess_over_services': False,
             u'flap_detection_enabled': True,
             u'active_service_checks_enabled': True,
             u'active_host_checks_enabled': True
@@ -339,15 +333,12 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
             u'interval_length': 60,
             u'modified_host_attributes': 0,
             u'check_external_commands': True,
-            u'failure_prediction_enabled': 0,
             u'modified_service_attributes': 0,
             u'passive_host_checks_enabled': True,
-            u'obsess_over_hosts': False,
             u'global_service_event_handler': 'None',
             u'notifications_enabled': True,
             u'check_service_freshness': True,
             u'check_host_freshness': True,
-            u'obsess_over_services': False,
             u'flap_detection_enabled': True,
             u'active_service_checks_enabled': True,
             u'active_host_checks_enabled': True
@@ -372,12 +363,32 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         alignak.pop('_id')
         alignak.pop('_links')
         alignak.pop('_etag')
+        # TODO need add this new fields in alignak brok creation
+        for field_name in ['use_timezone',
+                           'illegal_macro_output_chars', 'illegal_object_name_chars',
+                           'cleaning_queues_interval', 'max_plugins_output_length',
+                           'enable_environment_macros', 'log_initial_states', 'log_active_checks',
+                           'log_host_retries', 'log_service_retries', 'log_passive_checks',
+                           'log_notifications', 'log_event_handlers', 'log_external_commands',
+                           'log_flappings', 'log_snapshots', 'enable_notifications',
+                           'notification_timeout', 'timeout_exit_status', 'execute_host_checks',
+                           'max_host_check_spread', 'host_check_timeout',
+                           'check_for_orphaned_hosts', 'execute_service_checks',
+                           'max_service_check_spread', 'service_check_timeout',
+                           'check_for_orphaned_services', 'flap_history', 'low_host_flap_threshold',
+                           'high_host_flap_threshold', 'low_service_flap_threshold',
+                           'high_service_flap_threshold', 'event_handler_timeout',
+                           'no_event_handlers_during_downtimes', 'host_perfdata_command',
+                           'service_perfdata_command', 'accept_passive_host_checks',
+                           'host_freshness_check_interval', 'accept_passive_service_checks',
+                           'service_freshness_check_interval', 'additional_freshness_latency']:
+            alignak.pop(field_name)
 
         expected = brok_data.copy()
         expected[u'name'] = expected.pop('alignak_name')
         # Some fields are valued as default by the backend
         expected[u'_sub_realm'] = True
-        expected[u'alias'] = u''
+        expected[u'alias'] = expected[u'name']
         expected[u'notes'] = u''
         expected[u'notes_url'] = u''
         expected[u'_realm'] = self.realm_all
@@ -412,15 +423,12 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
             u'interval_length': 60,
             u'modified_host_attributes': 0,
             u'check_external_commands': True,
-            u'failure_prediction_enabled': 0,
             u'modified_service_attributes': 0,
             u'passive_host_checks_enabled': True,
-            u'obsess_over_hosts': False,
             u'global_service_event_handler': 'None',
             u'notifications_enabled': True,
             u'check_service_freshness': True,
             u'check_host_freshness': True,
-            u'obsess_over_services': False,
             u'flap_detection_enabled': True,
             u'active_service_checks_enabled': True,
             u'active_host_checks_enabled': True
@@ -444,12 +452,32 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         alignak.pop('_id')
         alignak.pop('_links')
         alignak.pop('_etag')
+        # TODO need add this new fields in alignak brok creation
+        for field_name in ['use_timezone',
+                           'illegal_macro_output_chars', 'illegal_object_name_chars',
+                           'cleaning_queues_interval', 'max_plugins_output_length',
+                           'enable_environment_macros', 'log_initial_states', 'log_active_checks',
+                           'log_host_retries', 'log_service_retries', 'log_passive_checks',
+                           'log_notifications', 'log_event_handlers', 'log_external_commands',
+                           'log_flappings', 'log_snapshots', 'enable_notifications',
+                           'notification_timeout', 'timeout_exit_status', 'execute_host_checks',
+                           'max_host_check_spread', 'host_check_timeout',
+                           'check_for_orphaned_hosts', 'execute_service_checks',
+                           'max_service_check_spread', 'service_check_timeout',
+                           'check_for_orphaned_services', 'flap_history', 'low_host_flap_threshold',
+                           'high_host_flap_threshold', 'low_service_flap_threshold',
+                           'high_service_flap_threshold', 'event_handler_timeout',
+                           'no_event_handlers_during_downtimes', 'host_perfdata_command',
+                           'service_perfdata_command', 'accept_passive_host_checks',
+                           'host_freshness_check_interval', 'accept_passive_service_checks',
+                           'service_freshness_check_interval', 'additional_freshness_latency']:
+            alignak.pop(field_name)
 
         expected = brok_data.copy()
         expected[u'name'] = expected.pop('alignak_name')
         # Some fields are valued as default by the backend
         expected[u'_sub_realm'] = True
-        expected[u'alias'] = u''
+        expected[u'alias'] = expected[u'name']
         expected[u'notes'] = u''
         expected[u'notes_url'] = u''
         expected[u'_realm'] = self.realm_all
@@ -484,15 +512,12 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
             u'interval_length': 60,
             u'modified_host_attributes': 0,
             u'check_external_commands': True,
-            u'failure_prediction_enabled': 0,
             u'modified_service_attributes': 0,
             u'passive_host_checks_enabled': True,
-            u'obsess_over_hosts': False,
             u'global_service_event_handler': 'None',
             u'notifications_enabled': True,
             u'check_service_freshness': True,
             u'check_host_freshness': True,
-            u'obsess_over_services': False,
             u'flap_detection_enabled': True,
             u'active_service_checks_enabled': True,
             u'active_host_checks_enabled': True
@@ -521,12 +546,32 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         alignak.pop('_id')
         alignak.pop('_links')
         alignak.pop('_etag')
+        # TODO need add this new fields in alignak brok creation
+        for field_name in ['use_timezone',
+                           'illegal_macro_output_chars', 'illegal_object_name_chars',
+                           'cleaning_queues_interval', 'max_plugins_output_length',
+                           'enable_environment_macros', 'log_initial_states', 'log_active_checks',
+                           'log_host_retries', 'log_service_retries', 'log_passive_checks',
+                           'log_notifications', 'log_event_handlers', 'log_external_commands',
+                           'log_flappings', 'log_snapshots', 'enable_notifications',
+                           'notification_timeout', 'timeout_exit_status', 'execute_host_checks',
+                           'max_host_check_spread', 'host_check_timeout',
+                           'check_for_orphaned_hosts', 'execute_service_checks',
+                           'max_service_check_spread', 'service_check_timeout',
+                           'check_for_orphaned_services', 'flap_history', 'low_host_flap_threshold',
+                           'high_host_flap_threshold', 'low_service_flap_threshold',
+                           'high_service_flap_threshold', 'event_handler_timeout',
+                           'no_event_handlers_during_downtimes', 'host_perfdata_command',
+                           'service_perfdata_command', 'accept_passive_host_checks',
+                           'host_freshness_check_interval', 'accept_passive_service_checks',
+                           'service_freshness_check_interval', 'additional_freshness_latency']:
+            alignak.pop(field_name)
 
         expected = brok_data.copy()
         expected[u'name'] = expected.pop('alignak_name')
         # Some fields are valued as default by the backend
         expected[u'_sub_realm'] = True
-        expected[u'alias'] = u''
+        expected[u'alias'] = expected[u'name']
         expected[u'notes'] = u''
         expected[u'notes_url'] = u''
         expected[u'_realm'] = self.realm_all
@@ -561,15 +606,12 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
             u'interval_length': 60,
             u'modified_host_attributes': 0,
             u'check_external_commands': True,
-            u'failure_prediction_enabled': 0,
             u'modified_service_attributes': 0,
             u'passive_host_checks_enabled': True,
-            u'obsess_over_hosts': False,
             u'global_service_event_handler': 'None',
             u'notifications_enabled': True,
             u'check_service_freshness': True,
             u'check_host_freshness': True,
-            u'obsess_over_services': False,
             u'flap_detection_enabled': True,
             u'active_service_checks_enabled': True,
             u'active_host_checks_enabled': True
@@ -597,12 +639,32 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         alignak.pop('_id')
         alignak.pop('_links')
         alignak.pop('_etag')
+        # TODO need add this new fields in alignak brok creation
+        for field_name in ['use_timezone',
+                           'illegal_macro_output_chars', 'illegal_object_name_chars',
+                           'cleaning_queues_interval', 'max_plugins_output_length',
+                           'enable_environment_macros', 'log_initial_states', 'log_active_checks',
+                           'log_host_retries', 'log_service_retries', 'log_passive_checks',
+                           'log_notifications', 'log_event_handlers', 'log_external_commands',
+                           'log_flappings', 'log_snapshots', 'enable_notifications',
+                           'notification_timeout', 'timeout_exit_status', 'execute_host_checks',
+                           'max_host_check_spread', 'host_check_timeout',
+                           'check_for_orphaned_hosts', 'execute_service_checks',
+                           'max_service_check_spread', 'service_check_timeout',
+                           'check_for_orphaned_services', 'flap_history', 'low_host_flap_threshold',
+                           'high_host_flap_threshold', 'low_service_flap_threshold',
+                           'high_service_flap_threshold', 'event_handler_timeout',
+                           'no_event_handlers_during_downtimes', 'host_perfdata_command',
+                           'service_perfdata_command', 'accept_passive_host_checks',
+                           'host_freshness_check_interval', 'accept_passive_service_checks',
+                           'service_freshness_check_interval', 'additional_freshness_latency']:
+            alignak.pop(field_name)
 
         expected = brok_data.copy()
         expected[u'name'] = expected.pop('alignak_name')
         # Some fields are valued as default by the backend
         expected[u'_sub_realm'] = True
-        expected[u'alias'] = u''
+        expected[u'alias'] = expected[u'name']
         expected[u'notes'] = u''
         expected[u'notes_url'] = u''
         expected[u'_realm'] = self.realm_all
@@ -637,15 +699,12 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
             u'interval_length': 60,
             u'modified_host_attributes': 0,
             u'check_external_commands': True,
-            u'failure_prediction_enabled': 0,
             u'modified_service_attributes': 0,
             u'passive_host_checks_enabled': True,
-            u'obsess_over_hosts': False,
             u'global_service_event_handler': 'None',
             u'notifications_enabled': True,
             u'check_service_freshness': True,
             u'check_host_freshness': True,
-            u'obsess_over_services': False,
             u'flap_detection_enabled': True,
             u'active_service_checks_enabled': True,
             u'active_host_checks_enabled': True
@@ -676,12 +735,32 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         alignak.pop('_id')
         alignak.pop('_links')
         alignak.pop('_etag')
+        # TODO need add this new fields in alignak brok creation
+        for field_name in ['use_timezone',
+                           'illegal_macro_output_chars', 'illegal_object_name_chars',
+                           'cleaning_queues_interval', 'max_plugins_output_length',
+                           'enable_environment_macros', 'log_initial_states', 'log_active_checks',
+                           'log_host_retries', 'log_service_retries', 'log_passive_checks',
+                           'log_notifications', 'log_event_handlers', 'log_external_commands',
+                           'log_flappings', 'log_snapshots', 'enable_notifications',
+                           'notification_timeout', 'timeout_exit_status', 'execute_host_checks',
+                           'max_host_check_spread', 'host_check_timeout',
+                           'check_for_orphaned_hosts', 'execute_service_checks',
+                           'max_service_check_spread', 'service_check_timeout',
+                           'check_for_orphaned_services', 'flap_history', 'low_host_flap_threshold',
+                           'high_host_flap_threshold', 'low_service_flap_threshold',
+                           'high_service_flap_threshold', 'event_handler_timeout',
+                           'no_event_handlers_during_downtimes', 'host_perfdata_command',
+                           'service_perfdata_command', 'accept_passive_host_checks',
+                           'host_freshness_check_interval', 'accept_passive_service_checks',
+                           'service_freshness_check_interval', 'additional_freshness_latency']:
+            alignak.pop(field_name)
 
         expected = brok_data.copy()
         expected[u'name'] = expected.pop('alignak_name')
         # Some fields are valued as default by the backend
         expected[u'_sub_realm'] = True
-        expected[u'alias'] = u''
+        expected[u'alias'] = expected[u'name']
         expected[u'notes'] = u''
         expected[u'notes_url'] = u''
         expected[u'_realm'] = self.realm_all

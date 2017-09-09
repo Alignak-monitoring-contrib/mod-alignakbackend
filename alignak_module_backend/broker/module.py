@@ -82,6 +82,7 @@ class AlignakBackendBroker(BaseModule):
         self.backend = Backend(self.url, self.client_processes)
         self.backend.token = getattr(mod_conf, 'token', '')
         self.backend_connected = False
+        self.backend_connection_retry_planned = 0
         self.backend_errors_count = 0
         self.backend_username = getattr(mod_conf, 'username', '')
         self.backend_password = getattr(mod_conf, 'password', '')
@@ -145,6 +146,7 @@ class AlignakBackendBroker(BaseModule):
             self.backend_errors_count = 0
         except BackendException as exp:  # pragma: no cover - should not happen
             self.backend_connected = False
+            self.backend_connection_retry_planned = int(time.time()) + 60
             self.backend_errors_count += 1
             logger.warning("Alignak backend is not available for login. "
                            "No backend connection, attempt: %d", self.backend_errors_count)
@@ -186,6 +188,7 @@ class AlignakBackendBroker(BaseModule):
                     self.default_realm = realm['_id']
             except BackendException:
                 self.backend_connected = False
+                self.backend_connection_retry_planned = int(time.time()) + 60
                 self.backend_errors_count += 1
                 logger.warning("Alignak backend connection fails. Check and fix your configuration")
                 return False
@@ -494,6 +497,9 @@ class AlignakBackendBroker(BaseModule):
         :return: True if send is ok, False otherwise
         :rtype: bool
         """
+        if not self.backend_connected and int(time.time() > self.backend_connection_retry_planned):
+            self.logged_in = self.backendConnection()
+
         if not self.backend_connected:
             logger.error("Alignak backend connection is not available. "
                          "Skipping objects update.")
@@ -519,7 +525,12 @@ class AlignakBackendBroker(BaseModule):
                 logger.error('Patch livestate for host %s error', self.mapping['host'][name])
                 logger.error('Data: %s', data)
                 logger.exception("Exception: %s", exp)
-                self.backend_connected = False
+                if exp.code == 404:
+                    logger.error('Seems the host %s deleted in the Backend',
+                                 self.mapping['host'][name])
+                else:
+                    self.backend_connected = False
+                    self.backend_connection_retry_planned = int(time.time()) + 60
         elif type_data == 'livestate_service':
             headers['If-Match'] = self.ref_live['service'][self.mapping['service'][name]]['_etag']
             try:
@@ -536,7 +547,12 @@ class AlignakBackendBroker(BaseModule):
                 logger.error('Patch livestate for service %s error', self.mapping['service'][name])
                 logger.error('Data: %s', data)
                 logger.exception("Exception: %s", exp)
-                self.backend_connected = False
+                if exp.code == 404:
+                    logger.error('Seems the service %s deleted in the Backend',
+                                 self.mapping['service'][name])
+                else:
+                    self.backend_connected = False
+                    self.backend_connection_retry_planned = int(time.time()) + 60
         elif type_data == 'log_host':
             try:
                 response = self.backend.post('logcheckresult', data)
@@ -544,7 +560,12 @@ class AlignakBackendBroker(BaseModule):
                 logger.error('Post logcheckresult for host %s error', self.mapping['host'][name])
                 logger.error('Data: %s', data)
                 logger.exception("Exception: %s", exp)
-                self.backend_connected = False
+                if exp.code == 422:
+                    logger.error('Seems the host %s deleted in the Backend',
+                                 self.mapping['host'][name])
+                else:
+                    self.backend_connected = False
+                    self.backend_connection_retry_planned = int(time.time()) + 60
                 ret = False
         elif type_data == 'log_service':
             try:
@@ -555,7 +576,12 @@ class AlignakBackendBroker(BaseModule):
                 logger.error('Data: %s', data)
                 logger.exception("Exception: %s", exp)
                 logger.error('Error detail: %s, %s, %s', exp.code, exp.message, exp.response)
-                self.backend_connected = False
+                if exp.code == 422:
+                    logger.error('Seems the service %s deleted in the Backend',
+                                 self.mapping['service'][name])
+                else:
+                    self.backend_connected = False
+                    self.backend_connection_retry_planned = int(time.time()) + 60
                 ret = False
         return ret
 
@@ -664,7 +690,12 @@ class AlignakBackendBroker(BaseModule):
                 logger.error("Update %s '%s' failed", endpoint, name)
                 logger.error("Data: %s", differences)
                 logger.exception("Exception: %s", exp)
-                self.backend_connected = False
+                if exp.code == 404:
+                    logger.error('Seems the %s %s deleted in the Backend',
+                                 endpoint, name)
+                else:
+                    self.backend_connected = False
+                    self.backend_connection_retry_planned = int(time.time()) + 60
 
         return update
 
@@ -757,6 +788,7 @@ class AlignakBackendBroker(BaseModule):
                 logger.error("Data: %s", brok.data)
                 logger.exception("Exception: %s", exp)
                 self.backend_connected = False
+                self.backend_connection_retry_planned = int(time.time()) + 60
 
         else:
             item = all_alignak['_items'][0]
@@ -786,6 +818,7 @@ class AlignakBackendBroker(BaseModule):
                 logger.error("Data: %s", brok.data)
                 logger.exception("Exception: %s / %s", exp, exp.response)
                 self.backend_connected = False
+                self.backend_connection_retry_planned = int(time.time()) + 60
 
     def manage_brok(self, brok):
         """

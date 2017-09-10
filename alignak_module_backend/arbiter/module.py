@@ -154,6 +154,8 @@ class AlignakBackendArbiter(BaseModule):
                        'servicedependencies': [],
                        'serviceescalations': [],
                        'triggers': []}
+        self.backend_nb_hosts = 0
+        self.backend_nb_services = 0
         self.default_tp_always = None
         self.default_tp_never = None
         self.default_host_check_command = None
@@ -672,6 +674,7 @@ class AlignakBackendArbiter(BaseModule):
 
             logger.debug("- host: %s", host)
             self.config['hosts'].append(host)
+        self.backend_nb_hosts = len(self.config['hosts'])
 
     def get_servicegroups(self):
         """Get servicegroups from alignak_backend
@@ -842,6 +845,7 @@ class AlignakBackendArbiter(BaseModule):
 
             logger.debug("- service: %s", service)
             self.config['services'].append(service)
+        self.backend_nb_services = len(self.config['services'])
 
     def get_hostdependencies(self):
         """Get hostdependencies from alignak_backend
@@ -1187,6 +1191,20 @@ class AlignakBackendArbiter(BaseModule):
                             if not exists:
                                 self.configuration_reload_changelog.append({"resource": resource,
                                                                             "item": updated})
+
+                # Test number of host and services in backend. The goal is to detect the resources
+                # deleted
+                ret = self.backend.get('host', {"where": '{"_is_template": false}'})
+                if ret['_meta']['total'] < self.backend_nb_hosts:
+                    self.configuration_reload_required = True
+                    self.configuration_reload_changelog.append({"resource": 'host',
+                                                                "item": 'deleted'})
+                ret = self.backend.get('service', {"where": '{"_is_template": false}'})
+                if ret['_meta']['total'] < self.backend_nb_services:
+                    self.configuration_reload_required = True
+                    self.configuration_reload_changelog.append({"resource": 'service',
+                                                                "item": 'deleted'})
+
                 if self.configuration_reload_required:
                     logger.warning("Hey, we must reload configuration from the backend!")
                     try:

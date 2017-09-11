@@ -115,6 +115,8 @@ class AlignakBackendBroker(BaseModule):
         self.loaded_hosts = 0
         self.loaded_services = 0
         self.loaded_users = 0
+        self.loaded = False
+
 
     # Common functions
     def do_loop_turn(self):
@@ -209,6 +211,7 @@ class AlignakBackendBroker(BaseModule):
         :type type_data: str
         :return: None
         """
+        self.loaded = True
         now = int(time.time())
         if type_data == 'livestate_host' \
                 and self.loaded_hosts < now - self.load_protect_delay:
@@ -891,7 +894,7 @@ class AlignakBackendBroker(BaseModule):
                 logger.debug("Got contact update status brok: %s", brok.data)
                 self.update_status(brok)
 
-            if brok.type == 'new_conf':
+            if brok.type == 'new_conf' or not self.loaded:
                 logger.info("Got a new configuration, reloading objects...")
                 loaded = self.loaded_users
                 self.get_refs('livestate_user')

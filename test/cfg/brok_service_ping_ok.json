@@ -1,0 +1,52 @@
+{
+  "host_name": "srv001",
+  "service_description": "ping",
+  "command_name": "ping",
+
+  "attempt": 1,
+  "execution_time": 3.1496069431000002,
+  "latency": 0.2317881584,
+  "return_code": 2,
+  "state": "OK",
+  "state_type": "HARD",
+  "state_id": 0,
+  "state_type_id": 1,
+
+  "output": "PING OK - Packet loss = 0%, RTA = 0.05 ms",
+  "long_output": "Long output ...",
+  "perf_data": "rta=0.049000ms;2.000000;3.000000;0.000000 pl=0%;50;80;0",
+
+  "passive_check": false,
+
+  "problem_has_been_acknowledged": false,
+  "acknowledgement_type": 1,
+  "in_scheduled_downtime": false,
+
+  "last_chk": 1473597375,
+  "last_state_change": 1444427108.147903,
+  "last_state_id": 0,
+  "last_state": "UNKNOWN",
+  "last_state_type": "HARD",
+  "last_hard_state_change": 0.0,
+  "last_time_unknown": 0,
+  "last_time_unreachable": 0,
+  "last_time_critical": 1473597376,
+  "last_time_warning": 0,
+  "last_time_ok": 0,
+
+  "retry_interval": 2,
+  "percent_state_change": 4.1,
+  "check_interval": 5,
+
+  "in_checking": false,
+  "early_timeout": 0,
+  "instance_id": "3ac88dd0c1c04b37a5d181622e93b5bc",
+  "current_event_id": 1,
+  "last_event_id": 0,
+  "current_problem_id": 1,
+  "last_problem_id": 0,
+  "timeout": 0,
+  "has_been_checked": 1,
+  "start_time": 0,
+  "end_time": 0
+}

@@ -1,0 +1,6 @@
+{
+  "host_name": "srv001",
+  "service_description": "ping",
+  "next_chk": 1473598375,
+  "in_checking": true
+}

@@ -1,7 +1,7 @@
 {
   "last_time_unreachable": 0, 
   "last_problem_id": 0,
-  "check_type": 0,
+  "passive_check": false,
   "retry_interval": 1,
   "last_event_id": 0,
   "problem_has_been_acknowledged": false,

@@ -1,7 +1,7 @@
 {
   "last_time_unreachable": 0, 
   "last_problem_id": 0,
-  "check_type": 0,
+  "passive_check": true,
   "retry_interval": 1,
   "last_event_id": 0,
   "problem_has_been_acknowledged": false,
@@ -32,7 +32,7 @@
   "last_state_change": 1444427108.040841,
   "last_time_down": 1444427108,
   "instance_id": 0,
-  "long_output": "",
+  "long_output": "Long output ...",
   "current_problem_id": 0,
   "host_name": "srv001",
   "check_interval": 5,

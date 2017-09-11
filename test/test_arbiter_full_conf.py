@@ -8,6 +8,8 @@ import subprocess
 import json
 import unittest2
 from alignak_module_backend.arbiter.module import AlignakBackendArbiter
+from alignak_module_backend.broker.module import AlignakBackendBroker
+
 from alignak.objects.module import Module
 from alignak.objects.realm import Realm
 from alignak.objects.command import Command
@@ -17,13 +19,23 @@ from alignak.objects.contactgroup import Contactgroup
 from alignak.objects.host import Host
 from alignak.objects.hostgroup import Hostgroup
 from alignak.objects.hostdependency import Hostdependency
+from alignak.objects.hostescalation import Hostescalation
 from alignak.objects.service import Service
 from alignak.objects.servicegroup import Servicegroup
 from alignak.objects.servicedependency import Servicedependency
+from alignak.objects.serviceescalation import Serviceescalation
 from alignak_backend_client.client import Backend
 
+from alignak.brok import Brok
 
-class TestArbiterLoadconf(unittest2.TestCase):
+class Arbiter():
+    """Fake Arbiter class, only for tests..."""
+    def __init__(self, verify_only=False, arbiter_name=None):
+        self.verify_only = verify_only
+        self.arbiter_name = arbiter_name
+
+
+class TestArbiterFullConfiguration(unittest2.TestCase):
 
     maxDiff = None
 
@@ -53,9 +65,9 @@ class TestArbiterLoadconf(unittest2.TestCase):
         )
         assert exit_code == 0
 
-        # Start broker module
+        # Start arbiter module
         modconf = Module()
-        modconf.module_alias = "alignakbackendarbit"
+        modconf.module_alias = "backend_arbiter"
         modconf.username = "admin"
         modconf.password = "admin"
         modconf.api_url = 'http://127.0.0.1:5000'
@@ -72,6 +84,183 @@ class TestArbiterLoadconf(unittest2.TestCase):
         subprocess.call(['uwsgi', '--stop', '/tmp/uwsgi.pid'])
         time.sleep(2)
 
+    def test_alignak_configuration(self):
+        """Test alignak configuration reading
+
+        :return:
+        """
+        # Start broker module
+        modconf = Module()
+        modconf.module_alias = "backend_broker"
+        modconf.username = "admin"
+        modconf.password = "admin"
+        modconf.api_url = 'http://127.0.0.1:5000'
+        self.brokmodule = AlignakBackendBroker(modconf)
+
+        # Get a program status brok
+        brok_data = {
+            # Some general information
+            u'alignak_name': u'my_alignak',
+            u'instance_id': u'176064a1b30741d39452415097807ab0',
+            u'instance_name': u'scheduler-master',
+
+            # Some running information
+            u'program_start': 1493969754,
+            u'daemon_mode': 1,
+            u'pid': 68989,
+            u'last_alive': 1493970641,
+            u'last_command_check': 1493970641,
+            u'last_log_rotation': 1493970641,
+            u'is_running': 1,
+
+            # Some configuration parameters
+            u'process_performance_data': True,
+            u'passive_service_checks_enabled': True,
+            u'event_handlers_enabled': True,
+            u'command_file': u'',
+            u'global_host_event_handler': None,
+            u'interval_length': 60,
+            u'modified_host_attributes': 0,
+            u'check_external_commands': True,
+            u'modified_service_attributes': 0,
+            u'passive_host_checks_enabled': True,
+            u'global_service_event_handler': None,
+            u'notifications_enabled': True,
+            u'check_service_freshness': True,
+            u'check_host_freshness': True,
+            u'flap_detection_enabled': True,
+            u'active_service_checks_enabled': True,
+            u'active_host_checks_enabled': True
+        }
+        brok = Brok({'type': 'update_program_status', 'data': brok_data})
+        brok.prepare()
+
+        # Send program status brok
+        self.brokmodule.manage_brok(brok)
+        # This has created an `alignak` resource...
+
+        # Now we call the Arbiter hook function to get this created configuration
+        # Will get all the `alignak` resources because no arbiter name is defined ...
+        fake_arb = Arbiter()
+        self.arbmodule.hook_read_configuration(fake_arb)
+        configuration = self.arbmodule.get_alignak_configuration()
+        print("Configuration: %s" % configuration)
+        expected = brok_data.copy()
+        print("Expected: %s" % expected)
+        expected[u'name'] = expected.pop('alignak_name')
+        # Some fields are valued as default by the backend
+        configuration.pop(u'_created')
+        configuration.pop(u'_updated')
+        configuration.pop(u'_id')
+        configuration.pop(u'_etag')
+        configuration.pop(u'_realm')
+        configuration.pop(u'_sub_realm')
+        configuration.pop(u'_links')
+        # TODO need add this new fields in alignak brok creation
+        for field_name in ['use_timezone',
+                           'illegal_macro_output_chars', 'illegal_object_name_chars',
+                           'cleaning_queues_interval', 'max_plugins_output_length',
+                           'enable_environment_macros', 'log_initial_states', 'log_active_checks',
+                           'log_host_retries', 'log_service_retries', 'log_passive_checks',
+                           'log_notifications', 'log_event_handlers', 'log_external_commands',
+                           'log_flappings', 'log_snapshots', 'enable_notifications',
+                           'notification_timeout', 'timeout_exit_status', 'execute_host_checks',
+                           'max_host_check_spread', 'host_check_timeout',
+                           'check_for_orphaned_hosts', 'execute_service_checks',
+                           'max_service_check_spread', 'service_check_timeout',
+                           'check_for_orphaned_services', 'flap_history', 'low_host_flap_threshold',
+                           'high_host_flap_threshold', 'low_service_flap_threshold',
+                           'high_service_flap_threshold', 'event_handler_timeout',
+                           'no_event_handlers_during_downtimes', 'host_perfdata_command',
+                           'service_perfdata_command', 'accept_passive_host_checks',
+                           'host_freshness_check_interval', 'accept_passive_service_checks',
+                           'service_freshness_check_interval', 'additional_freshness_latency']:
+            configuration.pop(field_name)
+        expected[u'alias'] = expected[u'name']
+        expected[u'notes'] = u''
+        expected[u'notes_url'] = u''
+        expected[u'global_host_event_handler'] = str(expected[u'global_host_event_handler'])
+        expected[u'global_service_event_handler'] = u'None'
+        self.assertEqual(configuration, expected)
+
+        # Get another program status brok
+        brok_data = {
+            # Some general information
+            u'alignak_name': u'my_alignak_2',
+            u'instance_id': u'176064a1b30741d39452415097807ab0',
+            u'instance_name': u'scheduler-master',
+
+            # Some running information
+            u'program_start': 1493969754,
+            u'daemon_mode': 1,
+            u'pid': 68989,
+            u'last_alive': 1493970641,
+            u'last_command_check': 1493970641,
+            u'last_log_rotation': 1493970641,
+            u'is_running': 1,
+
+            # Some configuration parameters
+            u'process_performance_data': True,
+            u'passive_service_checks_enabled': True,
+            u'event_handlers_enabled': True,
+            u'command_file': u'',
+            u'global_host_event_handler': 'None',
+            u'interval_length': 60,
+            u'modified_host_attributes': 0,
+            u'check_external_commands': True,
+            u'modified_service_attributes': 0,
+            u'passive_host_checks_enabled': True,
+            u'global_service_event_handler': 'None',
+            u'notifications_enabled': True,
+            u'check_service_freshness': True,
+            u'check_host_freshness': True,
+            u'flap_detection_enabled': True,
+            u'active_service_checks_enabled': True,
+            u'active_host_checks_enabled': True
+        }
+        brok = Brok({'type': 'update_program_status', 'data': brok_data})
+        brok.prepare()
+
+        # Send program status brok
+        self.brokmodule.manage_brok(brok)
+        # This has created an `alignak` resource...
+
+        # Now we call the Arbiter hook function to get this created configuration
+        # Get the configuration for a specific arbiter / alignak
+        # It will be the first one created
+        fake_arb = Arbiter(arbiter_name='my_alignak')
+        self.arbmodule.hook_read_configuration(fake_arb)
+        configuration = self.arbmodule.get_alignak_configuration()
+        # Some fields are valued as default by the backend
+        configuration.pop(u'_created')
+        configuration.pop(u'_updated')
+        configuration.pop(u'_id')
+        configuration.pop(u'_etag')
+        configuration.pop(u'_realm')
+        configuration.pop(u'_sub_realm')
+        configuration.pop(u'_links')
+        # TODO need add this new fields in alignak brok creation
+        for field_name in ['use_timezone',
+                           'illegal_macro_output_chars', 'illegal_object_name_chars',
+                           'cleaning_queues_interval', 'max_plugins_output_length',
+                           'enable_environment_macros', 'log_initial_states', 'log_active_checks',
+                           'log_host_retries', 'log_service_retries', 'log_passive_checks',
+                           'log_notifications', 'log_event_handlers', 'log_external_commands',
+                           'log_flappings', 'log_snapshots', 'enable_notifications',
+                           'notification_timeout', 'timeout_exit_status', 'execute_host_checks',
+                           'max_host_check_spread', 'host_check_timeout',
+                           'check_for_orphaned_hosts', 'execute_service_checks',
+                           'max_service_check_spread', 'service_check_timeout',
+                           'check_for_orphaned_services', 'flap_history', 'low_host_flap_threshold',
+                           'high_host_flap_threshold', 'low_service_flap_threshold',
+                           'high_service_flap_threshold', 'event_handler_timeout',
+                           'no_event_handlers_during_downtimes', 'host_perfdata_command',
+                           'service_perfdata_command', 'accept_passive_host_checks',
+                           'host_freshness_check_interval', 'accept_passive_service_checks',
+                           'service_freshness_check_interval', 'additional_freshness_latency']:
+            configuration.pop(field_name)
+        self.assertEqual(configuration, expected)
+
     def test_commands(self):
         self.assertEqual(len(self.objects['commands']), 105)
         for comm in self.objects['commands']:
@@ -79,14 +268,17 @@ class TestArbiterLoadconf(unittest2.TestCase):
                 self.assertTrue(Command.properties[key])
 
     def test_hostescalations(self):
-        self.assertEqual(len(self.objects['hostescalations']), 0)
+        self.assertEqual(len(self.objects['hostescalations']), 2)
+        for item in self.objects['hostescalations']:
+            for key, value in item.iteritems():
+                self.assertTrue(Hostescalation.properties[key])
 
     def test_contacts(self):
-        self.assertEqual(len(self.objects['contacts']), 5)
+        self.assertEqual(len(self.objects['contacts']), 8)
         for cont in self.objects['contacts']:
             for key, value in cont.iteritems():
                 # problem in alignak because not defined
-                if key not in ['can_update_livestate'] and not key.startswith('_'):
+                if key not in ['can_update_livestate', 'skill_level'] and not key.startswith('_'):
                     self.assertTrue(Contact.properties[key])
 
     def test_timeperiods(self):
@@ -96,7 +288,10 @@ class TestArbiterLoadconf(unittest2.TestCase):
         #         self.assertTrue(Timeperiod.properties[key])
 
     def test_serviceescalations(self):
-        self.assertEqual(len(self.objects['serviceescalations']), 0)
+        self.assertEqual(len(self.objects['serviceescalations']), 3)
+        for item in self.objects['serviceescalations']:
+            for key, value in item.iteritems():
+                self.assertTrue(Serviceescalation.properties[key])
 
     def test_hostgroups(self):
         self.assertEqual(len(self.objects['hostgroups']), 9)
@@ -107,7 +302,7 @@ class TestArbiterLoadconf(unittest2.TestCase):
                     self.assertTrue(Hostgroup.properties[key])
 
     def test_contactgroups(self):
-        self.assertEqual(len(self.objects['contactgroups']), 3)
+        self.assertEqual(len(self.objects['contactgroups']), 4)
         for contact in self.objects['contactgroups']:
             for key, value in contact.iteritems():
                 # problem in alignak because not defined
@@ -128,13 +323,26 @@ class TestArbiterLoadconf(unittest2.TestCase):
             print("Got realm: %s" % realm)
             for key, value in realm.iteritems():
                 self.assertTrue(Realm.properties[key])
+            if realm['realm_name'] == 'All':
+                members = realm['realm_members'].split(',')
+                print("Realm All members: %s", members)
+                self.assertEqual(len(members), 2)
+                for member in members:
+                    self.assertIn(member, [u'Europe', u'US'])
+            if realm['realm_name'] == 'Europe':
+                members = realm['realm_members'].split(',')
+                print("Realm Europe members: %s", members)
+                self.assertEqual(len(members), 2)
+                for member in members:
+                    self.assertIn(member, [u'Italy', u'France'])
 
     def test_services(self):
+        # As of #80, ... 94
         self.assertEqual(len(self.objects['services']), 94)
         for serv in self.objects['services']:
             print("Got service: %s" % serv)
             for key, value in serv.iteritems():
-                if not key.startswith('ls_') and not key.startswith('_'):
+                if not key.startswith('ls_') and not key.startswith('_') and not key in ['alias']:
                     self.assertTrue(Service.properties[key])
 
     def test_servicegroups(self):

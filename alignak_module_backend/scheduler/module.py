@@ -27,7 +27,7 @@ import logging
 from alignak.basemodule import BaseModule
 from alignak_backend_client.client import Backend, BackendException
 
-logger = logging.getLogger('alignak.module')  # pylint: disable=C0103
+logger = logging.getLogger('alignak.module')  # pylint: disable=invalid-name
 
 # pylint: disable=C0103
 properties = {
@@ -56,8 +56,7 @@ class AlignakBackendScheduler(BaseModule):
     """
 
     def __init__(self, mod_conf):
-        """
-        Module initialization
+        """Module initialization
 
         mod_conf is a dictionary that contains:
         - all the variables declared in the module configuration file
@@ -74,13 +73,28 @@ class AlignakBackendScheduler(BaseModule):
         logger.debug("inner properties: %s", self.__dict__)
         logger.debug("received configuration: %s", mod_conf.__dict__)
 
+        self.client_processes = int(getattr(mod_conf, 'client_processes', 1))
+        logger.info(
+            "Number of processes used by backend client: %s", self.client_processes
+        )
+
         self.url = getattr(mod_conf, 'api_url', 'http://localhost:5000')
-        self.backend = Backend(self.url)
+        self.backend = Backend(self.url, self.client_processes)
         self.backend.token = getattr(mod_conf, 'token', '')
         self.backend_connected = False
-        if self.backend.token == '':
-            self.getToken(getattr(mod_conf, 'username', ''), getattr(mod_conf, 'password', ''),
-                          getattr(mod_conf, 'allowgeneratetoken', False))
+        self.backend_errors_count = 0
+        self.backend_username = getattr(mod_conf, 'username', '')
+        self.backend_password = getattr(mod_conf, 'password', '')
+        self.backend_generate = getattr(mod_conf, 'allowgeneratetoken', False)
+
+        if not self.backend.token:
+            logger.warning("no user token configured. "
+                           "It is recommended to set a user token rather than a user login "
+                           "in the configuration. Trying to get a token from the provided "
+                           "user login information...")
+            self.getToken()
+        else:
+            self.backend_connected = True
 
     # Common functions
     def do_loop_turn(self):
@@ -90,34 +104,45 @@ class AlignakBackendScheduler(BaseModule):
         logger.info("[Backend Scheduler] In loop")
         time.sleep(1)
 
-    def getToken(self, username, password, generatetoken):
-        """
-        Authenticate and get the token
+    def getToken(self):
+        """Authenticate and get the token
 
-        :param username: login name
-        :type username: str
-        :param password: password
-        :type password: str
-        :param generatetoken: if True allow generate token, otherwise not generate
-        :type generatetoken: bool
         :return: None
         """
         generate = 'enabled'
-        if not generatetoken:
+        if not self.backend_generate:
             generate = 'disabled'
 
         try:
-            self.backend.login(username, password, generate)
-            self.backend_connected = True
-        except BackendException as exp:
-            logger.warning("Alignak backend is not available for login. "
-                           "No backend connection.")
-            logger.exception("Exception: %s", exp)
+            self.backend_connected = self.backend.login(self.backend_username,
+                                                        self.backend_password,
+                                                        generate)
+            if not self.backend_connected:
+                logger.warning("Backend login failed")
+            self.token = self.backend.token
+            self.backend_errors_count = 0
+        except BackendException as exp:  # pragma: no cover - should not happen
             self.backend_connected = False
+            self.backend_errors_count += 1
+            logger.warning("Alignak backend is not available for login. "
+                           "No backend connection, attempt: %d", self.backend_errors_count)
+            logger.debug("Exception: %s", exp)
+
+    def raise_backend_alert(self, errors_count=10):
+        """Raise a backend alert
+
+        :return: True if the backend is not connected and the error count
+        is greater than a defined threshold
+        """
+        logger.debug("Check backend connection, connected: %s, errors count: %d",
+                     self.backend_connected, self.backend_errors_count)
+        if not self.backend_connected and self.backend_errors_count >= errors_count:
+            return True
+
+        return False
 
     def hook_load_retention(self, scheduler):
-        """
-        Load retention data from alignak-backend
+        """Load retention data from alignak-backend
 
         :param scheduler: scheduler instance of alignak
         :type scheduler: object
@@ -125,77 +150,106 @@ class AlignakBackendScheduler(BaseModule):
         """
 
         all_data = {'hosts': {}, 'services': {}}
+
         if not self.backend_connected:
-            logger.error("[Backend Scheduler] Alignak backend connection is not available. "
-                         "Skipping objects retention load.")
-        else:
-            # Get data from the backend
-            response = self.backend.get_all('retentionhost')
+            self.getToken()
+            if self.raise_backend_alert(errors_count=1):
+                logger.warning("Alignak backend connection is not available. "
+                               "Loading retention data is not possible.")
+                return
+
+        if not self.backend_connected:
+            return False
+
+        # Get data from the backend
+        try:
+            response = self.backend.get_all('alignakretention')
             for host in response['_items']:
                 # clean unusable keys
                 hostname = host['host']
-                for key in ['_created', '_etag', '_id', '_links', '_updated', 'host']:
+                if 'retention_services' in host:
+                    for service in host['retention_services']:
+                        all_data['services'][(host['host'], service)] = \
+                            host['retention_services'][service]
+                for key in ['_created', '_etag', '_id', '_links', '_updated', 'host',
+                            'retention_services', '_user']:
                     del host[key]
                 all_data['hosts'][hostname] = host
-            response = self.backend.get_all('retentionservice')
-            for service in response['_items']:
-                # clean unusable keys
-                servicename = (service['service'][0], service['service'][1])
-                for key in ['_created', '_etag', '_id', '_links', '_updated', 'service']:
-                    del service[key]
-                all_data['services'][servicename] = service
+            logger.info('%d hosts loaded from retention', len(all_data['hosts']))
+            logger.info('%d services loaded from retention', len(all_data['services']))
 
-        scheduler.restore_retention_data(all_data)
+            scheduler.restore_retention_data(all_data)
+        except BackendException:
+            self.backend_connected = False
+            self.backend_errors_count += 1
+            logger.warning("Alignak backend connection fails. Check and fix your configuration")
 
     def hook_save_retention(self, scheduler):
-        """
-        Save retention data from alignak-backend
+        """Save retention data to alignak-backend
 
         :param scheduler: scheduler instance of alignak
         :type scheduler: object
         :return: None
         """
-        data_to_save = scheduler.get_retention_data()
+        if not self.backend_connected:
+            self.getToken()
+            if self.raise_backend_alert(errors_count=1):
+                logger.warning("Alignak backend connection is not available. "
+                               "Saving objects is not possible.")
+                return
 
         if not self.backend_connected:
-            logger.error("Alignak backend connection is not available. "
-                         "Skipping objects retention save.")
-            return
+            return False
 
-        # clean hosts we will re-upload the retention
-        response = self.backend.get_all('retentionhost')
-        for host in response['_items']:
-            if host['host'] in data_to_save['hosts']:
-                delheaders = {'If-Match': host['_etag']}
-                self.backend.delete('/'.join(['retentionhost', host['_id']]), headers=delheaders)
+        try:
+            data_to_save = scheduler.get_retention_data()
+            start_time = time.time()
 
-        # Add all hosts after
-        for host in data_to_save['hosts']:
-            data_to_save['hosts'][host]['host'] = host
-            try:
-                self.backend.post('retentionhost', data=data_to_save['hosts'][host])
-            except BackendException as exp:
-                logger.error('Post retentionhost for host error')
-                logger.error('Response: %s', exp.response)
-                logger.exception("Exception: %s", exp)
-                return
-        logger.info('%d hosts saved in retention', len(data_to_save['hosts']))
+            # get list of retention_data
+            response = self.backend.get_all('alignakretention')
+            db_hosts = {}
+            for host in response['_items']:
+                db_hosts[host['host']] = host
 
-        # clean services we will re-upload the retention
-        response = self.backend.get_all('retentionservice')
-        for service in response['_items']:
-            if (service['service'][0], service['service'][1]) in data_to_save['services']:
-                delheaders = {'If-Match': service['_etag']}
-                self.backend.delete('/'.join(['retentionservice', service['_id']]),
-                                    headers=delheaders)
+            # add services in the hosts
+            for host in data_to_save['hosts']:
+                data_to_save['hosts'][host]['retention_services'] = {}
+                data_to_save['hosts'][host]['host'] = host
+            for service in data_to_save['services']:
+                data_to_save['hosts'][service[0]]['retention_services'][service[1]] = \
+                    data_to_save['services'][service]
 
-        # Add all services after
-        for service in data_to_save['services']:
-            data_to_save['services'][service]['service'] = service
-            try:
-                self.backend.post('retentionservice', data=data_to_save['services'][service])
-            except BackendException as exp:
-                logger.error('Post retentionservice for service error')
-                logger.exception("Exception: %s", exp)
-                return
-        logger.info('%d services saved in retention', len(data_to_save['services']))
+            for host in data_to_save['hosts']:
+                if host in db_hosts:
+                    # if host in retention_data, PUT
+                    headers = {'Content-Type': 'application/json'}
+                    headers['If-Match'] = db_hosts[host]['_etag']
+                    try:
+                        logger.debug('Host retention data: %s', data_to_save['hosts'][host])
+                        self.backend.put('alignakretention/%s' % (db_hosts[host]['_id']),
+                                         data_to_save['hosts'][host], headers, True)
+                    except BackendException as exp:  # pragma: no cover - should not happen
+                        logger.error('Put alignakretention error')
+                        logger.error('Response: %s', exp.response)
+                        logger.exception("Exception: %s", exp)
+                        self.backend_connected = False
+                        return
+                else:
+                    # if not host in retention_data, POST
+                    try:
+                        logger.debug('Host retention data: %s', data_to_save['hosts'][host])
+                        self.backend.post('alignakretention', data=data_to_save['hosts'][host])
+                    except BackendException as exp:  # pragma: no cover - should not happen
+                        logger.error('Post alignakretention error')
+                        logger.error('Response: %s', exp.response)
+                        logger.exception("Exception: %s", exp)
+                        self.backend_connected = False
+                        return
+            logger.info('%d hosts saved in retention', len(data_to_save['hosts']))
+
+            now = time.time()
+            logger.info("Retention saved in %s seconds", (now - start_time))
+        except BackendException:
+            self.backend_connected = False
+            self.backend_errors_count += 1
+            logger.warning("Alignak backend connection fails. Check and fix your configuration")

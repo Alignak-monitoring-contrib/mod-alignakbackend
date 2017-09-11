@@ -78,6 +78,7 @@ class TestArbiterConfigCheck(unittest2.TestCase):
         data = json.loads(open('cfg/command_http.json').read())
         data['_realm'] = cls.realm_all
         data_cmd_http = cls.backend.post("command", data)
+        cls.ping_cmd = data_cmd_http['_id']
 
         # add 1 host
         data = json.loads(open('cfg/host_srv001.json').read())
@@ -309,3 +310,81 @@ class TestArbiterConfigCheck(unittest2.TestCase):
                                               % (123456, arb.pidfile)
         # No arbiter PID file exists remains in the log!
         # Invalid arbiter PID!
+
+    def test_delete_host_service_detection(self):
+        """Test if the hook detect we have deleted an host / service in the backend
+        """
+        class Arbiter(object):
+            conf = Config()
+            pidfile = '/tmp/arbiter.pid'
+
+        arb = Arbiter()
+
+        if os.path.exists('/tmp/arbiter.pid'):
+            os.remove('/tmp/arbiter.pid')
+
+        now = timegm(datetime.utcnow().utctimetuple())
+
+        # add 1 host
+        data = json.loads(open('cfg/host_srv001.json').read())
+        data['check_command'] = self.ping_cmd
+        data['name'] = 'srv002'
+        del data['realm']
+        data['_realm'] = self.realm_all
+        srv002 = self.data_host = self.backend.post("host", data)
+
+        # Get our existing host
+        hosts = self.backend.get_all('host')
+        self.assertEqual(len(hosts['_items']), 3)
+
+        # Start arbiter module
+        modconf = Module()
+        modconf.module_alias = "backend_arbiter"
+        modconf.username = "admin"
+        modconf.password = "admin"
+        modconf.api_url = 'http://127.0.0.1:5000'
+
+        # Update default check timers
+        # check every x min if config in backend changed, if yes it will reload it
+        # Default, every 5 minutes
+        modconf.verify_modification = 1
+        # verify_modification     5
+
+        self.arbmodule = AlignakBackendArbiter(modconf)
+        self.objects = self.arbmodule.get_objects()
+
+        # No configuration check is done ... because it is not yet the moment to check.
+        print("No configuration check")
+        next_check = self.arbmodule.next_check
+        print("Next check: %s" % (next_check))
+        assert self.arbmodule.configuration_reload_required is False
+        assert self.arbmodule.configuration_reload_changelog == []
+        self.arbmodule.hook_tick(arb)
+        print("Next check: %s / %s" % (next_check, self.arbmodule.next_check))
+        assert self.arbmodule.next_check == next_check
+        assert self.arbmodule.configuration_reload_required is False
+        assert self.arbmodule.configuration_reload_changelog == []
+
+        # delete the last host
+        headers = {
+            'Content-Type': 'application/json',
+            'If-Match': srv002['_etag']
+        }
+        self.backend.delete('host/%s' % srv002['_id'], headers)
+        hosts = self.backend.get_all('host')
+        self.assertEqual(len(hosts['_items']), 2)
+
+        # Set next check in the past to force a configuration check
+        # Set check date in the future
+        # And configuration has changed...
+        print("Configuration check - a host has been deleted changed")
+        self.arbmodule.next_check = now - 1
+        self.arbmodule.time_loaded_conf = datetime.utcfromtimestamp(now + 1).strftime(self.arbmodule.backend_date_format)
+        print("Next check: %s" % (next_check))
+        assert self.arbmodule.configuration_reload_required is False
+        assert self.arbmodule.configuration_reload_changelog == []
+        self.arbmodule.hook_tick(arb)
+        print("Next check: %s / %s" % (next_check, self.arbmodule.next_check))
+        assert self.arbmodule.next_check > now
+        assert self.arbmodule.configuration_reload_required is True
+        assert len(self.arbmodule.configuration_reload_changelog) > 0

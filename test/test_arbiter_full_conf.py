@@ -59,9 +59,13 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
                                   '/tmp/uwsgi.pid'])
         time.sleep(3)
 
-        print ("Feeding backend...")
+        test_dir = os.path.dirname(os.path.realpath(__file__))
+        print("Current test directory: %s" % test_dir)
+
+        print("Feeding Alignak backend... %s" % test_dir)
         exit_code = subprocess.call(
-            shlex.split('alignak-backend-import --delete cfg/default/_main.cfg')
+            shlex.split(
+                'alignak-backend-import --delete %s/cfg/default/_main.cfg' % test_dir)
         )
         assert exit_code == 0
 

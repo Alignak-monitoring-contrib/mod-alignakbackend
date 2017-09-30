@@ -33,4 +33,23 @@ after_success:
   # to get coverage data with relative paths and not absolute we have to
   # execute coveralls from the base directory of the project,
   # so we need to move the .coverage file here :
-  mv test/.coverage . && coveralls --rcfile=test/.coveragerc -v
+  - mv test/.coverage . && coveralls --rcfile=test/.coveragerc -v
+  - ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION
+
+deploy:
+  - provider: bintray
+    skip_cleanup: true
+    file: .bintray.json
+    user: ddurieux
+    key:
+      secure: "AMABxlOeqkSszJt2kp0ZbwuCbBnTgPlLN27/Exi/Bxab3gbjQN2zR0X/D3ReeoPREjgFGqVrgPSYK54aj6HHDxNI+WH8yI0dIXFgCso5QXsLbwLm+OSyfYxz0Mef8CzQq3CbVcGQ1beoVw75pKWsT36tu2Wi+yD5OPg48szGkuj4BQ35GpEldS1EEj6iVF0e6yafY0SOzRMrYYC9k+ik3Rnz39RkDsA1T07OVQMFvlL2IP3dl2qKO+OrXDJP6z9KI1zdRhNjqMhglB8rkOue8FxF+x+Gol9C2kJAtRKGq8EZltyG4AEbHr6LIiIMU0lE9XZX/RykiQN0bG/J+CM6lrgfU6yce6UEYeSDxPyCaRZiKaWWSOYVtpB73wwJ5mGwE8SM1mXve2p+Ap7d8TlTFzCK/AlS38GIg9LgwRnhqFdvrL5nLRayCSHo4IcxroIxlldzBUaV2APpjeIb5WH5MI/QHQViKwqoMl2RJJRF1e+k4fkS6FBaiDKtT3ALizrnX2elKZOpcfFb+fr9ydcTHaznk6wGnPZcMON9npyl6QOh/OKbzbdbfqGLW5aTnGRu4MBLmR+N2aTl83p6nQmw5jpy0TuF1BHthC7GkiS49sXVLzyhVhbbGstHX1Oa72JnBbu5xk46nDqJCXPY8c7RNkRGbO9LiJnWzogM6exb8T4="
+    on:
+      branch: develop
+  - provider: bintray
+    skip_cleanup: true
+    file: .bintray.json
+    user: ddurieux
+    key:
+      secure: "AMABxlOeqkSszJt2kp0ZbwuCbBnTgPlLN27/Exi/Bxab3gbjQN2zR0X/D3ReeoPREjgFGqVrgPSYK54aj6HHDxNI+WH8yI0dIXFgCso5QXsLbwLm+OSyfYxz0Mef8CzQq3CbVcGQ1beoVw75pKWsT36tu2Wi+yD5OPg48szGkuj4BQ35GpEldS1EEj6iVF0e6yafY0SOzRMrYYC9k+ik3Rnz39RkDsA1T07OVQMFvlL2IP3dl2qKO+OrXDJP6z9KI1zdRhNjqMhglB8rkOue8FxF+x+Gol9C2kJAtRKGq8EZltyG4AEbHr6LIiIMU0lE9XZX/RykiQN0bG/J+CM6lrgfU6yce6UEYeSDxPyCaRZiKaWWSOYVtpB73wwJ5mGwE8SM1mXve2p+Ap7d8TlTFzCK/AlS38GIg9LgwRnhqFdvrL5nLRayCSHo4IcxroIxlldzBUaV2APpjeIb5WH5MI/QHQViKwqoMl2RJJRF1e+k4fkS6FBaiDKtT3ALizrnX2elKZOpcfFb+fr9ydcTHaznk6wGnPZcMON9npyl6QOh/OKbzbdbfqGLW5aTnGRu4MBLmR+N2aTl83p6nQmw5jpy0TuF1BHthC7GkiS49sXVLzyhVhbbGstHX1Oa72JnBbu5xk46nDqJCXPY8c7RNkRGbO9LiJnWzogM6exb8T4="
+    on:
+      tags: true

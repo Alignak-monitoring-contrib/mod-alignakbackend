@@ -300,7 +300,7 @@ class AlignakBackendArbiter(BaseModule):
             'ls_last_time_unknown', 'ls_last_time_unreachable',
             'ls_passive_check', 'ls_last_notification',
             '_overall_state_id',
-            'trigger'
+            'trigger', 'schema_version'
         ]
         for field in fields:
             if field in resource:

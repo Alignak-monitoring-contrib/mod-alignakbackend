@@ -259,7 +259,8 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'email': u'',
                 u'alias': u'Administrator',
                 u'host_notification_options': u'd,u,r,f,s',
-                # u'skill_level': 2
+                # u'skill_level': 2,
+                u'webui_visible': True
             },
             # the test created user has default notifications (eg. enabled)
             {
@@ -289,14 +290,16 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'email': u'',
                 u'alias': u'jeronimo',
                 u'host_notification_options': u'd,u,r,f,s',
-                # u'skill_level': 0
+                # u'skill_level': 0,
+                u'webui_visible': True
             }
         ]
         self.assertItemsEqual(reference, self.objects['contacts'])
         for cont in self.objects['contacts']:
             for key, value in cont.iteritems():
                 # problem in alignak because not defined
-                if key not in ['can_update_livestate', 'skill_level']:
+                if key not in ['can_update_livestate', 'skill_level', 'webui_visible'] \
+                        and not key.startswith('_'):
                     self.assertTrue(Contact.properties[key])
 
     def test_timeperiods(self):

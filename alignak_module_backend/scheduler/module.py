@@ -176,7 +176,7 @@ class AlignakBackendScheduler(BaseModule):
                         all_data['services'][(host['host'], service)] = \
                             host['retention_services'][service]
                 for key in ['_created', '_etag', '_id', '_links', '_updated', 'host',
-                            'retention_services', '_user']:
+                            'retention_services', '_user', 'schema_version']:
                     del host[key]
                 all_data['hosts'][hostname] = host
             logger.info('%d hosts loaded from retention', len(all_data['hosts']))

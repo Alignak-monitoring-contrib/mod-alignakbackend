@@ -363,6 +363,7 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         alignak.pop('_id')
         alignak.pop('_links')
         alignak.pop('_etag')
+        alignak.pop('schema_version')
         # TODO need add this new fields in alignak brok creation
         for field_name in ['use_timezone',
                            'illegal_macro_output_chars', 'illegal_object_name_chars',
@@ -452,6 +453,7 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         alignak.pop('_id')
         alignak.pop('_links')
         alignak.pop('_etag')
+        alignak.pop('schema_version')
         # TODO need add this new fields in alignak brok creation
         for field_name in ['use_timezone',
                            'illegal_macro_output_chars', 'illegal_object_name_chars',
@@ -546,6 +548,7 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         alignak.pop('_id')
         alignak.pop('_links')
         alignak.pop('_etag')
+        alignak.pop('schema_version')
         # TODO need add this new fields in alignak brok creation
         for field_name in ['use_timezone',
                            'illegal_macro_output_chars', 'illegal_object_name_chars',
@@ -639,6 +642,7 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         alignak.pop('_id')
         alignak.pop('_links')
         alignak.pop('_etag')
+        alignak.pop('schema_version')
         # TODO need add this new fields in alignak brok creation
         for field_name in ['use_timezone',
                            'illegal_macro_output_chars', 'illegal_object_name_chars',
@@ -735,6 +739,7 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         alignak.pop('_id')
         alignak.pop('_links')
         alignak.pop('_etag')
+        alignak.pop('schema_version')
         # TODO need add this new fields in alignak brok creation
         for field_name in ['use_timezone',
                            'illegal_macro_output_chars', 'illegal_object_name_chars',

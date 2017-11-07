@@ -160,6 +160,7 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
         configuration.pop(u'_realm')
         configuration.pop(u'_sub_realm')
         configuration.pop(u'_links')
+        configuration.pop(u'schema_version')
         # TODO need add this new fields in alignak brok creation
         for field_name in ['use_timezone',
                            'illegal_macro_output_chars', 'illegal_object_name_chars',
@@ -243,6 +244,7 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
         configuration.pop(u'_realm')
         configuration.pop(u'_sub_realm')
         configuration.pop(u'_links')
+        configuration.pop(u'schema_version')
         # TODO need add this new fields in alignak brok creation
         for field_name in ['use_timezone',
                            'illegal_macro_output_chars', 'illegal_object_name_chars',
@@ -282,7 +284,8 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
         for cont in self.objects['contacts']:
             for key, value in cont.iteritems():
                 # problem in alignak because not defined
-                if key not in ['can_update_livestate', 'skill_level'] and not key.startswith('_'):
+                if key not in ['can_update_livestate', 'skill_level', 'webui_visible'] \
+                        and not key.startswith('_'):
                     self.assertTrue(Contact.properties[key])
 
     def test_timeperiods(self):

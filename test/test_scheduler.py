@@ -228,7 +228,8 @@ class TestScheduler(unittest2.TestCase):
         ]
 
         for host in hosts['_items']:
-            for key in ['_created', '_etag', '_id', '_links', '_updated', '_user']:
+            for key in ['_created', '_etag', '_id', '_links', '_updated', '_user',
+                        'schema_version']:
                 del host[key]
 
         self.assertEqual(2, len(hosts['_items']))
@@ -311,7 +312,8 @@ class TestScheduler(unittest2.TestCase):
         ]
 
         for host in hosts['_items']:
-            for key in ['_created', '_etag', '_id', '_links', '_updated', '_user']:
+            for key in ['_created', '_etag', '_id', '_links', '_updated', '_user',
+                        'schema_version']:
                 del host[key]
 
         self.assertEqual(3, len(hosts['_items']))
@@ -331,14 +333,14 @@ class TestScheduler(unittest2.TestCase):
         reference = {
             'srv001': {
                 'latency': 0,
-                'last_state_type': 'HARD',
-                'state': 'UP',
+                'last_state_type': u'HARD',
+                'state': u'UP',
                 'last_chk': 0,
             },
             'srv002': {
                 'latency': 0,
-                'last_state_type': 'HARD',
-                'state': 'UP',
+                'last_state_type': u'HARD',
+                'state': u'UP',
                 'last_chk': 0,
             }
         }
@@ -347,14 +349,14 @@ class TestScheduler(unittest2.TestCase):
         reference = {
             ('srv001', 'check_http'): {
                 'latency': 0,
-                'last_state_type': 'HARD',
-                'state': 'OK',
+                'last_state_type': u'HARD',
+                'state': u'OK',
                 'last_chk': 0,
             },
             ('srv002', 'check_https'): {
                 'latency': 0,
-                'last_state_type': 'HARD',
-                'state': 'WARNING',
+                'last_state_type': u'HARD',
+                'state': u'WARNING',
                 'last_chk': 0,
             }
         }

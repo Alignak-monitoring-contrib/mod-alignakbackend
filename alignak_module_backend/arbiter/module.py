@@ -36,9 +36,12 @@ from alignak_backend_client.client import Backend, BackendException
 # Set the backend client library log to ERROR level
 logging.getLogger("alignak_backend_client.client").setLevel(logging.ERROR)
 
-logger = logging.getLogger('alignak.module')  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+for handler in logger.parent.handlers:
+    if isinstance(handler, logging.StreamHandler):
+        logger.parent.removeHandler(handler)
 
-# pylint: disable=C0103
+# pylint: disable=invalid-name
 properties = {
     'daemons': ['arbiter'],
     'type': 'backend_arbiter',
@@ -78,6 +81,7 @@ class AlignakBackendArbiter(BaseModule):
         # pylint: disable=global-statement
         global logger
         logger = logging.getLogger('alignak.module.%s' % self.alias)
+        logger.setLevel(getattr(mod_conf, 'log_level', logging.INFO))
 
         logger.debug("inner properties: %s", self.__dict__)
         logger.debug("received configuration: %s", mod_conf.__dict__)

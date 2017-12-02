@@ -520,6 +520,100 @@ class AlignakBackendBroker(BaseModule):
             logger.debug("--- %s seconds ---", (time.time() - start_time))
         return counters
 
+    def post_lcr(self, data, obj_type):
+        """
+        Post a check result for an host/service
+
+        :param data: dictionary of data from scheduler
+        :type data: dict
+        :param obj_type: type of data (host | service)
+        :type obj_type: str
+        :return: Counters of updated or add data to alignak backend
+        :rtype: dict
+        """
+        start_time = time.time()
+        counters = {
+            'livestate_host': 0,
+            'livestate_service': 0,
+            'log_host': 0,
+            'log_service': 0
+        }
+        logger.debug("Update livestate: %s - %s", obj_type, data)
+
+        # Received data for an host:
+        # {
+        #   "last_problem_id": 0,
+        #   "retry_interval": 1,
+        #   "last_event_id": 0,
+        #   "last_time_up": 0,
+        #   "percent_state_change": 0.0,
+        #   "end_time": 0,
+        #   "timeout": 0,
+        #   "current_event_id": 10,
+        #   "start_time": 0,
+        #   "return_code": 2,
+        #   "in_checking": true,
+        #   "early_timeout": 0,
+        #   "in_scheduled_downtime": false,
+        #   "state_type_id": 1,
+        #   "instance_id": 0,
+        #   "current_problem_id": 0,
+        #   "check_interval": 5,
+        #   "has_been_checked": 1,
+        # }
+        name = data['host_name']
+        lcr_data = {
+            'host_name': data['host_name'],
+
+            'state': data['state'],
+            'state_type': data['state_type'],
+            'state_id': data['state_id'],
+            'passive_check': data['passive_check'],
+            'acknowledged': data['problem_has_been_acknowledged'],
+            'acknowledgement_type': data['acknowledgement_type'],
+            'downtimed': data['in_scheduled_downtime'],
+            'last_check': data['last_chk'],
+            'last_state': data['last_state'],
+            'last_state_id': data['last_state_id'],
+            'last_state_type': data['last_state_type'],
+            'output': data['output'],
+            'long_output': data['long_output'],
+            'perf_data': data['perf_data'],
+            'execution_time': data['execution_time'],
+            'latency': data['latency'],
+
+            'current_attempt': data['attempt'],
+            'max_attempts': data['max_attempts'],
+
+            'state_changed': data['state_changed'],
+            'last_state_changed': data['last_state_change'],
+            'last_hard_state_changed': data['last_hard_state_change'],
+
+            # Last time in the corresponding state
+            'last_time_0': data['last_time_up'],
+            'last_time_1': data['last_time_down'],
+            'last_time_2': 0,
+            'last_time_3': 0,
+            'last_time_4': data['last_time_unreachable']
+        }
+        if obj_type == 'service':
+            lcr_data.update({'service_name': data['service_description']})
+            name = '/'.join([data['host_name'], data['service_name']])
+
+        try:
+            response = self.backend.post('logcheckresult', lcr_data)
+        except BackendException as exp:  # pragma: no cover - should not happen
+            logger.error('Post logcheckresult for %s error', name)
+            logger.error('Data: %s', data)
+            logger.exception("Exception: %s", exp)
+            if exp.code == 422:
+                logger.error('Seems that %s was deleted from the Backend', name)
+            else:
+                self.backend_connected = False
+                self.backend_connection_retry_planned = int(time.time()) + 60
+            return False
+        return True
+
     def send_to_backend(self, type_data, name, data):
         """
         Send data to alignak backend
@@ -548,50 +642,54 @@ class AlignakBackendBroker(BaseModule):
         ret = True
         if type_data == 'livestate_host':
             headers['If-Match'] = self.ref_live['host'][self.mapping['host'][name]]['_etag']
-            try:
+            retry = True
+            while retry:try:
                 start = time.time()
-                statsmgr.counter('backend-patch.host', 1)
-                response = self.backend.patch(
+                statsmgr.counter('backend-patch.host', 1)response = self.backend.patch(
                     'host/%s' % self.ref_live['host'][self.mapping['host'][name]]['_id'],
-                    data, headers, True)
-                statsmgr.timer('backend-patch-time.host', time.time() - start)
+                    data, headers, True)statsmgr.timer('backend-patch-time.host', time.time() - start)
                 if response['_status'] == 'ERR':  # pragma: no cover - should not happen
                     logger.error('%s', response['_issues'])
                     ret = False
                 else:
                     self.ref_live['host'][self.mapping['host'][name]]['_etag'] = response['_etag']
-            except BackendException as exp:  # pragma: no cover - should not happen
+            retry = Falseexcept BackendException as exp:  # pragma: no cover - should not happen
                 logger.error('Patch livestate for host %s error', self.mapping['host'][name])
                 logger.error('Data: %s', data)
                 logger.exception("Exception: %s", exp)
-                if exp.code == 404:
+                retry = Falseif exp.code == 404:
                     logger.error('Seems the host %s deleted in the Backend',
-                                 self.mapping['host'][name])
+                                 self.mapping['host'][name])elif exp.code == 412:
+                        logger.warning('Seems the host %s was still updated in the Backend. '
+                                       'Retrying...', self.mapping['host'][name])
+                        retry = True
                 else:
                     self.backend_connected = False
                     self.backend_connection_retry_planned = int(time.time()) + 60
         elif type_data == 'livestate_service':
             headers['If-Match'] = self.ref_live['service'][self.mapping['service'][name]]['_etag']
-            try:
+            retry = True
+            while retry:try:
                 start = time.time()
-                statsmgr.counter('backend-patch.service', 1)
-                response = self.backend.patch(
+                statsmgr.counter('backend-patch.service', 1)response = self.backend.patch(
                     'service/%s' % self.ref_live['service'][self.mapping['service'][name]]['_id'],
-                    data, headers, True)
-                statsmgr.timer('backend-patch-time.service', time.time() - start)
+                    data, headers, True)statsmgr.timer('backend-patch-time.service', time.time() - start)
                 if response['_status'] == 'ERR':  # pragma: no cover - should not happen
                     logger.error('%s', response['_issues'])
                     ret = False
                 else:
                     self.ref_live['service'][self.mapping['service'][name]]['_etag'] = response[
                         '_etag']
-            except BackendException as exp:  # pragma: no cover - should not happen
+            retry = Falseexcept BackendException as exp:  # pragma: no cover - should not happen
                 logger.error('Patch livestate for service %s error', self.mapping['service'][name])
                 logger.error('Data: %s', data)
                 logger.exception("Exception: %s", exp)
-                if exp.code == 404:
+                retry = Falseif exp.code == 404:
                     logger.error('Seems the service %s deleted in the Backend',
-                                 self.mapping['service'][name])
+                                 self.mapping['service'][name])elif exp.code == 412:
+                        logger.warning('Seems the service %s was still updated in the Backend. '
+                                       'Retrying...', self.mapping['service'][name])
+                        retry = True
                 else:
                     self.backend_connected = False
                     self.backend_connection_retry_planned = int(time.time()) + 60

@@ -140,8 +140,7 @@ class TestBrokerAckDowntime(unittest2.TestCase):
         ack = Acknowledge(data)
         b = ack.get_raise_brok('srv001')
         b.prepare()
-        self.brokmodule.get_refs('livestate_host')
-        self.brokmodule.get_refs('livestate_service')
+        self.brokmodule.get_refs()
         self.brokmodule.manage_brok(b)
 
         actionack = self.backend.get_all('actionacknowledge')
@@ -170,8 +169,7 @@ class TestBrokerAckDowntime(unittest2.TestCase):
         ack = Acknowledge(data)
         b = ack.get_raise_brok('srv001')
         b.prepare()
-        self.brokmodule.get_refs('livestate_host')
-        self.brokmodule.get_refs('livestate_service')
+        self.brokmodule.get_refs()
         self.brokmodule.manage_brok(b)
 
         actionack = self.backend.get_all('actionacknowledge')
@@ -202,8 +200,7 @@ class TestBrokerAckDowntime(unittest2.TestCase):
         ack = Acknowledge(data)
         b = ack.get_raise_brok('srv050')
         b.prepare()
-        self.brokmodule.get_refs('livestate_host')
-        self.brokmodule.get_refs('livestate_service')
+        self.brokmodule.get_refs()
         self.brokmodule.manage_brok(b)
 
         actionack = self.backend.get_all('actionacknowledge')
@@ -249,8 +246,7 @@ class TestBrokerAckDowntime(unittest2.TestCase):
         ack = Acknowledge(data)
         b = ack.get_expire_brok('srv001')
         b.prepare()
-        self.brokmodule.get_refs('livestate_host')
-        self.brokmodule.get_refs('livestate_service')
+        self.brokmodule.get_refs()
         self.brokmodule.manage_brok(b)
 
         actionack = self.backend.get_all('actionacknowledge')
@@ -292,8 +288,7 @@ class TestBrokerAckDowntime(unittest2.TestCase):
         ack = Acknowledge(data)
         b = ack.get_expire_brok('srv001')
         b.prepare()
-        self.brokmodule.get_refs('livestate_host')
-        self.brokmodule.get_refs('livestate_service')
+        self.brokmodule.get_refs()
         self.brokmodule.manage_brok(b)
 
         actionack = self.backend.get_all('actionacknowledge')
@@ -326,8 +321,7 @@ class TestBrokerAckDowntime(unittest2.TestCase):
         ack = Acknowledge(data)
         b = ack.get_expire_brok('srv050')
         b.prepare()
-        self.brokmodule.get_refs('livestate_host')
-        self.brokmodule.get_refs('livestate_service')
+        self.brokmodule.get_refs()
         self.brokmodule.manage_brok(b)
 
         actionack = self.backend.get_all('actionacknowledge')
@@ -360,8 +354,7 @@ class TestBrokerAckDowntime(unittest2.TestCase):
         ack = Acknowledge(data)
         b = ack.get_raise_brok('srv001', 'http toto.com')
         b.prepare()
-        self.brokmodule.get_refs('livestate_host')
-        self.brokmodule.get_refs('livestate_service')
+        self.brokmodule.get_refs()
         self.brokmodule.manage_brok(b)
 
         actionack = self.backend.get_all('actionacknowledge')
@@ -391,8 +384,7 @@ class TestBrokerAckDowntime(unittest2.TestCase):
         ack = Acknowledge(data)
         b = ack.get_raise_brok('srv001', 'http toto.com')
         b.prepare()
-        self.brokmodule.get_refs('livestate_host')
-        self.brokmodule.get_refs('livestate_service')
+        self.brokmodule.get_refs()
         self.brokmodule.manage_brok(b)
 
         actionack = self.backend.get_all('actionacknowledge')
@@ -451,8 +443,7 @@ class TestBrokerAckDowntime(unittest2.TestCase):
         downtime = Downtime(data)
         b = downtime.get_raise_brok('srv001', 'http toto.com')
         b.prepare()
-        self.brokmodule.get_refs('livestate_host')
-        self.brokmodule.get_refs('livestate_service')
+        self.brokmodule.get_refs()
         self.brokmodule.manage_brok(b)
 
         actiondowntime = self.backend.get_all('actiondowntime')

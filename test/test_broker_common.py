@@ -23,11 +23,23 @@ import time
 import requests
 import subprocess
 import json
+import logging
 import unittest2
+
+# Configure logger
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s - %(levelname)8s - %(message)s')
+# Name the logger to get the backend client logs
+# logger = logging.getLogger('host-simulator')
+# logger.setLevel('INFO')
+
 from alignak_module_backend.broker.module import AlignakBackendBroker
 from alignak.objects.module import Module
 from alignak.brok import Brok
 from alignak_backend_client.client import Backend
+#
+# # Set the module log to DEBUG level
+# logging.getLogger("alignak.module.backend_broker").setLevel(logging.DEBUG).setLevel('DEBUG')
 
 
 class TestBrokerConnection(unittest2.TestCase):
@@ -97,7 +109,7 @@ class TestBrokerConnection(unittest2.TestCase):
         modconf.api_url = 'http://127.0.0.1:5000'
         broker_module = AlignakBackendBroker(modconf)
 
-        self.assertTrue(broker_module.backendConnection())
+        self.assertTrue(broker_module.backend_connection())
         self.assertTrue(broker_module.logged_in)
 
     def test_01_connection_refused(self):
@@ -109,7 +121,7 @@ class TestBrokerConnection(unittest2.TestCase):
         modconf.api_url = 'http://127.0.0.1:5000'
         broker_module = AlignakBackendBroker(modconf)
 
-        self.assertFalse(broker_module.backendConnection())
+        self.assertFalse(broker_module.backend_connection())
         self.assertFalse(broker_module.logged_in)
 
     def test_02_connection_accepted(self):
@@ -122,7 +134,7 @@ class TestBrokerConnection(unittest2.TestCase):
         modconf.api_url = 'http://127.0.0.1:5000'
         broker_module = AlignakBackendBroker(modconf)
 
-        self.assertTrue(broker_module.backendConnection())
+        self.assertTrue(broker_module.backend_connection())
         self.assertTrue(broker_module.logged_in)
 
 
@@ -188,27 +200,30 @@ class TestBrokerCommon(unittest2.TestCase):
 
         # Start broker module
         modconf = Module()
+        modconf.python_name = "alignak_module_backend.broker"
         modconf.module_alias = "backend_broker"
         modconf.username = "admin"
         modconf.password = "admin"
         modconf.api_url = 'http://127.0.0.1:5000'
+        modconf.log_level = "DEBUG"
         cls.brokmodule = AlignakBackendBroker(modconf)
 
     @classmethod
     def tearDownClass(cls):
         cls.p.kill()
 
-    def test_01_get_refs_host(self):
-        """Get hosts references"""
+    def test_01_get_refs(self):
+        """Get hosts, services and users references"""
         # Default reload protection delay
         self.assertEqual(self.brokmodule.load_protect_delay, 300)
 
         now = int(time.time())
         # First call loads the corresponding objects
-        self.brokmodule.get_refs('livestate_host')
+        self.brokmodule.get_refs()
         # Stored loaded hosts timestamp
-        self.assertEqual(self.brokmodule.loaded_hosts, now)
+        self.assertEqual(self.brokmodule.last_load, now)
 
+        # Hosts
         self.assertEqual(len(self.brokmodule.ref_live['host']), 1)
         self.assertEqual(
             self.brokmodule.ref_live['host'][self.data_host['_id']]['initial_state'],'UNREACHABLE'
@@ -226,23 +241,7 @@ class TestBrokerCommon(unittest2.TestCase):
         r = self.backend.get('host', params)
         self.assertEqual(len(r['_items']), 1)
 
-        # A call some seconds later the first one do not reload the objects
-        time.sleep(3)
-        self.brokmodule.get_refs('livestate_host')
-        # Stored loaded host timestamp did not changed
-        self.assertEqual(self.brokmodule.loaded_hosts, now)
-
-    def test_02_get_refs_service(self):
-        """Get services references"""
-        # Default reload protection delay
-        self.assertEqual(self.brokmodule.load_protect_delay, 300)
-
-        now = int(time.time())
-        # First call loads the corresponding objects
-        self.brokmodule.get_refs('livestate_service')
-        # Stored loaded services timestamp
-        self.assertEqual(self.brokmodule.loaded_services, now)
-
+        # Services
         self.assertEqual(len(self.brokmodule.ref_live['service']), 2)
         self.assertEqual(
             self.brokmodule.ref_live['service'][self.data_srv_ping['_id']]['initial_state'],
@@ -266,23 +265,7 @@ class TestBrokerCommon(unittest2.TestCase):
                'srv001__http toto.com': self.data_srv_http['_id']}
         self.assertEqual(self.brokmodule.mapping['service'], ref)
 
-        # A call some seconds later the first one do not reload the objects
-        time.sleep(3)
-        self.brokmodule.get_refs('livestate_service')
-        # Stored loaded host timestamp did not changed
-        self.assertEqual(self.brokmodule.loaded_services, now)
-
-    def test_03_get_refs_users(self):
-        """Get users references"""
-        # Default reload protection delay
-        self.assertEqual(self.brokmodule.load_protect_delay, 300)
-
-        now = int(time.time())
-        # First call loads the corresponding objects
-        self.brokmodule.get_refs('livestate_user')
-        # Stored loaded users timestamp
-        self.assertEqual(self.brokmodule.loaded_users, now)
-
+        # Users
         self.assertEqual(len(self.brokmodule.ref_live['user']), 1)
         self.assertEqual(
             self.brokmodule.ref_live['user'][self.admin_user['_id']]['_realm'],
@@ -294,13 +277,13 @@ class TestBrokerCommon(unittest2.TestCase):
 
         # A call some seconds later the first one do not reload the objects
         time.sleep(3)
-        self.brokmodule.get_refs('livestate_user')
+        self.brokmodule.get_refs()
         # Stored loaded host timestamp did not changed
-        self.assertEqual(self.brokmodule.loaded_users, now)
+        self.assertEqual(self.brokmodule.last_load, now)
 
     def test_03_1_manage_brok_host(self):
         """Test host livestate is updated with an alignak brok"""
-        self.brokmodule.get_refs('livestate_host')
+        self.brokmodule.get_refs()
         self.assertEqual(len(self.brokmodule.ref_live['host']), 1)
 
         # Initial host state as created in the backend
@@ -318,8 +301,6 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_acknowledgement_type'], 1)
             self.assertEqual(item['ls_downtimed'], False)
 
-            self.assertEqual(item['ls_impact'], 0)
-
             self.assertEqual(item['ls_last_check'], 0)
             self.assertEqual(item['ls_last_state'], 'UNREACHABLE')
             self.assertEqual(item['ls_last_state_type'], 'HARD')
@@ -331,7 +312,6 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_perf_data'], '')
 
             self.assertEqual(item['ls_current_attempt'], 0)
-            self.assertEqual(item['ls_attempt'], 0)
             self.assertEqual(item['ls_max_attempts'], 0)
             self.assertEqual(item['ls_latency'], 0.0)
             self.assertEqual(item['ls_execution_time'], 0.0)
@@ -377,7 +357,6 @@ class TestBrokerCommon(unittest2.TestCase):
             updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
-        print("Updated: %s" % updated)
 
         # Simulate an host next check brok
         data = json.loads(open('cfg/brok_host_srv001_next_check.json').read())
@@ -411,7 +390,6 @@ class TestBrokerCommon(unittest2.TestCase):
             new_updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
-        print("Updated: %s" % new_updated)
         # The item do not have its _updated field changed!
         self.assertEqual(updated, new_updated)
 
@@ -465,7 +443,7 @@ class TestBrokerCommon(unittest2.TestCase):
 
     def test_03_2_manage_brok_host(self):
         """Test host livestate is updated with an alignak brok (from real broks)"""
-        self.brokmodule.get_refs('livestate_host')
+        self.brokmodule.get_refs()
         self.assertEqual(len(self.brokmodule.ref_live['host']), 1)
 
         # Initial host state as left by the former test
@@ -484,8 +462,6 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_acknowledgement_type'], 1)
             self.assertEqual(item['ls_downtimed'], False)
 
-            self.assertEqual(item['ls_impact'], 0)
-
             self.assertEqual(item['ls_last_check'], 1444427104)
             self.assertEqual(item['ls_last_state'], 'UP')
             self.assertEqual(item['ls_last_state_type'], 'HARD')
@@ -497,8 +473,7 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_perf_data'], '')
 
             self.assertEqual(item['ls_current_attempt'], 0)
-            self.assertEqual(item['ls_attempt'], 0)
-            self.assertEqual(item['ls_max_attempts'], 0)
+            # self.assertEqual(item['ls_max_attempts'], 0)
             self.assertEqual(item['ls_latency'], 0.2317881584)
             self.assertEqual(item['ls_execution_time'], 3.1496069431000002)
 
@@ -551,8 +526,6 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_acknowledgement_type'], 1)
             self.assertEqual(item['ls_downtimed'], False)
 
-            self.assertEqual(item['ls_impact'], 0)
-
             self.assertEqual(item['ls_last_check'], 1496234083)         # !
             self.assertEqual(item['ls_last_state'], 'UNREACHABLE')      # !
             self.assertEqual(item['ls_last_state_type'], 'HARD')
@@ -563,8 +536,7 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_long_output'], 'Host assumed to be UP')
             self.assertEqual(item['ls_perf_data'], '')
 
-            self.assertEqual(item['ls_current_attempt'], 0)
-            self.assertEqual(item['ls_attempt'], 1)                     # !
+            self.assertEqual(item['ls_current_attempt'], 1)
             self.assertEqual(item['ls_max_attempts'], 0)
             self.assertEqual(item['ls_latency'], 0.9299669266)          # !
             self.assertEqual(item['ls_execution_time'], 0.0)
@@ -619,8 +591,6 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_acknowledgement_type'], 1)
             self.assertEqual(item['ls_downtimed'], False)
 
-            self.assertEqual(item['ls_impact'], 0)
-
             self.assertEqual(item['ls_last_check'], 1496237383)         # !
             self.assertEqual(item['ls_last_state'], 'UP')               # !
             self.assertEqual(item['ls_last_state_type'], 'HARD')
@@ -631,8 +601,7 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_long_output'], 'Host assumed to be UP')
             self.assertEqual(item['ls_perf_data'], '')
 
-            self.assertEqual(item['ls_current_attempt'], 0)
-            self.assertEqual(item['ls_attempt'], 1)                     # !
+            self.assertEqual(item['ls_current_attempt'], 1)
             self.assertEqual(item['ls_max_attempts'], 0)
             self.assertEqual(item['ls_latency'], 0.8838100433)          # !
             self.assertEqual(item['ls_execution_time'], 0.0)
@@ -687,8 +656,6 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_acknowledgement_type'], 1)
             self.assertEqual(item['ls_downtimed'], False)
 
-            self.assertEqual(item['ls_impact'], 0)
-
             self.assertEqual(item['ls_last_check'], 1496237383)         # !
             self.assertEqual(item['ls_last_state'], 'UP')               # !
             self.assertEqual(item['ls_last_state_type'], 'HARD')
@@ -699,8 +666,7 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_long_output'], 'Host assumed to be UP')
             self.assertEqual(item['ls_perf_data'], '')
 
-            self.assertEqual(item['ls_current_attempt'], 0)
-            self.assertEqual(item['ls_attempt'], 1)                     # !
+            self.assertEqual(item['ls_current_attempt'], 1)
             self.assertEqual(item['ls_max_attempts'], 0)
             self.assertEqual(item['ls_latency'], 0.8838100433)          # !
             self.assertEqual(item['ls_execution_time'], 0.0)
@@ -756,8 +722,6 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_acknowledgement_type'], 1)
             self.assertEqual(item['ls_downtimed'], False)
 
-            self.assertEqual(item['ls_impact'], 0)
-
             self.assertEqual(item['ls_last_check'], 1496240268)         # !
             self.assertEqual(item['ls_last_state'], 'UP')               # !
             self.assertEqual(item['ls_last_state_type'], 'HARD')
@@ -769,7 +733,6 @@ class TestBrokerCommon(unittest2.TestCase):
             self.assertEqual(item['ls_perf_data'], '')
 
             self.assertEqual(item['ls_current_attempt'], 0)
-            self.assertEqual(item['ls_attempt'], 0)                     # !
             self.assertEqual(item['ls_max_attempts'], 0)
             self.assertEqual(item['ls_latency'], 1.491920948)          # !
             self.assertEqual(item['ls_execution_time'], 0.1163659096)
@@ -791,9 +754,8 @@ class TestBrokerCommon(unittest2.TestCase):
 
     def test_04_manage_brok_service(self):
         """Test service livestate is updated with an alignak brok"""
-        self.brokmodule.get_refs('livestate_host')
+        self.brokmodule.get_refs()
         self.assertEqual(len(self.brokmodule.ref_live['host']), 1)
-        self.brokmodule.get_refs('livestate_service')
         self.assertEqual(len(self.brokmodule.ref_live['service']), 2)
 
         # Simulate a service OK brok
@@ -1053,7 +1015,7 @@ class TestBrokerToken(unittest2.TestCase):
 
     def test_01_get_refs_host(self):
         """Get hosts references"""
-        self.brokmodule.get_refs('livestate_host')
+        self.brokmodule.get_refs()
 
         self.assertEqual(len(self.brokmodule.ref_live['host']), 1)
         self.assertEqual(

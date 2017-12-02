@@ -307,20 +307,24 @@ class AlignakBackendArbiter(BaseModule):
             'usergroups', 'users',
             'location',
             'duplicate_foreach', 'tags',
-            'ls_acknowledged', 'ls_acknowledgement_type', 'ls_current_attempt', 'ls_attempt',
-            'ls_downtimed', 'ls_execution_time',
-            'ls_grafana', 'ls_grafana_panelid', 'ls_impact', 'ls_last_check', 'ls_last_state',
-            'ls_last_state_changed', 'ls_last_hard_state_changed', 'ls_last_state_type',
-            'ls_latency', 'ls_long_output',
-            'ls_max_attempts', 'ls_next_check', 'ls_output', 'ls_perf_data',
-            'ls_state', 'ls_state_id', 'ls_state_type',
-            'ls_last_time_up', 'ls_last_time_down',
-            'ls_last_time_ok', 'ls_last_time_warning', 'ls_last_time_critical',
-            'ls_last_time_unknown', 'ls_last_time_unreachable',
-            'ls_passive_check', 'ls_last_notification',
+            # 'ls_acknowledged', 'ls_acknowledgement_type', 'ls_current_attempt', 'ls_attempt',
+            # 'ls_downtimed', 'ls_execution_time',
+            # 'ls_grafana', 'ls_grafana_panelid', 'ls_impact', 'ls_last_check', 'ls_last_state',
+            # 'ls_last_state_changed', 'ls_last_hard_state_changed', 'ls_last_state_type',
+            # 'ls_latency', 'ls_long_output',
+            # 'ls_max_attempts', 'ls_next_check', 'ls_output', 'ls_perf_data',
+            # 'ls_state', 'ls_state_id', 'ls_state_type',
+            # 'ls_last_time_up', 'ls_last_time_down',
+            # 'ls_last_time_ok', 'ls_last_time_warning', 'ls_last_time_critical',
+            # 'ls_last_time_unknown', 'ls_last_time_unreachable',
+            # 'ls_passive_check', 'ls_last_notification',
             '_overall_state_id',
             'trigger', 'schema_version'
         ]
+        # Add live state fields
+        for field in resource:
+            if field.startswith('ls_'):
+                fields.append(field)
         for field in fields:
             if field in resource:
                 del resource[field]

@@ -97,6 +97,10 @@ class AlignakBackendBroker(BaseModule):
         self.url = getattr(mod_conf, 'api_url', 'http://localhost:5000')
         self.backend_connected = False
         self.backend_connection_retry_planned = 0
+        try:
+            self.backend_connection_retry_delay = int(getattr(mod_conf, 'backend_connection_retry_delay', '10'))
+        except ValueError:
+            self.backend_connection_retry_delay = 10
         self.backend_errors_count = 0
         self.backend_username = getattr(mod_conf, 'username', '')
         self.backend_password = getattr(mod_conf, 'password', '')
@@ -571,7 +575,8 @@ class AlignakBackendBroker(BaseModule):
                                  endpoint, name)
                 else:
                     self.backend_connected = False
-                    self.backend_connection_retry_planned = int(time.time()) + 60
+                    self.backend_connection_retry_planned = int(time.time()) + \
+                                                            self.backend_connection_retry_delay
 
         return update
 
@@ -670,7 +675,8 @@ class AlignakBackendBroker(BaseModule):
                 logger.error("Data: %s", brok.data)
                 logger.exception("Exception: %s", exp)
                 self.backend_connected = False
-                self.backend_connection_retry_planned = int(time.time()) + 60
+                self.backend_connection_retry_planned = int(time.time()) + \
+                                                        self.backend_connection_retry_delay
 
         else:
             item = all_alignak['_items'][0]
@@ -703,7 +709,8 @@ class AlignakBackendBroker(BaseModule):
                 logger.error("Data: %s", brok.data)
                 logger.exception("Exception: %s / %s", exp, exp.response)
                 self.backend_connected = False
-                self.backend_connection_retry_planned = int(time.time()) + 60
+                self.backend_connection_retry_planned = int(time.time()) + \
+                                                        self.backend_connection_retry_delay
 
     def send_to_backend(self, type_data, name, data):
         """
@@ -754,7 +761,8 @@ class AlignakBackendBroker(BaseModule):
                                  self.mapping['host'][name])
                 else:
                     self.backend_connected = False
-                    self.backend_connection_retry_planned = int(time.time()) + 60
+                    self.backend_connection_retry_planned = int(time.time()) + \
+                                                            self.backend_connection_retry_delay
         elif type_data == 'livestate_service':
             headers['If-Match'] = self.ref_live['service'][self.mapping['service'][name]]['_etag']
             try:
@@ -779,7 +787,8 @@ class AlignakBackendBroker(BaseModule):
                                  self.mapping['service'][name])
                 else:
                     self.backend_connected = False
-                    self.backend_connection_retry_planned = int(time.time()) + 60
+                    self.backend_connection_retry_planned = int(time.time()) + \
+                                                            self.backend_connection_retry_delay
 
         return ret
 

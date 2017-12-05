@@ -729,7 +729,7 @@ class AlignakBackendBroker(BaseModule):
         :rtype: bool
         """
         if not self.backend_connected and int(time.time() > self.backend_connection_retry_planned):
-            self.logged_in = self.backend_connection()
+            self.backend_connected = self.backend_connection()
 
         if not self.backend_connected:
             logger.error("Alignak backend connection is not available. "

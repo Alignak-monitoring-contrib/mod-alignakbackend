@@ -26,7 +26,7 @@ import json
 import Queue
 import logging
 
-from alignak.stats import statsmgr
+from alignak.stats import Stats
 from alignak.basemodule import BaseModule
 from alignak_backend_client.client import Backend, BackendException
 
@@ -88,17 +88,20 @@ class AlignakBackendBroker(BaseModule):
                     int(getattr(mod_conf, 'statsd_port', '8125')),
                     getattr(mod_conf, 'statsd_prefix', 'alignak'),
                     (getattr(mod_conf, 'statsd_enabled', '0') != '0'))
-        statsmgr.register(self.alias, 'module',
-                          statsd_host=getattr(mod_conf, 'statsd_host', 'localhost'),
-                          statsd_port=int(getattr(mod_conf, 'statsd_port', '8125')),
-                          statsd_prefix=getattr(mod_conf, 'statsd_prefix', 'alignak'),
-                          statsd_enabled=(getattr(mod_conf, 'statsd_enabled', '0') != '0'))
+        self.statsmgr = Stats()
+        self.statsmgr.register(self.alias, 'module',
+                               statsd_host=getattr(mod_conf, 'statsd_host', 'localhost'),
+                               statsd_port=int(getattr(mod_conf, 'statsd_port', '8125')),
+                               statsd_prefix=getattr(mod_conf, 'statsd_prefix', 'alignak'),
+                               statsd_enabled=(getattr(mod_conf, 'statsd_enabled', '0') != '0'))
 
         self.url = getattr(mod_conf, 'api_url', 'http://localhost:5000')
         self.backend_connected = False
         self.backend_connection_retry_planned = 0
         try:
-            self.backend_connection_retry_delay = int(getattr(mod_conf, 'backend_connection_retry_delay', '10'))
+            self.backend_connection_retry_delay = int(getattr(mod_conf,
+                                                              'backend_connection_retry_delay',
+                                                              '10'))
         except ValueError:
             self.backend_connection_retry_delay = 10
         self.backend_errors_count = 0
@@ -166,8 +169,8 @@ class AlignakBackendBroker(BaseModule):
                 start = time.time()
                 params = {'where': '{"token":"%s"}' % self.backend.token}
                 users = self.backend.get('user', params)
-                statsmgr.counter('backend-get.user', 1)
-                statsmgr.timer('backend-get-time.user', time.time() - start)
+                self.statsmgr.counter('backend-get.user', 1)
+                self.statsmgr.timer('backend-get-time.user', time.time() - start)
             except BackendException as exp:
                 logger.warning("Error on backend when retrieving user information: %s", exp)
             else:
@@ -204,8 +207,8 @@ class AlignakBackendBroker(BaseModule):
                     start = time.time()
                     connected = self.backend.login(self.backend_username, self.backend_password,
                                                    generate)
-                    statsmgr.counter('backend-login', 1)
-                    statsmgr.timer('backend-login-time', time.time() - start)
+                    self.statsmgr.counter('backend-login', 1)
+                    self.statsmgr.timer('backend-login-time', time.time() - start)
                 except BackendException as exp:
                     logger.error("Error on backend login: %s", exp)
                     connected = False
@@ -223,8 +226,8 @@ class AlignakBackendBroker(BaseModule):
             try:
                 start = time.time()
                 result = self.backend.get('/realm', {'max_results': 1, 'sort': '_level'})
-                statsmgr.counter('backend-get.realm', 1)
-                statsmgr.timer('backend-get-time.realm', time.time() - start)
+                self.statsmgr.counter('backend-get.realm', 1)
+                self.statsmgr.timer('backend-get-time.realm', time.time() - start)
             except BackendException as exp:
                 logger.warning("Error on backend when retrieving default realm: %s", exp)
             else:
@@ -263,7 +266,7 @@ class AlignakBackendBroker(BaseModule):
                 'where': '{"_is_template":false}'
             }
             content = self.backend.get_all('host', params)
-            statsmgr.counter('backend-getall.host', 1)
+            self.statsmgr.counter('backend-getall.host', 1)
             for item in content['_items']:
                 host_mapping[item['name']] = item['_id']
 
@@ -283,7 +286,7 @@ class AlignakBackendBroker(BaseModule):
                 'where': '{"_is_template":false}'
             }
             content = self.backend.get_all('service', params)
-            statsmgr.counter('backend-getall.service', 1)
+            self.statsmgr.counter('backend-getall.service', 1)
             for item in content['_items']:
                 serv_mapping['__'.join([hosts[item['host']], item['name']])] = item['_id']
 
@@ -302,7 +305,7 @@ class AlignakBackendBroker(BaseModule):
                 'where': '{"_is_template":false}'
             }
             content = self.backend.get_all('user', params)
-            statsmgr.counter('backend-getall.user', 1)
+            self.statsmgr.counter('backend-getall.user', 1)
             for item in content['_items']:
                 user_mapping[item['name']] = item['_id']
 
@@ -327,7 +330,7 @@ class AlignakBackendBroker(BaseModule):
         self.ref_live['user'] = user_ref_live
 
         end = time.time()
-        statsmgr.timer('backend-getall.time', end - start)
+        self.statsmgr.timer('backend-getall.time', end - start)
 
         return True
 
@@ -437,7 +440,7 @@ class AlignakBackendBroker(BaseModule):
         #     del self.ref_live['host'][h_id]['initial_state_type']
 
         start = time.time()
-        statsmgr.counter('backend-post.lcr', 1)
+        self.statsmgr.counter('backend-post.lcr', 1)
 
         # Send to the backend
         try:
@@ -455,7 +458,7 @@ class AlignakBackendBroker(BaseModule):
                 print('Issues: %s', response['_issues'])
                 ret = False
 
-        statsmgr.timer('backend-post-time.lcr', time.time() - start)
+        self.statsmgr.timer('backend-post-time.lcr', time.time() - start)
         return ret
 
     def update_status(self, brok):
@@ -497,9 +500,9 @@ class AlignakBackendBroker(BaseModule):
 
         # Search the concerned element
         start = time.time()
-        statsmgr.counter('backend-get.%s' % endpoint, 1)
+        self.statsmgr.counter('backend-get.%s' % endpoint, 1)
         item = self.backend.get(endpoint + '/' + item_id)
-        statsmgr.timer('backend-get-time.%s' % endpoint, time.time() - start)
+        self.statsmgr.timer('backend-get-time.%s' % endpoint, time.time() - start)
         logger.debug("Found %s: %s", endpoint, sorted(item))
 
         differences = {}
@@ -555,11 +558,11 @@ class AlignakBackendBroker(BaseModule):
             }
             try:
                 start = time.time()
-                statsmgr.counter('backend-patch.%s' % endpoint, 1)
+                self.statsmgr.counter('backend-patch.%s' % endpoint, 1)
                 response = self.backend.patch('%s/%s' % (endpoint, item['_id']),
                                               differences, headers, True)
-                statsmgr.counter('backend-patch.%s' % endpoint, 1)
-                statsmgr.timer('backend-patch-time.%s' % endpoint, time.time() - start)
+                self.statsmgr.counter('backend-patch.%s' % endpoint, 1)
+                self.statsmgr.timer('backend-patch-time.%s' % endpoint, time.time() - start)
                 if response['_status'] == 'ERR':  # pragma: no cover - should not happen
                     logger.warning("Update %s: %s failed, errors: %s.",
                                    endpoint, name, response['_issues'])
@@ -575,8 +578,8 @@ class AlignakBackendBroker(BaseModule):
                                  endpoint, name)
                 else:
                     self.backend_connected = False
-                    self.backend_connection_retry_planned = int(time.time()) + \
-                                                            self.backend_connection_retry_delay
+                    self.backend_connection_retry_planned = \
+                        int(time.time()) + self.backend_connection_retry_delay
 
         return update
 
@@ -654,17 +657,17 @@ class AlignakBackendBroker(BaseModule):
         params = {'sort': '_id', 'where': '{"name": "%s"}' % name}
         start = time.time()
         all_alignak = self.backend.get_all('alignak', params)
-        statsmgr.counter('backend-getall.alignak', 1)
-        statsmgr.timer('backend-getall-time.alignak', time.time() - start)
+        self.statsmgr.counter('backend-getall.alignak', 1)
+        self.statsmgr.timer('backend-getall-time.alignak', time.time() - start)
         logger.debug("Got %d Alignak configurations for %s", len(all_alignak['_items']), name)
 
         headers = {'Content-Type': 'application/json'}
         if not all_alignak['_items']:
             try:
                 start = time.time()
-                statsmgr.counter('backend-post.alignak', 1)
+                self.statsmgr.counter('backend-post.alignak', 1)
                 response = self.backend.post('alignak', brok.data)
-                statsmgr.timer('backend-post-time.alignak', time.time() - start)
+                self.statsmgr.timer('backend-post-time.alignak', time.time() - start)
                 if response['_status'] == 'ERR':  # pragma: no cover - should not happen
                     logger.warning("Create alignak: %s failed, errors: %s.",
                                    name, response['_issues'])
@@ -675,8 +678,8 @@ class AlignakBackendBroker(BaseModule):
                 logger.error("Data: %s", brok.data)
                 logger.exception("Exception: %s", exp)
                 self.backend_connected = False
-                self.backend_connection_retry_planned = int(time.time()) + \
-                                                        self.backend_connection_retry_delay
+                self.backend_connection_retry_planned = \
+                    int(time.time()) + self.backend_connection_retry_delay
 
         else:
             item = all_alignak['_items'][0]
@@ -695,10 +698,10 @@ class AlignakBackendBroker(BaseModule):
             headers['If-Match'] = item['_etag']
             try:
                 start = time.time()
-                statsmgr.counter('backend-patch.alignak', 1)
+                self.statsmgr.counter('backend-patch.alignak', 1)
                 response = self.backend.patch('alignak/%s' % (item['_id']),
                                               brok.data, headers, True)
-                statsmgr.timer('backend-patch-time.alignak', time.time() - start)
+                self.statsmgr.timer('backend-patch-time.alignak', time.time() - start)
                 if response['_status'] == 'ERR':  # pragma: no cover - should not happen
                     logger.warning("Update alignak: %s failed, errors: %s.",
                                    name, response['_issues'])
@@ -709,8 +712,8 @@ class AlignakBackendBroker(BaseModule):
                 logger.error("Data: %s", brok.data)
                 logger.exception("Exception: %s / %s", exp, exp.response)
                 self.backend_connected = False
-                self.backend_connection_retry_planned = int(time.time()) + \
-                                                        self.backend_connection_retry_delay
+                self.backend_connection_retry_planned = \
+                    int(time.time()) + self.backend_connection_retry_delay
 
     def send_to_backend(self, type_data, name, data):
         """
@@ -742,11 +745,11 @@ class AlignakBackendBroker(BaseModule):
             headers['If-Match'] = self.ref_live['host'][self.mapping['host'][name]]['_etag']
             try:
                 start = time.time()
-                statsmgr.counter('backend-patch.host', 1)
+                self.statsmgr.counter('backend-patch.host', 1)
                 response = self.backend.patch(
                     'host/%s' % self.ref_live['host'][self.mapping['host'][name]]['_id'],
                     data, headers, True)
-                statsmgr.timer('backend-patch-time.host', time.time() - start)
+                self.statsmgr.timer('backend-patch-time.host', time.time() - start)
                 if response['_status'] == 'ERR':  # pragma: no cover - should not happen
                     logger.error('%s', response['_issues'])
                     ret = False
@@ -761,17 +764,17 @@ class AlignakBackendBroker(BaseModule):
                                  self.mapping['host'][name])
                 else:
                     self.backend_connected = False
-                    self.backend_connection_retry_planned = int(time.time()) + \
-                                                            self.backend_connection_retry_delay
+                    self.backend_connection_retry_planned = \
+                        int(time.time()) + self.backend_connection_retry_delay
         elif type_data == 'livestate_service':
             headers['If-Match'] = self.ref_live['service'][self.mapping['service'][name]]['_etag']
             try:
                 start = time.time()
-                statsmgr.counter('backend-patch.service', 1)
+                self.statsmgr.counter('backend-patch.service', 1)
                 response = self.backend.patch(
                     'service/%s' % self.ref_live['service'][self.mapping['service'][name]]['_id'],
                     data, headers, True)
-                statsmgr.timer('backend-patch-time.service', time.time() - start)
+                self.statsmgr.timer('backend-patch-time.service', time.time() - start)
                 if response['_status'] == 'ERR':  # pragma: no cover - should not happen
                     logger.error('%s', response['_issues'])
                     ret = False
@@ -787,8 +790,8 @@ class AlignakBackendBroker(BaseModule):
                                  self.mapping['service'][name])
                 else:
                     self.backend_connected = False
-                    self.backend_connection_retry_planned = int(time.time()) + \
-                                                            self.backend_connection_retry_delay
+                    self.backend_connection_retry_planned = \
+                        int(time.time()) + self.backend_connection_retry_delay
 
         return ret
 
@@ -846,7 +849,7 @@ class AlignakBackendBroker(BaseModule):
             logger.debug("Brok data: %s", brok.data)
 
             start = time.time()
-            statsmgr.counter('managed-broks-type-count.%s' % brok.type, 1)
+            self.statsmgr.counter('managed-broks-type-count.%s' % brok.type, 1)
 
             ret = False
             if brok.type in ['new_conf']:
@@ -871,7 +874,7 @@ class AlignakBackendBroker(BaseModule):
                              'downtime_raise', 'downtime_expire']:
                 ret = self.update_actions(brok)
 
-            statsmgr.timer('managed-broks-type-time-%s' % brok.type, time.time() - start)
+            self.statsmgr.timer('managed-broks-type-time-%s' % brok.type, time.time() - start)
 
             return ret
         except Exception as exp:  # pragma: no cover - should not happen
@@ -931,7 +934,7 @@ class AlignakBackendBroker(BaseModule):
         params = {
             'where': json.dumps(where)
         }
-        statsmgr.counter('backend-getall.%s' % endpoint, 1)
+        self.statsmgr.counter('backend-getall.%s' % endpoint, 1)
         actions = self.backend.get_all(endpoint, params)
         if actions['_items']:
             # case 1: the acknowledge / downtime come from backend, we update the 'notified' field
@@ -940,7 +943,7 @@ class AlignakBackendBroker(BaseModule):
                 'Content-Type': 'application/json',
                 'If-Match': actions['_items'][0]['_etag']
             }
-            statsmgr.counter('backend-patch.%s' % endpoint, 1)
+            self.statsmgr.counter('backend-patch.%s' % endpoint, 1)
             self.backend.patch(
                 endpoint + '/' + actions['_items'][0]['_id'], {"notified": True}, headers, True)
         else:
@@ -948,7 +951,7 @@ class AlignakBackendBroker(BaseModule):
             # command so we create a new entry
             where['notified'] = True
             # try find the user
-            statsmgr.counter('backend-getall.user', 1)
+            self.statsmgr.counter('backend-getall.user', 1)
             users = self.backend.get_all('user',
                                          {'where': '{"name":"' + brok.data['author'] + '"}'})
             if users['_items']:
@@ -973,7 +976,7 @@ class AlignakBackendBroker(BaseModule):
                 where['end_time'] = int(brok.data['end_time'])
                 where['fixed'] = bool(brok.data['fixed'])
                 where['duration'] = int(brok.data['duration'])
-            statsmgr.counter('backend-post.%s' % endpoint, 1)
+            self.statsmgr.counter('backend-post.%s' % endpoint, 1)
             self.backend.post(endpoint, where)
 
     def main(self):
@@ -994,21 +997,20 @@ class AlignakBackendBroker(BaseModule):
         while not self.interrupted:
             try:
                 queue_size = self.to_q.qsize()
-                logger.debug("queue length: %s", queue_size)
-                statsmgr.gauge('queue-size', queue_size)
-                start = time.time()
+                if queue_size:
+                    logger.debug("queue length: %s", queue_size)
+                    self.statsmgr.gauge('queue-size', queue_size)
 
                 message = self.to_q.get_nowait()
-                brok_count = 0
+                start = time.time()
                 for brok in message:
                     # Prepare and manage each brok in the queue message
                     brok.prepare()
                     self.manage_brok(brok)
-                    brok_count = brok_count + 1
-                statsmgr.gauge('managed-broks-count', brok_count)
+                self.statsmgr.gauge('managed-broks-count', len(message))
 
-                logger.debug("time to manage %s broks (%d secs)", brok_count, time.time() - start)
-                statsmgr.timer('managed-broks-time', time.time() - start)
+                logger.debug("time to manage %s broks (%d secs)", len(message), time.time() - start)
+                self.statsmgr.timer('managed-broks-time', time.time() - start)
             except Queue.Empty:
                 # logger.debug("No message in the module queue")
                 time.sleep(0.01)

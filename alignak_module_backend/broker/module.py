@@ -288,15 +288,18 @@ class AlignakBackendBroker(BaseModule):
             content = self.backend.get_all('service', params)
             self.statsmgr.counter('backend-getall.service', 1)
             for item in content['_items']:
-                serv_mapping['__'.join([hosts[item['host']], item['name']])] = item['_id']
+                try:
+                    serv_mapping['__'.join([hosts[item['host']], item['name']])] = item['_id']
 
-                serv_ref_live[item['_id']] = {
-                    '_id': item['_id'],
-                    '_etag': item['_etag'],
-                    '_realm': item['_realm'],
-                    'initial_state': item['ls_state'],
-                    'initial_state_type': item['ls_state_type']
-                }
+                    serv_ref_live[item['_id']] = {
+                        '_id': item['_id'],
+                        '_etag': item['_etag'],
+                        '_realm': item['_realm'],
+                        'initial_state': item['ls_state'],
+                        'initial_state_type': item['ls_state_type']
+                    }
+                except KeyError:
+                    logger.warning("Got a service for an unknown host")
             logger.info("- services references reloaded")
 
             # Updating users
@@ -991,8 +994,6 @@ class AlignakBackendBroker(BaseModule):
         self.set_exit_handler()
 
         logger.info("starting...")
-
-        queue_size = self.to_q.qsize()
 
         while not self.interrupted:
             try:

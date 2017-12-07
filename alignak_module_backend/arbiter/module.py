@@ -765,7 +765,11 @@ class AlignakBackendArbiter(BaseModule):
 
         for service in all_services['_items']:
             # Get host name from the previously loaded hosts list
-            service['host_name'] = self.configraw['hosts'][service['host']]
+            try:
+                service['host_name'] = self.configraw['hosts'][service['host']]
+            except KeyError:
+                logger.warning("Got a service for an unknown host")
+                continue
             logger.debug("- %s/%s", service['host_name'], service['name'])
             self.configraw['services'][service['_id']] = service['name']
             service['imported_from'] = u'alignak-backend'

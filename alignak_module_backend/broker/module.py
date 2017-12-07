@@ -26,7 +26,7 @@ import json
 import Queue
 import logging
 
-from alignak.stats import statsmgr
+from alignak.stats import Stats
 from alignak.basemodule import BaseModule
 from alignak_backend_client.client import Backend, BackendException
 
@@ -88,32 +88,35 @@ class AlignakBackendBroker(BaseModule):
                     int(getattr(mod_conf, 'statsd_port', '8125')),
                     getattr(mod_conf, 'statsd_prefix', 'alignak'),
                     (getattr(mod_conf, 'statsd_enabled', '0') != '0'))
-        statsmgr.register(self.alias, 'module',
-                          statsd_host=getattr(mod_conf, 'statsd_host', 'localhost'),
-                          statsd_port=int(getattr(mod_conf, 'statsd_port', '8125')),
-                          statsd_prefix=getattr(mod_conf, 'statsd_prefix', 'alignak'),
-                          statsd_enabled=(getattr(mod_conf, 'statsd_enabled', '0') != '0'))
+        self.statsmgr = Stats()
+        self.statsmgr.register(self.alias, 'module',
+                               statsd_host=getattr(mod_conf, 'statsd_host', 'localhost'),
+                               statsd_port=int(getattr(mod_conf, 'statsd_port', '8125')),
+                               statsd_prefix=getattr(mod_conf, 'statsd_prefix', 'alignak'),
+                               statsd_enabled=(getattr(mod_conf, 'statsd_enabled', '0') != '0'))
 
         self.url = getattr(mod_conf, 'api_url', 'http://localhost:5000')
-        self.backend = Backend(self.url, self.client_processes)
-        self.backend.token = getattr(mod_conf, 'token', '')
         self.backend_connected = False
         self.backend_connection_retry_planned = 0
+        try:
+            self.backend_connection_retry_delay = int(getattr(mod_conf,
+                                                              'backend_connection_retry_delay',
+                                                              '10'))
+        except ValueError:
+            self.backend_connection_retry_delay = 10
         self.backend_errors_count = 0
         self.backend_username = getattr(mod_conf, 'username', '')
         self.backend_password = getattr(mod_conf, 'password', '')
         self.backend_generate = getattr(mod_conf, 'allowgeneratetoken', False)
+        self.backend_token = getattr(mod_conf, 'token', '')
+        self.backend = Backend(self.url, self.client_processes)
 
-        if not self.backend.token:
-            logger.warning("no user token configured. "
-                           "It is recommended to set a user token rather than a user login "
-                           "in the configuration. Trying to get a token from the provided "
-                           "user login information...")
-            self.getToken()
-        else:
-            self.backend_connected = True
+        # Log in to the backend
+        self.logged_in = False
+        self.backend_connected = self.backend_connection()
 
-        self.logged_in = self.backendConnection()
+        # Get the default realm
+        self.default_realm = self.get_default_realm()
 
         self.ref_live = {
             'host': {},
@@ -128,9 +131,7 @@ class AlignakBackendBroker(BaseModule):
 
         # Objects reference
         self.load_protect_delay = int(getattr(mod_conf, 'load_protect_delay', '300'))
-        self.loaded_hosts = 0
-        self.loaded_services = 0
-        self.loaded_users = 0
+        self.last_load = 0
 
     # Common functions
     def do_loop_turn(self):
@@ -142,35 +143,6 @@ class AlignakBackendBroker(BaseModule):
         """
         logger.info("In loop")
         time.sleep(1)
-
-    def getToken(self):
-        """Authenticate and get the token
-
-        :return: None
-        """
-        generate = 'enabled'
-        if not self.backend_generate:
-            generate = 'disabled'
-
-        try:
-            start = time.time()
-            self.backend_connected = self.backend.login(self.backend_username,
-                                                        self.backend_password,
-                                                        generate)
-            statsmgr.counter('backend-login', 1)
-            statsmgr.timer('backend-login-time', time.time() - start)
-
-            if not self.backend_connected:
-                logger.warning("Backend login failed")
-            self.token = self.backend.token
-            self.backend_errors_count = 0
-        except BackendException as exp:  # pragma: no cover - should not happen
-            self.backend_connected = False
-            self.backend_connection_retry_planned = int(time.time()) + 60
-            self.backend_errors_count += 1
-            logger.warning("Alignak backend is not available for login. "
-                           "No backend connection, attempt: %d", self.backend_errors_count)
-            logger.debug("Exception: %s", exp)
 
     def raise_backend_alert(self, errors_count=10):
         """Raise a backend alert
@@ -185,129 +157,185 @@ class AlignakBackendBroker(BaseModule):
 
         return False
 
-    def backendConnection(self, default_realm='All'):
+    def backend_connection(self):
         """Backend connection to check live state update is allowed
 
         :return: True/False
         """
-        if not self.backend_connected:
-            self.getToken()
-            if self.raise_backend_alert(errors_count=1):
-                logger.error("Alignak backend connection is not available. "
-                             "Checking if livestate update is allowed is not possible.")
-                return False
+        if self.backend_login():
+            self.get_default_realm()
 
-        if not self.backend_connected:
-            return False
-
-        if not self.default_realm:
             try:
                 start = time.time()
-                params = {'where': '{"name":"%s"}' % default_realm}
-                realms = self.backend.get('realm', params=params)
-                statsmgr.counter('backend-get.realm', 1)
-                statsmgr.timer('backend-get-time.realm', time.time() - start)
-                for realm in realms['_items']:
-                    self.default_realm = realm['_id']
-            except BackendException:
-                self.backend_connected = False
-                self.backend_connection_retry_planned = int(time.time()) + 60
-                self.backend_errors_count += 1
-                logger.warning("Alignak backend connection fails. Check and fix your configuration")
-                return False
-
-        params = {'where': '{"token":"%s"}' % self.backend.token}
-        users = self.backend.get('user', params)
-        statsmgr.counter('backend-get.user', 1)
-        for item in users['_items']:
-            return item['can_update_livestate']
+                params = {'where': '{"token":"%s"}' % self.backend.token}
+                users = self.backend.get('user', params)
+                self.statsmgr.counter('backend-get.user', 1)
+                self.statsmgr.timer('backend-get-time.user', time.time() - start)
+            except BackendException as exp:
+                logger.warning("Error on backend when retrieving user information: %s", exp)
+            else:
+                try:
+                    for item in users['_items']:
+                        self.logged_in = item['can_update_livestate']
+                    return self.logged_in
+                except Exception as exp:
+                    logger.error("Can't get the user information in the backend response: %s", exp)
 
         logger.error("Configured user account is not allowed for this module")
         return False
 
-    def get_refs(self, type_data):
+    def backend_login(self):
+        """Log in to the backend
+
+        :return: bool
+        """
+        generate = 'enabled'
+        if not self.backend_generate:
+            generate = 'disabled'
+
+        if self.backend_token:
+            # We have a token, don't ask for a new one
+            self.backend.token = self.backend_token
+            connected = True  # Not really yet, but assume yes
+        else:
+            if not self.backend_username or not self.backend_password:
+                logger.error("No user or password supplied, and no default token defined. "
+                             "Can't connect to backend")
+                connected = False
+            else:
+                try:
+                    start = time.time()
+                    connected = self.backend.login(self.backend_username, self.backend_password,
+                                                   generate)
+                    self.statsmgr.counter('backend-login', 1)
+                    self.statsmgr.timer('backend-login-time', time.time() - start)
+                except BackendException as exp:
+                    logger.error("Error on backend login: %s", exp)
+                    connected = False
+
+        return connected
+
+    def get_default_realm(self):
+        """
+        Retrieves the default top level realm for the connected user
+        :return: str or None
+        """
+        default_realm = None
+
+        if self.backend_connected:
+            try:
+                start = time.time()
+                result = self.backend.get('/realm', {'max_results': 1, 'sort': '_level'})
+                self.statsmgr.counter('backend-get.realm', 1)
+                self.statsmgr.timer('backend-get-time.realm', time.time() - start)
+            except BackendException as exp:
+                logger.warning("Error on backend when retrieving default realm: %s", exp)
+            else:
+                try:
+                    default_realm = result['_items'][0]['_id']
+                except Exception as exp:
+                    logger.error("Can't get the default realm in the backend response: %s", exp)
+
+        return default_realm
+
+    def get_refs(self):
         """
         Get the _id in the backend for hosts, services and users
 
-        :param type_data: livestate type to get: livestate_host, livestate_service, livestate_user
-        :type type_data: str
         :return: None
         """
+        start = time.time()
         now = int(time.time())
-        if type_data == 'livestate_host' \
-                and self.loaded_hosts < now - self.load_protect_delay:
+
+        logger.info("Got a new configuration, reloading objects...")
+
+        # Get managed inter-process dicts
+        host_mapping = self.mapping['host']
+        serv_mapping = self.mapping['service']
+        user_mapping = self.mapping['user']
+        host_ref_live = self.ref_live['host']
+        serv_ref_live = self.ref_live['service']
+        user_ref_live = self.ref_live['user']
+
+        if now - self.last_load > self.load_protect_delay:
+            logger.info("Got a new configuration, reloading objects...")
+            # Updating hosts
+            hosts = {}
             params = {
                 'projection': '{"name":1,"ls_state":1,"ls_state_type":1,"_realm":1}',
                 'where': '{"_is_template":false}'
             }
-            start = time.time()
             content = self.backend.get_all('host', params)
-            statsmgr.counter('backend-getall.host', 1)
-            statsmgr.timer('backend-getall-time.host', time.time() - start)
+            self.statsmgr.counter('backend-getall.host', 1)
             for item in content['_items']:
-                self.mapping['host'][item['name']] = item['_id']
+                host_mapping[item['name']] = item['_id']
 
-                self.ref_live['host'][item['_id']] = {
+                host_ref_live[item['_id']] = {
                     '_id': item['_id'],
                     '_etag': item['_etag'],
                     '_realm': item['_realm'],
                     'initial_state': item['ls_state'],
                     'initial_state_type': item['ls_state_type']
                 }
-            self.loaded_hosts = now
-        elif type_data == 'livestate_service' \
-                and self.loaded_services < now - self.load_protect_delay:
-            params = {
-                'projection': '{"name":1}',
-                'where': '{"_is_template":false}'
-            }
-            start = time.time()
-            contenth = self.backend.get_all('host', params)
-            statsmgr.counter('backend-getall.host', 1)
-            statsmgr.timer('backend-getall-time.host', time.time() - start)
-            hosts = {}
-            for item in contenth['_items']:
                 hosts[item['_id']] = item['name']
+            logger.info("- hosts references reloaded")
 
+            # Updating services
             params = {
                 'projection': '{"host":1,"name":1,"ls_state":1,"ls_state_type":1,"_realm":1}',
                 'where': '{"_is_template":false}'
             }
-            start = time.time()
             content = self.backend.get_all('service', params)
-            statsmgr.counter('backend-getall.service', 1)
-            statsmgr.timer('backend-getall-time.service', time.time() - start)
+            self.statsmgr.counter('backend-getall.service', 1)
             for item in content['_items']:
-                self.mapping['service']['__'.join([hosts[item['host']],
-                                                   item['name']])] = item['_id']
+                try:
+                    serv_mapping['__'.join([hosts[item['host']], item['name']])] = item['_id']
 
-                self.ref_live['service'][item['_id']] = {
-                    '_id': item['_id'],
-                    '_etag': item['_etag'],
-                    '_realm': item['_realm'],
-                    'initial_state': item['ls_state'],
-                    'initial_state_type': item['ls_state_type']
-                }
-            self.loaded_services = now
-        elif type_data == 'livestate_user' \
-                and self.loaded_users < now - self.load_protect_delay:
+                    serv_ref_live[item['_id']] = {
+                        '_id': item['_id'],
+                        '_etag': item['_etag'],
+                        '_realm': item['_realm'],
+                        'initial_state': item['ls_state'],
+                        'initial_state_type': item['ls_state_type']
+                    }
+                except KeyError:
+                    logger.warning("Got a service for an unknown host")
+            logger.info("- services references reloaded")
+
+            # Updating users
             params = {
                 'projection': '{"name":1,"_realm":1}',
                 'where': '{"_is_template":false}'
             }
-            start = time.time()
             content = self.backend.get_all('user', params)
-            statsmgr.counter('backend-getall.user', 1)
-            statsmgr.timer('backend-getall-time.user', time.time() - start)
+            self.statsmgr.counter('backend-getall.user', 1)
             for item in content['_items']:
-                self.mapping['user'][item['name']] = item['_id']
+                user_mapping[item['name']] = item['_id']
 
-                self.ref_live['user'][item['_id']] = {
+                user_ref_live[item['_id']] = {
                     '_id': item['_id'],
                     '_etag': item['_etag'],
                     '_realm': item['_realm']
                 }
-            self.loaded_users = now
+            logger.info("- users references reloaded")
+
+            self.last_load = now
+        else:
+            logger.warning("- references not reloaded. Last reload is too recent; "
+                           "set the 'load_protect_delay' parameter accordingly.")
+
+        # Propagate changes in the inter-process dicts
+        self.mapping['host'] = host_mapping
+        self.mapping['service'] = serv_mapping
+        self.mapping['user'] = user_mapping
+        self.ref_live['host'] = host_ref_live
+        self.ref_live['service'] = serv_ref_live
+        self.ref_live['user'] = user_ref_live
+
+        end = time.time()
+        self.statsmgr.timer('backend-getall.time', end - start)
+
+        return True
 
     def update_next_check(self, data, obj_type):
         """Update livestate host and service next check timestamp
@@ -319,16 +347,9 @@ class AlignakBackendBroker(BaseModule):
         :type data: dict
         :param obj_type: type of data (host | service)
         :type obj_type: str
-        :return: Counters of updated or add data to alignak backend
-        :rtype: dict
+        :return: False if backend update problem
+        :rtype: bool
         """
-        start_time = time.time()
-        counters = {
-            'livestate_host': 0,
-            'livestate_service': 0,
-            'log_host': 0,
-            'log_service': 0
-        }
         logger.debug("Update next check: %s, %s", obj_type, data)
 
         if obj_type == 'host':
@@ -339,10 +360,7 @@ class AlignakBackendBroker(BaseModule):
                 }
 
                 # Update live state
-                ret = self.send_to_backend('livestate_host', data['host_name'], data_to_update)
-                if ret:
-                    counters['livestate_host'] += 1
-                logger.debug("Updated host live state data: %s", data_to_update)
+                return self.send_to_backend('livestate_host', data['host_name'], data_to_update)
         elif obj_type == 'service':
             service_name = '__'.join([data['host_name'], data['service_description']])
             if service_name in self.mapping['service']:
@@ -352,285 +370,98 @@ class AlignakBackendBroker(BaseModule):
                 }
 
                 # Update live state
-                ret = self.send_to_backend('livestate_service', service_name, data_to_update)
-                if ret:
-                    counters['livestate_service'] += 1
-                logger.debug("Updated service live state data: %s", data_to_update)
-        if (counters['livestate_host'] + counters['livestate_service']) > 0:
-            logger.debug("--- %s seconds ---", (time.time() - start_time))
-        return counters
+                return self.send_to_backend('livestate_service', service_name, data_to_update)
 
-    def update_livestate(self, data, obj_type):
+        return False
+
+    def check_result(self, data):
         """
-        Update livestate_host and livestate_service
+        Got a check result for an host/service
 
-        :param data: dictionary of data from scheduler
+        :param data: brok data got from scheduler
         :type data: dict
-        :param obj_type: type of data (host | service)
-        :type obj_type: str
-        :return: Counters of updated or add data to alignak backend
-        :rtype: dict
+        :return: False if any error when posting to the backend
         """
-        start_time = time.time()
-        counters = {
-            'livestate_host': 0,
-            'livestate_service': 0,
-            'log_host': 0,
-            'log_service': 0
-        }
-        logger.debug("Update livestate: %s - %s", obj_type, data)
-
-        if obj_type == 'host':
-            if data['host_name'] in self.mapping['host']:
-                # Received data for an host:
-                data_to_update = {
-                    'ls_state': data['state'],
-                    'ls_state_id': data['state_id'],
-                    'ls_state_type': data['state_type'],
-                    'ls_last_check': data['last_chk'],
-                    'ls_last_state': data['last_state'],
-                    'ls_last_state_type': data['last_state_type'],
-                    'ls_last_state_changed': data['last_state_change'],
-                    'ls_output': data['output'],
-                    'ls_long_output': data['long_output'],
-                    'ls_perf_data': data['perf_data'],
-                    'ls_acknowledged': data['problem_has_been_acknowledged'],
-                    'ls_acknowledgement_type': data['acknowledgement_type'],
-                    'ls_downtimed': data['in_scheduled_downtime'],
-                    'ls_execution_time': data['execution_time'],
-                    'ls_latency': data['latency'],
-
-                    # 'ls_passive_check': data['passive_check'],
-                    'ls_attempt': data['attempt'],
-                    'ls_last_hard_state_changed': data['last_hard_state_change'],
-                    # Last time in the corresponding state
-                    'ls_last_time_up': data['last_time_up'],
-                    'ls_last_time_down': data['last_time_down'],
-                    'ls_last_time_unknown': 0,
-                    'ls_last_time_unreachable': data['last_time_unreachable']
-                }
-
-                h_id = self.mapping['host'][data['host_name']]
-                if 'initial_state' in self.ref_live['host'][h_id]:
-                    data_to_update['ls_last_state'] = \
-                        self.ref_live['host'][h_id]['initial_state']
-                    data_to_update['ls_last_state_type'] = \
-                        self.ref_live['host'][h_id]['initial_state_type']
-                    del self.ref_live['host'][h_id]['initial_state']
-                    del self.ref_live['host'][h_id]['initial_state_type']
-
-                data_to_update['_realm'] = self.ref_live['host'][h_id]['_realm']
-
-                # Update live state
-                ret = self.send_to_backend('livestate_host', data['host_name'], data_to_update)
-                if ret:
-                    counters['livestate_host'] += 1
-                logger.debug("Updated host live state data: %s", data_to_update)
-
-                # Add an host log
-                data_to_update['ls_state_changed'] = (
-                    data_to_update['ls_state'] != data_to_update['ls_last_state']
-                )
-                data_to_update['host'] = self.mapping['host'][data['host_name']]
-                data_to_update['service'] = None
-
-                # Rename ls_ keys and delete non used keys...
-                for field in ['ls_attempt', 'ls_last_state_changed', 'ls_last_hard_state_changed',
-                              'ls_last_time_up', 'ls_last_time_down', 'ls_last_time_unknown',
-                              'ls_last_time_unreachable']:
-                    del data_to_update[field]
-                for key in data_to_update:
-                    if key.startswith('ls_'):
-                        data_to_update[key[3:]] = data_to_update[key]
-                        del data_to_update[key]
-
-                ret = self.send_to_backend('log_host', data['host_name'], data_to_update)
-                if ret:
-                    counters['log_host'] += 1
-        elif obj_type == 'service':
-            service_name = '__'.join([data['host_name'], data['service_description']])
-            if service_name in self.mapping['service']:
-                # Received data for a service:
-                data_to_update = {
-                    'ls_state': data['state'],
-                    'ls_state_id': data['state_id'],
-                    'ls_state_type': data['state_type'],
-                    'ls_last_check': data['last_chk'],
-                    'ls_last_state': data['last_state'],
-                    'ls_last_state_type': data['last_state_type'],
-                    'ls_last_state_changed': data['last_state_change'],
-                    'ls_output': data['output'],
-                    'ls_long_output': data['long_output'],
-                    'ls_perf_data': data['perf_data'],
-                    'ls_acknowledged': data['problem_has_been_acknowledged'],
-                    'ls_acknowledgement_type': data['acknowledgement_type'],
-                    'ls_downtimed': data['in_scheduled_downtime'],
-                    'ls_execution_time': data['execution_time'],
-                    'ls_latency': data['latency'],
-
-                    # 'ls_passive_check': data['passive_check'],
-                    'ls_attempt': data['attempt'],
-                    'ls_last_hard_state_changed': data['last_hard_state_change'],
-                    # Last time in the corresponding state
-                    'ls_last_time_ok': data['last_time_ok'],
-                    'ls_last_time_warning': data['last_time_warning'],
-                    'ls_last_time_critical': data['last_time_critical'],
-                    'ls_last_time_unknown': data['last_time_unknown'],
-                    'ls_last_time_unreachable': data['last_time_unreachable']
-                }
-                s_id = self.mapping['service'][service_name]
-                if 'initial_state' in self.ref_live['service'][s_id]:
-                    data_to_update['ls_last_state'] = \
-                        self.ref_live['service'][s_id]['initial_state']
-                    data_to_update['ls_last_state_type'] = \
-                        self.ref_live['service'][s_id]['initial_state_type']
-                    del self.ref_live['service'][s_id]['initial_state']
-                    del self.ref_live['service'][s_id]['initial_state_type']
-
-                data_to_update['_realm'] = self.ref_live['service'][s_id]['_realm']
-
-                # Update live state
-                ret = self.send_to_backend('livestate_service', service_name, data_to_update)
-                if ret:
-                    counters['livestate_service'] += 1
-                logger.debug("Updated service live state data: %s", data_to_update)
-
-                # Add a service log
-                data_to_update['ls_state_changed'] = (
-                    data_to_update['ls_state'] != data_to_update['ls_last_state']
-                )
-                data_to_update['host'] = self.mapping['host'][data['host_name']]
-                data_to_update['service'] = self.mapping['service'][service_name]
-
-                # Rename ls_ keys and delete non used keys...
-                for field in ['ls_attempt', 'ls_last_state_changed', 'ls_last_hard_state_changed',
-                              'ls_last_time_ok', 'ls_last_time_warning', 'ls_last_time_critical',
-                              'ls_last_time_unknown', 'ls_last_time_unreachable']:
-                    del data_to_update[field]
-                for key in data_to_update:
-                    if key.startswith('ls_'):
-                        data_to_update[key[3:]] = data_to_update[key]
-                        del data_to_update[key]
-
-                self.send_to_backend('log_service', service_name, data_to_update)
-                if ret:
-                    counters['log_service'] += 1
-
-        if (counters['livestate_host'] + counters['livestate_service']) > 0:
-            logger.debug("--- %s seconds ---", (time.time() - start_time))
-        return counters
-
-    def send_to_backend(self, type_data, name, data):
-        """
-        Send data to alignak backend
-
-        :param type_data: one of ['livestate_host', 'livestate_service', 'log_host', 'log_service']
-        :type type_data: str
-        :param name: name of host or service
-        :type name: str
-        :param data: dictionary with data to add / update
-        :type data: dict
-        :return: True if send is ok, False otherwise
-        :rtype: bool
-        """
-        if not self.backend_connected and int(time.time() > self.backend_connection_retry_planned):
-            self.logged_in = self.backendConnection()
-
-        if not self.backend_connected:
-            logger.error("Alignak backend connection is not available. "
-                         "Skipping objects update.")
-            return
-        logger.debug("Send to backend: %s, %s", type_data, data)
-
-        headers = {
-            'Content-Type': 'application/json',
-        }
+        logger.debug("Manage a check result: %s", data)
         ret = True
-        if type_data == 'livestate_host':
-            headers['If-Match'] = self.ref_live['host'][self.mapping['host'][name]]['_etag']
-            try:
-                start = time.time()
-                statsmgr.counter('backend-patch.host', 1)
-                response = self.backend.patch(
-                    'host/%s' % self.ref_live['host'][self.mapping['host'][name]]['_id'],
-                    data, headers, True)
-                statsmgr.timer('backend-patch-time.host', time.time() - start)
-                if response['_status'] == 'ERR':  # pragma: no cover - should not happen
-                    logger.error('%s', response['_issues'])
-                    ret = False
-                else:
-                    self.ref_live['host'][self.mapping['host'][name]]['_etag'] = response['_etag']
-            except BackendException as exp:  # pragma: no cover - should not happen
-                logger.error('Patch livestate for host %s error', self.mapping['host'][name])
-                logger.error('Data: %s', data)
-                logger.exception("Exception: %s", exp)
-                if exp.code == 404:
-                    logger.error('Seems the host %s deleted in the Backend',
-                                 self.mapping['host'][name])
-                else:
-                    self.backend_connected = False
-                    self.backend_connection_retry_planned = int(time.time()) + 60
-        elif type_data == 'livestate_service':
-            headers['If-Match'] = self.ref_live['service'][self.mapping['service'][name]]['_etag']
-            try:
-                start = time.time()
-                statsmgr.counter('backend-patch.service', 1)
-                response = self.backend.patch(
-                    'service/%s' % self.ref_live['service'][self.mapping['service'][name]]['_id'],
-                    data, headers, True)
-                statsmgr.timer('backend-patch-time.service', time.time() - start)
-                if response['_status'] == 'ERR':  # pragma: no cover - should not happen
-                    logger.error('%s', response['_issues'])
-                    ret = False
-                else:
-                    self.ref_live['service'][self.mapping['service'][name]]['_etag'] = response[
-                        '_etag']
-            except BackendException as exp:  # pragma: no cover - should not happen
-                logger.error('Patch livestate for service %s error', self.mapping['service'][name])
-                logger.error('Data: %s', data)
-                logger.exception("Exception: %s", exp)
-                if exp.code == 404:
-                    logger.error('Seems the service %s deleted in the Backend',
-                                 self.mapping['service'][name])
-                else:
-                    self.backend_connected = False
-                    self.backend_connection_retry_planned = int(time.time()) + 60
-        elif type_data == 'log_host':
-            try:
-                start = time.time()
-                statsmgr.counter('backend-post.lcr-host', 1)
-                response = self.backend.post('logcheckresult', data)
-                statsmgr.timer('backend-post-time.lcr-host', time.time() - start)
-            except BackendException as exp:  # pragma: no cover - should not happen
-                logger.error('Post logcheckresult for host %s error', self.mapping['host'][name])
-                logger.error('Data: %s', data)
-                logger.exception("Exception: %s", exp)
-                if exp.code == 422:
-                    logger.error('Seems the host %s deleted in the Backend',
-                                 self.mapping['host'][name])
-                else:
-                    self.backend_connected = False
-                    self.backend_connection_retry_planned = int(time.time()) + 60
+
+        # Received data for an host or service
+        # Obliged to set an _realm... despite it is unuseful.
+        posted_data = {
+            '_realm': self.default_realm,
+            'state': data['state'],
+            'state_type': data['state_type'],
+            'state_id': data['state_id'],
+            'passive_check': data['passive_check'] if 'passive_check' in data else False,
+            'acknowledged': data['problem_has_been_acknowledged'],
+            'acknowledgement_type': data['acknowledgement_type'],
+            'downtimed': data['in_scheduled_downtime'],
+            'last_check': data['last_chk'],
+            'last_state': data['last_state'],
+            'last_state_id': data['last_state_id'],
+            'last_state_type': data['last_state_type'],
+            'output': data['output'],
+            'long_output': data['long_output'],
+            'perf_data': data['perf_data'],
+            'latency': data['latency'],
+            'execution_time': data['execution_time'],
+            'current_attempt': data['attempt'],
+
+            # 'state_changed': data['state_changed'],
+            'last_state_changed': data['last_state_change'],
+            'last_hard_state_changed': data['last_hard_state_change'],
+        }
+        if 'service_description' in data:
+            posted_data.update({
+                'host_name': data['host_name'],
+                'service_name': data['service_description'],
+                # Last time in the corresponding state
+                'last_time_0': data['last_time_ok'],
+                'last_time_1': data['last_time_warning'],
+                'last_time_2': data['last_time_critical'],
+                'last_time_3': data['last_time_unknown'],
+                'last_time_4': data['last_time_unreachable']
+            })
+        else:
+            posted_data.update({
+                'host_name': data['host_name'],
+                # Last time in the corresponding state
+                'last_time_0': data['last_time_up'],
+                'last_time_1': data['last_time_down'],
+                'last_time_2': 0,
+                'last_time_3': 0,
+                'last_time_4': data['last_time_unreachable']
+            })
+
+        # Not managed currently
+        # if 'initial_state' in self.ref_live['host'][h_id]:
+        #     data_to_update['ls_last_state'] = \
+        #         self.ref_live['host'][h_id]['initial_state']
+        #     data_to_update['ls_last_state_type'] = \
+        #         self.ref_live['host'][h_id]['initial_state_type']
+        #     del self.ref_live['host'][h_id]['initial_state']
+        #     del self.ref_live['host'][h_id]['initial_state_type']
+
+        start = time.time()
+        self.statsmgr.counter('backend-post.lcr', 1)
+
+        # Send to the backend
+        try:
+            response = self.backend.post(endpoint='logcheckresult', data=posted_data)
+        except BackendException as exp:  # pragma: no cover - should not happen
+            logger.error('Error when posting LCR to the backend, data: %s', posted_data)
+            print('Error when posting LCR to the backend, data: %s', posted_data)
+            logger.error("Exception: %s", exp)
+            print("Exception: %s / %s", exp, exp.response)
+            ret = False
+        else:
+            if response['_status'] == 'ERR':  # pragma: no cover - should not happen
+                logger.error('Error when posting LCR to the backend, data: %s', posted_data)
+                logger.error('Issues: %s', response['_issues'])
+                print('Issues: %s', response['_issues'])
                 ret = False
-        elif type_data == 'log_service':
-            try:
-                start = time.time()
-                statsmgr.counter('backend-post.lcr-service', 1)
-                response = self.backend.post('logcheckresult', data)
-                statsmgr.timer('backend-post-time.lcr-service', time.time() - start)
-            except BackendException as exp:  # pragma: no cover - should not happen
-                logger.error('Post logcheckresult for service %s error',
-                             self.mapping['service'][name])
-                logger.error('Data: %s', data)
-                logger.exception("Exception: %s", exp)
-                logger.error('Error detail: %s, %s, %s', exp.code, exp.message, exp.response)
-                if exp.code == 422:
-                    logger.error('Seems the service %s deleted in the Backend',
-                                 self.mapping['service'][name])
-                else:
-                    self.backend_connected = False
-                    self.backend_connection_retry_planned = int(time.time()) + 60
-                ret = False
+
+        self.statsmgr.timer('backend-post-time.lcr', time.time() - start)
         return ret
 
     def update_status(self, brok):
@@ -672,9 +503,9 @@ class AlignakBackendBroker(BaseModule):
 
         # Search the concerned element
         start = time.time()
-        statsmgr.counter('backend-get.%s' % endpoint, 1)
+        self.statsmgr.counter('backend-get.%s' % endpoint, 1)
         item = self.backend.get(endpoint + '/' + item_id)
-        statsmgr.timer('backend-get-time.%s' % endpoint, time.time() - start)
+        self.statsmgr.timer('backend-get-time.%s' % endpoint, time.time() - start)
         logger.debug("Found %s: %s", endpoint, sorted(item))
 
         differences = {}
@@ -730,11 +561,11 @@ class AlignakBackendBroker(BaseModule):
             }
             try:
                 start = time.time()
-                statsmgr.counter('backend-patch.%s' % endpoint, 1)
+                self.statsmgr.counter('backend-patch.%s' % endpoint, 1)
                 response = self.backend.patch('%s/%s' % (endpoint, item['_id']),
                                               differences, headers, True)
-                statsmgr.counter('backend-patch.%s' % endpoint, 1)
-                statsmgr.timer('backend-patch-time.%s' % endpoint, time.time() - start)
+                self.statsmgr.counter('backend-patch.%s' % endpoint, 1)
+                self.statsmgr.timer('backend-patch-time.%s' % endpoint, time.time() - start)
                 if response['_status'] == 'ERR':  # pragma: no cover - should not happen
                     logger.warning("Update %s: %s failed, errors: %s.",
                                    endpoint, name, response['_issues'])
@@ -750,7 +581,8 @@ class AlignakBackendBroker(BaseModule):
                                  endpoint, name)
                 else:
                     self.backend_connected = False
-                    self.backend_connection_retry_planned = int(time.time()) + 60
+                    self.backend_connection_retry_planned = \
+                        int(time.time()) + self.backend_connection_retry_delay
 
         return update
 
@@ -828,17 +660,17 @@ class AlignakBackendBroker(BaseModule):
         params = {'sort': '_id', 'where': '{"name": "%s"}' % name}
         start = time.time()
         all_alignak = self.backend.get_all('alignak', params)
-        statsmgr.counter('backend-getall.alignak', 1)
-        statsmgr.timer('backend-getall-time.alignak', time.time() - start)
+        self.statsmgr.counter('backend-getall.alignak', 1)
+        self.statsmgr.timer('backend-getall-time.alignak', time.time() - start)
         logger.debug("Got %d Alignak configurations for %s", len(all_alignak['_items']), name)
 
         headers = {'Content-Type': 'application/json'}
         if not all_alignak['_items']:
             try:
                 start = time.time()
-                statsmgr.counter('backend-post.alignak', 1)
+                self.statsmgr.counter('backend-post.alignak', 1)
                 response = self.backend.post('alignak', brok.data)
-                statsmgr.timer('backend-post-time.alignak', time.time() - start)
+                self.statsmgr.timer('backend-post-time.alignak', time.time() - start)
                 if response['_status'] == 'ERR':  # pragma: no cover - should not happen
                     logger.warning("Create alignak: %s failed, errors: %s.",
                                    name, response['_issues'])
@@ -849,7 +681,8 @@ class AlignakBackendBroker(BaseModule):
                 logger.error("Data: %s", brok.data)
                 logger.exception("Exception: %s", exp)
                 self.backend_connected = False
-                self.backend_connection_retry_planned = int(time.time()) + 60
+                self.backend_connection_retry_planned = \
+                    int(time.time()) + self.backend_connection_retry_delay
 
         else:
             item = all_alignak['_items'][0]
@@ -868,10 +701,10 @@ class AlignakBackendBroker(BaseModule):
             headers['If-Match'] = item['_etag']
             try:
                 start = time.time()
-                statsmgr.counter('backend-patch.alignak', 1)
+                self.statsmgr.counter('backend-patch.alignak', 1)
                 response = self.backend.patch('alignak/%s' % (item['_id']),
                                               brok.data, headers, True)
-                statsmgr.timer('backend-patch-time.alignak', time.time() - start)
+                self.statsmgr.timer('backend-patch-time.alignak', time.time() - start)
                 if response['_status'] == 'ERR':  # pragma: no cover - should not happen
                     logger.warning("Update alignak: %s failed, errors: %s.",
                                    name, response['_issues'])
@@ -882,7 +715,88 @@ class AlignakBackendBroker(BaseModule):
                 logger.error("Data: %s", brok.data)
                 logger.exception("Exception: %s / %s", exp, exp.response)
                 self.backend_connected = False
-                self.backend_connection_retry_planned = int(time.time()) + 60
+                self.backend_connection_retry_planned = \
+                    int(time.time()) + self.backend_connection_retry_delay
+
+    def send_to_backend(self, type_data, name, data):
+        """
+        Send data to alignak backend
+
+        :param type_data: one of ['livestate_host', 'livestate_service', 'log_host', 'log_service']
+        :type type_data: str
+        :param name: name of host or service
+        :type name: str
+        :param data: dictionary with data to add / update
+        :type data: dict
+        :return: True if send is ok, False otherwise
+        :rtype: bool
+        """
+        if not self.backend_connected and int(time.time() > self.backend_connection_retry_planned):
+            self.backend_connected = self.backend_connection()
+
+        if not self.backend_connected:
+            logger.error("Alignak backend connection is not available. "
+                         "Skipping objects update.")
+            return
+        logger.debug("Send to backend: %s, %s", type_data, data)
+
+        headers = {
+            'Content-Type': 'application/json',
+        }
+        ret = True
+        if type_data == 'livestate_host':
+            headers['If-Match'] = self.ref_live['host'][self.mapping['host'][name]]['_etag']
+            try:
+                start = time.time()
+                self.statsmgr.counter('backend-patch.host', 1)
+                response = self.backend.patch(
+                    'host/%s' % self.ref_live['host'][self.mapping['host'][name]]['_id'],
+                    data, headers, True)
+                self.statsmgr.timer('backend-patch-time.host', time.time() - start)
+                if response['_status'] == 'ERR':  # pragma: no cover - should not happen
+                    logger.error('%s', response['_issues'])
+                    ret = False
+                else:
+                    self.ref_live['host'][self.mapping['host'][name]]['_etag'] = response['_etag']
+            except BackendException as exp:  # pragma: no cover - should not happen
+                logger.error('Patch livestate for host %s error', self.mapping['host'][name])
+                logger.error('Data: %s', data)
+                logger.exception("Exception: %s", exp)
+                if exp.code == 404:
+                    logger.error('Seems the host %s deleted in the Backend',
+                                 self.mapping['host'][name])
+                else:
+                    self.backend_connected = False
+                    self.backend_connection_retry_planned = \
+                        int(time.time()) + self.backend_connection_retry_delay
+        elif type_data == 'livestate_service':
+            headers['If-Match'] = self.ref_live['service'][self.mapping['service'][name]]['_etag']
+            try:
+                start = time.time()
+                self.statsmgr.counter('backend-patch.service', 1)
+                response = self.backend.patch(
+                    'service/%s' % self.ref_live['service'][self.mapping['service'][name]]['_id'],
+                    data, headers, True)
+                self.statsmgr.timer('backend-patch-time.service', time.time() - start)
+                if response['_status'] == 'ERR':  # pragma: no cover - should not happen
+                    logger.error('%s', response['_issues'])
+                    ret = False
+                else:
+                    self.ref_live['service'][self.mapping['service'][name]]['_etag'] = response[
+                        '_etag']
+            except BackendException as exp:  # pragma: no cover - should not happen
+                logger.error('Patch livestate for service %s error', self.mapping['service'][name])
+                logger.error('Data: %s', data)
+                logger.exception("Exception: %s", exp)
+                if exp.code == 404:
+                    logger.error('Seems the service %s deleted in the Backend',
+                                 self.mapping['service'][name])
+                else:
+                    self.backend_connected = False
+                    self.backend_connection_retry_planned = \
+                        int(time.time()) + self.backend_connection_retry_delay
+
+        return ret
 
     def manage_brok(self, brok):
         """
@@ -893,11 +807,14 @@ class AlignakBackendBroker(BaseModule):
         :return: False if broks were not managed by the module
         """
         if not self.logged_in:
-            self.logged_in = self.backendConnection()
+            if not self.backend_connection():
+                logger.debug("Not logged-in, ignoring broks...")
+                return False
 
-        if not self.logged_in:
-            logger.debug("Not logged-in, ignoring broks...")
-            return False
+        brok.prepare()
+
+        logger.debug("manage_brok receives a Brok:")
+        logger.debug("\t-Brok: %s - %s", brok.type, brok.data)
 
         try:
             endpoint = ''
@@ -935,73 +852,37 @@ class AlignakBackendBroker(BaseModule):
             logger.debug("Brok data: %s", brok.data)
 
             start = time.time()
-            statsmgr.counter('managed-broks-type-count.%s' % brok.type, 1)
+            self.statsmgr.counter('managed-broks-type-count.%s' % brok.type, 1)
+
+            ret = False
+            if brok.type in ['new_conf']:
+                ret = self.get_refs()
 
             if brok.type in ['program_status', 'update_program_status']:
-                logger.debug("Got %s brok: %s", brok.type, brok.data)
-                self.update_program_status(brok)
+                ret = self.update_program_status(brok)
 
             if brok.type == 'host_next_schedule':
-                logger.debug("Got host next schedule brok: %s", brok.data)
-                self.update_next_check(brok.data, 'host')
+                ret = self.update_next_check(brok.data, 'host')
             if brok.type == 'service_next_schedule':
-                logger.debug("Got service next schedule brok: %s", brok.data)
-                self.update_next_check(brok.data, 'service')
+                ret = self.update_next_check(brok.data, 'service')
 
-            if brok.type == 'update_service_status':
-                logger.debug("Got service update status brok: %s", brok.data)
-                self.update_status(brok)
-            if brok.type == 'update_host_status':
-                logger.debug("Got host update status brok: %s", brok.data)
-                self.update_status(brok)
-            if brok.type == 'update_contact_status':
-                logger.debug("Got contact update status brok: %s", brok.data)
-                self.update_status(brok)
+            if brok.type in ['update_host_status', 'update_service_status',
+                             'update_contact_status']:
+                ret = self.update_status(brok)
 
-            if brok.type == 'new_conf':
-                logger.info("Got a new configuration, reloading objects...")
-                loaded = self.loaded_users
-                self.get_refs('livestate_user')
-                if self.loaded_users > loaded:
-                    logger.info("- users references reloaded")
-                else:
-                    logger.warning("- users references not reloaded. "
-                                   "Last reload is too recent; set the 'load_protect_delay' "
-                                   "parameter accordingly.")
-
-                loaded = self.loaded_hosts
-                self.get_refs('livestate_host')
-                if self.loaded_hosts > loaded:
-                    logger.info("- hosts references reloaded")
-                else:
-                    logger.warning("- hosts references not reloaded. "
-                                   "Last reload is too recent; set the 'load_protect_delay' "
-                                   "parameter accordingly.")
-
-                loaded = self.loaded_services
-                self.get_refs('livestate_service')
-                if self.loaded_services > loaded:
-                    logger.info("- services references reloaded")
-                else:
-                    logger.warning("- services references not reloaded. "
-                                   "Last reload is too recent; set the 'load_protect_delay' "
-                                   "parameter accordingly.")
-
-            if brok.type == 'host_check_result':
-                self.update_livestate(brok.data, 'host')
-
-            if brok.type == 'service_check_result':
-                self.update_livestate(brok.data, 'service')
+            if brok.type in ['host_check_result', 'service_check_result']:
+                ret = self.check_result(brok.data)
 
             if brok.type in ['acknowledge_raise', 'acknowledge_expire',
                              'downtime_raise', 'downtime_expire']:
-                self.update_actions(brok)
+                ret = self.update_actions(brok)
 
-            statsmgr.timer('managed-broks-type-time-%s' % brok.type, time.time() - start)
+            self.statsmgr.timer('managed-broks-type-time-%s' % brok.type, time.time() - start)
 
-            return True
+            return ret
         except Exception as exp:  # pragma: no cover - should not happen
             logger.exception("Manage brok exception: %s", exp)
+            print("Manage brok exception: %s", exp)
 
         return False
 
@@ -1014,13 +895,14 @@ class AlignakBackendBroker(BaseModule):
         """
         host_name = brok.data['host']
         if host_name not in self.mapping['host']:
-            logger.warning("Got a brok for an unknown host: '%s'", host_name)
+            logger.warning("Updating action for a brok for an unknown host: '%s'", host_name)
             return
         service_name = ''
         if 'service' in brok.data:
             service_name = '__'.join([host_name, brok.data['service']])
             if service_name not in self.mapping['service']:
-                logger.warning("Got a brok for an unknown service: '%s'", service_name)
+                logger.warning("Updating action for a brok for an unknown service: '%s'",
+                               service_name)
                 return
 
         data_to_update = {}
@@ -1055,7 +937,7 @@ class AlignakBackendBroker(BaseModule):
         params = {
             'where': json.dumps(where)
         }
-        statsmgr.counter('backend-getall.%s' % endpoint, 1)
+        self.statsmgr.counter('backend-getall.%s' % endpoint, 1)
         actions = self.backend.get_all(endpoint, params)
         if actions['_items']:
             # case 1: the acknowledge / downtime come from backend, we update the 'notified' field
@@ -1064,7 +946,7 @@ class AlignakBackendBroker(BaseModule):
                 'Content-Type': 'application/json',
                 'If-Match': actions['_items'][0]['_etag']
             }
-            statsmgr.counter('backend-patch.%s' % endpoint, 1)
+            self.statsmgr.counter('backend-patch.%s' % endpoint, 1)
             self.backend.patch(
                 endpoint + '/' + actions['_items'][0]['_id'], {"notified": True}, headers, True)
         else:
@@ -1072,7 +954,7 @@ class AlignakBackendBroker(BaseModule):
             # command so we create a new entry
             where['notified'] = True
             # try find the user
-            statsmgr.counter('backend-getall.user', 1)
+            self.statsmgr.counter('backend-getall.user', 1)
             users = self.backend.get_all('user',
                                          {'where': '{"name":"' + brok.data['author'] + '"}'})
             if users['_items']:
@@ -1097,7 +979,7 @@ class AlignakBackendBroker(BaseModule):
                 where['end_time'] = int(brok.data['end_time'])
                 where['fixed'] = bool(brok.data['fixed'])
                 where['duration'] = int(brok.data['duration'])
-            statsmgr.counter('backend-post.%s' % endpoint, 1)
+            self.statsmgr.counter('backend-post.%s' % endpoint, 1)
             self.backend.post(endpoint, where)
 
     def main(self):
@@ -1113,26 +995,23 @@ class AlignakBackendBroker(BaseModule):
 
         logger.info("starting...")
 
-        queue_size = self.to_q.qsize()
-
         while not self.interrupted:
             try:
                 queue_size = self.to_q.qsize()
-                logger.debug("queue length: %s", queue_size)
-                statsmgr.gauge('queue-size', queue_size)
-                start = time.time()
+                if queue_size:
+                    logger.debug("queue length: %s", queue_size)
+                    self.statsmgr.gauge('queue-size', queue_size)
 
                 message = self.to_q.get_nowait()
-                brok_count = 0
+                start = time.time()
                 for brok in message:
                     # Prepare and manage each brok in the queue message
                     brok.prepare()
                     self.manage_brok(brok)
-                    brok_count = brok_count + 1
-                statsmgr.gauge('managed-broks-count', brok_count)
+                self.statsmgr.gauge('managed-broks-count', len(message))
 
-                logger.debug("time to manage %s broks (%d secs)", brok_count, time.time() - start)
-                statsmgr.timer('managed-broks-time', time.time() - start)
+                logger.debug("time to manage %s broks (%d secs)", len(message), time.time() - start)
+                self.statsmgr.timer('managed-broks-time', time.time() - start)
             except Queue.Empty:
                 # logger.debug("No message in the module queue")
                 time.sleep(0.01)

@@ -174,9 +174,7 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         self.brokmodule = AlignakBackendBroker(modconf)
 
         # Set up the broker module
-        self.brokmodule.get_refs('livestate_host')
-        self.brokmodule.get_refs('livestate_service')
-        self.brokmodule.get_refs('livestate_user')
+        self.brokmodule.get_refs()
 
     def test_00_refused_program_status_brok(self):
         """Test with a bad formatted brok for the program status

@@ -24,7 +24,7 @@ This module is used to manage retention and livestate to alignak-backend with sc
 import time
 import logging
 
-from alignak.stats import statsmgr
+from alignak.stats import Stats
 from alignak.basemodule import BaseModule
 from alignak_backend_client.client import Backend, BackendException
 
@@ -88,11 +88,12 @@ class AlignakBackendScheduler(BaseModule):
                     int(getattr(mod_conf, 'statsd_port', '8125')),
                     getattr(mod_conf, 'statsd_prefix', 'alignak'),
                     (getattr(mod_conf, 'statsd_enabled', '0') != '0'))
-        statsmgr.register(self.alias, 'module',
-                          statsd_host=getattr(mod_conf, 'statsd_host', 'localhost'),
-                          statsd_port=int(getattr(mod_conf, 'statsd_port', '8125')),
-                          statsd_prefix=getattr(mod_conf, 'statsd_prefix', 'alignak'),
-                          statsd_enabled=(getattr(mod_conf, 'statsd_enabled', '0') != '0'))
+        self.statsmgr = Stats()
+        self.statsmgr.register(self.alias, 'module',
+                               statsd_host=getattr(mod_conf, 'statsd_host', 'localhost'),
+                               statsd_port=int(getattr(mod_conf, 'statsd_port', '8125')),
+                               statsd_prefix=getattr(mod_conf, 'statsd_prefix', 'alignak'),
+                               statsd_enabled=(getattr(mod_conf, 'statsd_enabled', '0') != '0'))
 
         self.url = getattr(mod_conf, 'api_url', 'http://localhost:5000')
         self.backend = Backend(self.url, self.client_processes)
@@ -134,8 +135,8 @@ class AlignakBackendScheduler(BaseModule):
             self.backend_connected = self.backend.login(self.backend_username,
                                                         self.backend_password,
                                                         generate)
-            statsmgr.counter('backend-login', 1)
-            statsmgr.timer('backend-login-time', time.time() - start)
+            self.statsmgr.counter('backend-login', 1)
+            self.statsmgr.timer('backend-login-time', time.time() - start)
             if not self.backend_connected:
                 logger.warning("Backend login failed")
             self.token = self.backend.token
@@ -197,10 +198,10 @@ class AlignakBackendScheduler(BaseModule):
                         del host[key]
                 all_data['hosts'][hostname] = host
             logger.info('%d hosts loaded from retention', len(all_data['hosts']))
-            statsmgr.counter('load.host', len(all_data['hosts']))
+            self.statsmgr.counter('load.host', len(all_data['hosts']))
             logger.info('%d services loaded from retention', len(all_data['services']))
-            statsmgr.counter('load.service', len(all_data['services']))
-            statsmgr.timer('load.time', time.time() - start)
+            self.statsmgr.counter('load.service', len(all_data['services']))
+            self.statsmgr.timer('load.time', time.time() - start)
 
             scheduler.restore_retention_data(all_data)
         except BackendException:
@@ -270,10 +271,10 @@ class AlignakBackendScheduler(BaseModule):
                         self.backend_connected = False
                         return
             logger.info('%d hosts saved in retention', len(data_to_save['hosts']))
-            statsmgr.counter('save.host', len(data_to_save['hosts']))
+            self.statsmgr.counter('save.host', len(data_to_save['hosts']))
             logger.info('%d services saved in retention', len(data_to_save['services']))
-            statsmgr.counter('save.service', len(data_to_save['services']))
-            statsmgr.timer('save.time', time.time() - start_time)
+            self.statsmgr.counter('save.service', len(data_to_save['services']))
+            self.statsmgr.timer('save.time', time.time() - start_time)
 
             now = time.time()
             logger.info("Retention saved in %s seconds", (now - start_time))

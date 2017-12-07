@@ -28,7 +28,7 @@ import json
 import logging
 from datetime import datetime
 
-from alignak.stats import statsmgr
+from alignak.stats import Stats
 from alignak.basemodule import BaseModule
 from alignak.external_command import ExternalCommand
 
@@ -103,11 +103,12 @@ class AlignakBackendArbiter(BaseModule):
                     int(getattr(mod_conf, 'statsd_port', '8125')),
                     getattr(mod_conf, 'statsd_prefix', 'alignak'),
                     (getattr(mod_conf, 'statsd_enabled', '0') != '0'))
-        statsmgr.register(self.alias, 'module',
-                          statsd_host=getattr(mod_conf, 'statsd_host', 'localhost'),
-                          statsd_port=int(getattr(mod_conf, 'statsd_port', '8125')),
-                          statsd_prefix=getattr(mod_conf, 'statsd_prefix', 'alignak'),
-                          statsd_enabled=(getattr(mod_conf, 'statsd_enabled', '0') != '0'))
+        self.statsmgr = Stats()
+        self.statsmgr.register(self.alias, 'module',
+                               statsd_host=getattr(mod_conf, 'statsd_host', 'localhost'),
+                               statsd_port=int(getattr(mod_conf, 'statsd_port', '8125')),
+                               statsd_prefix=getattr(mod_conf, 'statsd_prefix', 'alignak'),
+                               statsd_enabled=(getattr(mod_conf, 'statsd_enabled', '0') != '0'))
 
         self.url = getattr(mod_conf, 'api_url', 'http://localhost:5000')
         self.backend = Backend(self.url, self.client_processes)
@@ -218,8 +219,8 @@ class AlignakBackendArbiter(BaseModule):
             self.backend_connected = self.backend.login(self.backend_username,
                                                         self.backend_password,
                                                         generate)
-            statsmgr.counter('backend-login', 1)
-            statsmgr.timer('backend-login-time', time.time() - start)
+            self.statsmgr.counter('backend-login', 1)
+            self.statsmgr.timer('backend-login-time', time.time() - start)
             if not self.backend_connected:
                 logger.warning("Backend login failed")
             self.token = self.backend.token
@@ -307,20 +308,24 @@ class AlignakBackendArbiter(BaseModule):
             'usergroups', 'users',
             'location',
             'duplicate_foreach', 'tags',
-            'ls_acknowledged', 'ls_acknowledgement_type', 'ls_current_attempt', 'ls_attempt',
-            'ls_downtimed', 'ls_execution_time',
-            'ls_grafana', 'ls_grafana_panelid', 'ls_impact', 'ls_last_check', 'ls_last_state',
-            'ls_last_state_changed', 'ls_last_hard_state_changed', 'ls_last_state_type',
-            'ls_latency', 'ls_long_output',
-            'ls_max_attempts', 'ls_next_check', 'ls_output', 'ls_perf_data',
-            'ls_state', 'ls_state_id', 'ls_state_type',
-            'ls_last_time_up', 'ls_last_time_down',
-            'ls_last_time_ok', 'ls_last_time_warning', 'ls_last_time_critical',
-            'ls_last_time_unknown', 'ls_last_time_unreachable',
-            'ls_passive_check', 'ls_last_notification',
+            # 'ls_acknowledged', 'ls_acknowledgement_type', 'ls_current_attempt', 'ls_attempt',
+            # 'ls_downtimed', 'ls_execution_time',
+            # 'ls_grafana', 'ls_grafana_panelid', 'ls_impact', 'ls_last_check', 'ls_last_state',
+            # 'ls_last_state_changed', 'ls_last_hard_state_changed', 'ls_last_state_type',
+            # 'ls_latency', 'ls_long_output',
+            # 'ls_max_attempts', 'ls_next_check', 'ls_output', 'ls_perf_data',
+            # 'ls_state', 'ls_state_id', 'ls_state_type',
+            # 'ls_last_time_up', 'ls_last_time_down',
+            # 'ls_last_time_ok', 'ls_last_time_warning', 'ls_last_time_critical',
+            # 'ls_last_time_unknown', 'ls_last_time_unreachable',
+            # 'ls_passive_check', 'ls_last_notification',
             '_overall_state_id',
             'trigger', 'schema_version'
         ]
+        # Add live state fields
+        for field in resource:
+            if field.startswith('ls_'):
+                fields.append(field)
         for field in fields:
             if field in resource:
                 del resource[field]
@@ -374,7 +379,7 @@ class AlignakBackendArbiter(BaseModule):
             logger.debug("- realm: %s", realm)
             self.config['realms'].append(realm)
 
-        statsmgr.counter('objects.realm', len(self.config['realms']))
+        self.statsmgr.counter('objects.realm', len(self.config['realms']))
 
     def get_commands(self):
         """Get commands from alignak_backend
@@ -409,7 +414,7 @@ class AlignakBackendArbiter(BaseModule):
             logger.debug("- command: %s", command)
             self.config['commands'].append(command)
 
-        statsmgr.counter('objects.command', len(self.config['commands']))
+        self.statsmgr.counter('objects.command', len(self.config['commands']))
 
     def get_timeperiods(self):
         """Get timeperiods from alignak_backend
@@ -443,7 +448,7 @@ class AlignakBackendArbiter(BaseModule):
             logger.debug("- timeperiod: %s", timeperiod)
             self.config['timeperiods'].append(timeperiod)
 
-        statsmgr.counter('objects.timeperiod', len(self.config['timeperiods']))
+        self.statsmgr.counter('objects.timeperiod', len(self.config['timeperiods']))
 
     def get_contactgroups(self):
         """Get contactgroups from alignak_backend
@@ -476,7 +481,7 @@ class AlignakBackendArbiter(BaseModule):
             logger.debug("- contacts group: %s", contactgroup)
             self.config['contactgroups'].append(contactgroup)
 
-        statsmgr.counter('objects.contactgroup', len(self.config['contactgroups']))
+        self.statsmgr.counter('objects.contactgroup', len(self.config['contactgroups']))
 
     def get_contacts(self):
         """Get contacts from alignak_backend
@@ -540,7 +545,7 @@ class AlignakBackendArbiter(BaseModule):
             logger.debug("- contact: %s", contact)
             self.config['contacts'].append(contact)
 
-        statsmgr.counter('objects.contact', len(self.config['contacts']))
+        self.statsmgr.counter('objects.contact', len(self.config['contacts']))
 
     def get_hostgroups(self):
         """Get hostgroups from alignak_backend
@@ -573,7 +578,7 @@ class AlignakBackendArbiter(BaseModule):
             logger.debug("- hosts group: %s", hostgroup)
             self.config['hostgroups'].append(hostgroup)
 
-        statsmgr.counter('objects.hostgroup', len(self.config['hostgroups']))
+        self.statsmgr.counter('objects.hostgroup', len(self.config['hostgroups']))
 
     def get_hosts(self):
         """Get hosts from alignak_backend
@@ -707,7 +712,7 @@ class AlignakBackendArbiter(BaseModule):
             self.config['hosts'].append(host)
         self.backend_nb_hosts = len(self.config['hosts'])
 
-        statsmgr.counter('objects.host', len(self.config['hosts']))
+        self.statsmgr.counter('objects.host', len(self.config['hosts']))
 
     def get_servicegroups(self):
         """Get servicegroups from alignak_backend
@@ -746,7 +751,7 @@ class AlignakBackendArbiter(BaseModule):
             logger.debug("- services group: %s", servicegroup)
             self.config['servicegroups'].append(servicegroup)
 
-        statsmgr.counter('objects.servicegroup', len(self.config['servicegroups']))
+        self.statsmgr.counter('objects.servicegroup', len(self.config['servicegroups']))
 
     def get_services(self):
         """Get services from alignak_backend
@@ -760,7 +765,11 @@ class AlignakBackendArbiter(BaseModule):
 
         for service in all_services['_items']:
             # Get host name from the previously loaded hosts list
-            service['host_name'] = self.configraw['hosts'][service['host']]
+            try:
+                service['host_name'] = self.configraw['hosts'][service['host']]
+            except KeyError:
+                logger.warning("Got a service for an unknown host")
+                continue
             logger.debug("- %s/%s", service['host_name'], service['name'])
             self.configraw['services'][service['_id']] = service['name']
             service['imported_from'] = u'alignak-backend'
@@ -882,7 +891,7 @@ class AlignakBackendArbiter(BaseModule):
             self.config['services'].append(service)
         self.backend_nb_services = len(self.config['services'])
 
-        statsmgr.counter('objects.service', len(self.config['services']))
+        self.statsmgr.counter('objects.service', len(self.config['services']))
 
     def get_hostdependencies(self):
         """Get hostdependencies from alignak_backend
@@ -921,7 +930,7 @@ class AlignakBackendArbiter(BaseModule):
             logger.debug("- hosts dependency: %s", hostdependency)
             self.config['hostdependencies'].append(hostdependency)
 
-        statsmgr.counter('objects.hostdependency', len(self.config['hostdependencies']))
+        self.statsmgr.counter('objects.hostdependency', len(self.config['hostdependencies']))
 
     def get_hostescalations(self):
         """Get hostescalations from alignak_backend
@@ -959,7 +968,7 @@ class AlignakBackendArbiter(BaseModule):
             logger.debug("- host escalation: %s", hostescalation)
             self.config['hostescalations'].append(hostescalation)
 
-        statsmgr.counter('objects.hostescalation', len(self.config['hostescalations']))
+        self.statsmgr.counter('objects.hostescalation', len(self.config['hostescalations']))
 
     def get_servicedependencies(self):
         """Get servicedependencies from alignak_backend
@@ -1014,7 +1023,7 @@ class AlignakBackendArbiter(BaseModule):
             logger.debug("- services dependency: %s", servicedependency)
             self.config['servicedependencies'].append(servicedependency)
 
-        statsmgr.counter('objects.servicedependency', len(self.config['servicedependencies']))
+        self.statsmgr.counter('objects.servicedependency', len(self.config['servicedependencies']))
 
     def get_serviceescalations(self):
         """Get serviceescalations from alignak_backend
@@ -1055,7 +1064,7 @@ class AlignakBackendArbiter(BaseModule):
             logger.debug("- service escalation: %s", serviceescalation)
             self.config['serviceescalations'].append(serviceescalation)
 
-        statsmgr.counter('objects.serviceescalation', len(self.config['serviceescalations']))
+        self.statsmgr.counter('objects.serviceescalation', len(self.config['serviceescalations']))
 
     def get_alignak_configuration(self):
         """Get Alignak configuration from alignak-backend
@@ -1115,8 +1124,8 @@ class AlignakBackendArbiter(BaseModule):
         now = time.time()
         logger.info("Alignak configuration loaded in %s seconds", now - start_time)
 
-        statsmgr.counter('objects.alignak', len(self.alignak_configuration))
-        statsmgr.timer('objects-alignak-time', now - start_time)
+        self.statsmgr.counter('objects.alignak', len(self.alignak_configuration))
+        self.statsmgr.timer('objects-alignak-time', now - start_time)
 
         return self.alignak_configuration
 
@@ -1175,7 +1184,7 @@ class AlignakBackendArbiter(BaseModule):
         now = time.time()
         logger.info("Alignak monitored system configuration loaded in %s seconds", now - start_time)
 
-        statsmgr.timer('objects-time', now - start_time)
+        self.statsmgr.timer('objects-time', now - start_time)
 
         # Schedule next configuration reload check
         self.next_check = int(now) + (60 * self.verify_modification)
@@ -1232,7 +1241,7 @@ class AlignakBackendArbiter(BaseModule):
                         logger.info(" - backend updated resource: %s, count: %d",
                                     resource, ret['_meta']['total'])
 
-                        statsmgr.counter('updated.%s' % resource, ret['_meta']['total'])
+                        self.statsmgr.counter('updated.%s' % resource, ret['_meta']['total'])
 
                         self.configuration_reload_required = True
                         for updated in ret['_items']:
@@ -1260,7 +1269,7 @@ class AlignakBackendArbiter(BaseModule):
                                                                 "item": 'deleted'})
 
                 if self.configuration_reload_required:
-                    statsmgr.counter('reload_required', 1)
+                    self.statsmgr.counter('reload_required', 1)
 
                     logger.warning("Hey, we must reload configuration from the backend!")
                     try:
@@ -1356,7 +1365,7 @@ class AlignakBackendArbiter(BaseModule):
                                        {'where': '{"processed": false}',
                                         'embedded': '{"host": 1, "service": 1, "user": 1}'})
 
-        statsmgr.counter('action.acknowledge', len(all_ack['_items']))
+        self.statsmgr.counter('action.acknowledge', len(all_ack['_items']))
 
         for ack in all_ack['_items']:
             sticky = 1
@@ -1403,7 +1412,7 @@ class AlignakBackendArbiter(BaseModule):
                                           'embedded': '{"host": 1, "service": 1, '
                                                       '"user": 1}'})
 
-        statsmgr.counter('action.downtime', len(all_downt['_items']))
+        self.statsmgr.counter('action.downtime', len(all_downt['_items']))
 
         # pylint: disable=too-many-format-args
         for downt in all_downt['_items']:
@@ -1451,7 +1460,7 @@ class AlignakBackendArbiter(BaseModule):
                                           {'where': '{"processed": false}',
                                            'embedded': '{"host": 1, "service": 1}'})
 
-        statsmgr.counter('action.force_check', len(all_fcheck['_items']))
+        self.statsmgr.counter('action.force_check', len(all_fcheck['_items']))
 
         for fcheck in all_fcheck['_items']:
             timestamp = self.convert_date_timestamp(fcheck['_created'])

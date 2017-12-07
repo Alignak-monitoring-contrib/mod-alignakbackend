@@ -415,7 +415,7 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
                 u'business_rule_downtime_as_ack': False,
                 u'stalking_options': u'',
                 u'event_handler_enabled': False,
-                'event_handler': u'',
+                'event_handler': '',
                 u'notes': u'',
                 u'macromodulations': u'',
                 u'host_name': u'srv001',
@@ -487,6 +487,7 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
         self.assertEqual(len(self.objects['hosts']), 1)
         for host in self.objects['hosts']:
             for key, value in host.iteritems():
+                print("Got: %s = %s", key, value)
                 if not key.startswith('ls_'):
                     self.assertTrue(Host.properties[key])
 

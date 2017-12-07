@@ -447,7 +447,7 @@ class TestBackendNotAvailable(unittest2.TestCase):
         modconf.api_url = 'http://127.0.0.1:5000'
         self.brokmodule = AlignakBackendBroker(modconf)
 
-        assert self.brokmodule.backendConnection() is False
+        assert self.brokmodule.backend_connection() is False
         assert self.brokmodule.logged_in is False
 
         b = Brok({'data': {}, 'type': 'new_conf'}, False)

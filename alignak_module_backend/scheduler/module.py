@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak contrib team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak contrib team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak contrib projet.
 #
@@ -179,7 +179,7 @@ class AlignakBackendScheduler(BaseModule):
                 return
 
         if not self.backend_connected:
-            return False
+            return
 
         # Get data from the backend
         try:
@@ -224,7 +224,7 @@ class AlignakBackendScheduler(BaseModule):
                 return
 
         if not self.backend_connected:
-            return False
+            return
 
         try:
             data_to_save = scheduler.get_retention_data()

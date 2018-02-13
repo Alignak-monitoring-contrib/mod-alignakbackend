@@ -108,6 +108,8 @@ class AlignakBackendBroker(BaseModule):
         self.backend_username = getattr(mod_conf, 'username', '')
         self.backend_password = getattr(mod_conf, 'password', '')
         self.backend_generate = getattr(mod_conf, 'allowgeneratetoken', False)
+
+        self.backend_count = int(getattr(mod_conf, 'backend_count', '50'))
         self.backend_token = getattr(mod_conf, 'token', '')
         self.backend = Backend(self.url, self.client_processes)
 
@@ -266,6 +268,7 @@ class AlignakBackendBroker(BaseModule):
             hosts = {}
             params = {
                 'projection': '{"name":1,"ls_state":1,"ls_state_type":1,"_realm":1}',
+                'max_results': self.backend_count,
                 'where': '{"_is_template":false}'
             }
             content = self.backend.get_all('host', params)
@@ -286,6 +289,7 @@ class AlignakBackendBroker(BaseModule):
             # Updating services
             params = {
                 'projection': '{"host":1,"name":1,"ls_state":1,"ls_state_type":1,"_realm":1}',
+                'max_results': self.backend_count,
                 'where': '{"_is_template":false}'
             }
             content = self.backend.get_all('service', params)
@@ -308,6 +312,7 @@ class AlignakBackendBroker(BaseModule):
             # Updating users
             params = {
                 'projection': '{"name":1,"_realm":1}',
+                'max_results': self.backend_count,
                 'where': '{"_is_template":false}'
             }
             content = self.backend.get_all('user', params)

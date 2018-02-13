@@ -176,10 +176,10 @@ class AlignakBackendScheduler(BaseModule):
             if self.raise_backend_alert(errors_count=1):
                 logger.warning("Alignak backend connection is not available. "
                                "Loading retention data is not possible.")
-                return
+                return None
 
         if not self.backend_connected:
-            return
+            return None
 
         # Get data from the backend
         try:
@@ -208,6 +208,9 @@ class AlignakBackendScheduler(BaseModule):
             self.backend_connected = False
             self.backend_errors_count += 1
             logger.warning("Alignak backend connection fails. Check and fix your configuration")
+            return False
+
+        return True
 
     def hook_save_retention(self, scheduler):
         """Save retention data to alignak-backend
@@ -221,10 +224,10 @@ class AlignakBackendScheduler(BaseModule):
             if self.raise_backend_alert(errors_count=1):
                 logger.warning("Alignak backend connection is not available. "
                                "Saving objects is not possible.")
-                return
+                return None
 
         if not self.backend_connected:
-            return
+            return None
 
         try:
             data_to_save = scheduler.get_retention_data()
@@ -258,7 +261,7 @@ class AlignakBackendScheduler(BaseModule):
                         logger.error('Response: %s', exp.response)
                         logger.exception("Exception: %s", exp)
                         self.backend_connected = False
-                        return
+                        return False
                 else:
                     # if not host in retention_data, POST
                     try:
@@ -269,7 +272,7 @@ class AlignakBackendScheduler(BaseModule):
                         logger.error('Response: %s', exp.response)
                         logger.exception("Exception: %s", exp)
                         self.backend_connected = False
-                        return
+                        return False
             logger.info('%d hosts saved in retention', len(data_to_save['hosts']))
             self.statsmgr.counter('save.host', len(data_to_save['hosts']))
             logger.info('%d services saved in retention', len(data_to_save['services']))
@@ -282,3 +285,6 @@ class AlignakBackendScheduler(BaseModule):
             self.backend_connected = False
             self.backend_errors_count += 1
             logger.warning("Alignak backend connection fails. Check and fix your configuration")
+            return False
+
+        return True

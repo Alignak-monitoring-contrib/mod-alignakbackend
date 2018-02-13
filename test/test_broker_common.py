@@ -330,8 +330,13 @@ class TestBrokerCommon(unittest2.TestCase):
         # Simulate an host UP brok
         data = json.loads(open('cfg/brok_host_srv001_up.json').read())
         b = Brok({'data': data, 'type': 'host_check_result'}, False)
+        # Simulate the main module function
         b.prepare()
-        assert self.brokmodule.manage_brok(b) is True
+        self.brokmodule.manage_brok(b)
+        # Check the log check results prepared list
+        assert len(self.brokmodule.logcheckresults) == 1
+        # Send data to the backend
+        self.brokmodule.send_to_backend('lcrs', '', '')
 
         params = {'where': '{"name": "srv001"}'}
         r = self.backend.get('host', params)
@@ -408,8 +413,13 @@ class TestBrokerCommon(unittest2.TestCase):
         # Simulate an host DOWN brok
         data = json.loads(open('cfg/brok_host_srv001_down.json').read())
         b = Brok({'data': data, 'type': 'host_check_result'}, False)
+        # Simulate the main module function
         b.prepare()
-        assert self.brokmodule.manage_brok(b) is True
+        self.brokmodule.manage_brok(b)
+        # Check the log check results prepared list
+        assert len(self.brokmodule.logcheckresults) == 1
+        # Send data to the backend
+        self.brokmodule.send_to_backend('lcrs', '', '')
 
         params = {'where': '{"name": "srv001"}'}
         r = self.backend.get('host', params)
@@ -440,6 +450,45 @@ class TestBrokerCommon(unittest2.TestCase):
         self.assertEqual(r['_items'][0]['hosts_unreachable_soft'], 0)
         self.assertEqual(r['_items'][0]['hosts_acknowledged'], 0)
         self.assertEqual(r['_items'][0]['hosts_in_downtime'], 0)
+
+        # Got two broks
+        # Simulate an host UP brok
+        data = json.loads(open('cfg/brok_host_srv001_up.json').read())
+        b = Brok({'data': data, 'type': 'host_check_result'}, False)
+        # Simulate the main module function
+        b.prepare()
+        self.brokmodule.manage_brok(b)
+        # Check the log check results prepared list
+        assert len(self.brokmodule.logcheckresults) == 1
+
+        # Simulate an host DOWN brok
+        data = json.loads(open('cfg/brok_host_srv001_down.json').read())
+        b = Brok({'data': data, 'type': 'host_check_result'}, False)
+        # Simulate the main module function
+        b.prepare()
+        self.brokmodule.manage_brok(b)
+        # Check the log check results prepared list
+        assert len(self.brokmodule.logcheckresults) == 2
+        # Send data to the backend
+        self.brokmodule.send_to_backend('lcrs', '', '')
+
+        params = {'where': '{"name": "srv001"}'}
+        r = self.backend.get('host', params)
+        self.assertEqual(len(r['_items']), 1)
+        number = 0
+        for index, item in enumerate(r['_items']):
+            self.assertEqual(item['ls_last_state'], 'UP')
+            self.assertEqual(item['ls_state'], 'DOWN')
+            self.assertEqual(item['ls_last_state_type'], 'HARD')
+            self.assertEqual(item['ls_state_type'], 'SOFT')
+            self.assertEqual(item['ls_output'], 'CRITICAL - Plugin timed out after 10 seconds')
+            self.assertEqual(item['ls_perf_data'], '')
+            new_updated = item['_updated']
+            number += 1
+        self.assertEqual(1, number)
+        print("Updated: %s" % new_updated)
+        # The item do not have its _updated field changed!
+        self.assertEqual(updated, new_updated)
 
     def test_03_2_manage_brok_host(self):
         """Test host livestate is updated with an alignak brok (from real broks)"""
@@ -508,8 +557,13 @@ class TestBrokerCommon(unittest2.TestCase):
             u'has_been_checked': 1, u'perf_data': u''
         }
         b = Brok({'data': data, 'type': 'host_check_result'}, False)
+        # Simulate the main module function
         b.prepare()
-        assert self.brokmodule.manage_brok(b) is True
+        self.brokmodule.manage_brok(b)
+        # Check the log check results prepared list
+        assert len(self.brokmodule.logcheckresults) == 1
+        # Send data to the backend
+        self.brokmodule.send_to_backend('lcrs', '', '')
 
         # Updated host state
         params = {'where': '{"name": "srv001"}'}
@@ -574,8 +628,13 @@ class TestBrokerCommon(unittest2.TestCase):
             u'has_been_checked': 1, u'perf_data': u''
         }
         b = Brok({'data': data, 'type': 'host_check_result'}, False)
+        # Simulate the main module function
         b.prepare()
-        assert self.brokmodule.manage_brok(b) is True
+        self.brokmodule.manage_brok(b)
+        # Check the log check results prepared list
+        assert len(self.brokmodule.logcheckresults) == 1
+        # Send data to the backend
+        self.brokmodule.send_to_backend('lcrs', '', '')
 
         # Updated host state
         params = {'where': '{"name": "srv001"}'}
@@ -639,8 +698,13 @@ class TestBrokerCommon(unittest2.TestCase):
             u'has_been_checked': 1, u'perf_data': u''
         }
         b = Brok({'data': data, 'type': 'host_check_result'}, False)
+        # Simulate the main module function
         b.prepare()
-        assert self.brokmodule.manage_brok(b) is True
+        self.brokmodule.manage_brok(b)
+        # Check the log check results prepared list
+        assert len(self.brokmodule.logcheckresults) == 1
+        # Send data to the backend
+        self.brokmodule.send_to_backend('lcrs', '', '')
 
         # Updated host state
         params = {'where': '{"name": "srv001"}'}
@@ -705,8 +769,13 @@ class TestBrokerCommon(unittest2.TestCase):
             u'perf_data': u''
         }
         b = Brok({'data': data, 'type': 'host_check_result'}, False)
+        # Simulate the main module function
         b.prepare()
-        assert self.brokmodule.manage_brok(b) is True
+        self.brokmodule.manage_brok(b)
+        # Check the log check results prepared list
+        assert len(self.brokmodule.logcheckresults) == 1
+        # Send data to the backend
+        self.brokmodule.send_to_backend('lcrs', '', '')
 
         # Updated host state
         params = {'where': '{"name": "srv001"}'}
@@ -761,8 +830,13 @@ class TestBrokerCommon(unittest2.TestCase):
         # Simulate a service OK brok
         data = json.loads(open('cfg/brok_service_ping_ok.json').read())
         b = Brok({'data': data, 'type': 'service_check_result'}, False)
+        # Simulate the main module function
         b.prepare()
-        assert self.brokmodule.manage_brok(b) is True
+        self.brokmodule.manage_brok(b)
+        # Check the log check results prepared list
+        assert len(self.brokmodule.logcheckresults) == 1
+        # Send data to the backend
+        self.brokmodule.send_to_backend('lcrs', '', '')
 
         params = {'where': '{"name": "ping"}'}
         r = self.backend.get('service', params)
@@ -862,8 +936,13 @@ class TestBrokerCommon(unittest2.TestCase):
                 u'has_been_checked': 1, u'perf_data': u"'uptime'=60173s;2100;90000", u'end_time': 0
             }
             b = Brok({'data': data, 'type': 'service_check_result'}, False)
+            # Simulate the main module function
             b.prepare()
-            assert self.brokmodule.manage_brok(b) is True
+            self.brokmodule.manage_brok(b)
+            # Check the log check results prepared list
+            assert len(self.brokmodule.logcheckresults) == 1
+            # Send data to the backend
+            self.brokmodule.send_to_backend('lcrs', '', '')
 
             params = {'where': '{"name": "ping"}'}
             r = self.backend.get('service', params)

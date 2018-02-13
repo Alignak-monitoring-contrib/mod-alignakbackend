@@ -133,6 +133,9 @@ class AlignakBackendBroker(BaseModule):
         self.load_protect_delay = int(getattr(mod_conf, 'load_protect_delay', '300'))
         self.last_load = 0
 
+        # Backend to be posted data
+        self.logcheckresults = []
+
     # Common functions
     def do_loop_turn(self):
         """This function is called/used when you need a module with
@@ -383,7 +386,6 @@ class AlignakBackendBroker(BaseModule):
         :return: False if any error when posting to the backend
         """
         logger.debug("Manage a check result: %s", data)
-        ret = True
 
         # Received data for an host or service
         # Obliged to set an _realm... despite it is unuseful.
@@ -441,28 +443,29 @@ class AlignakBackendBroker(BaseModule):
         #         self.ref_live['host'][h_id]['initial_state_type']
         #     del self.ref_live['host'][h_id]['initial_state']
         #     del self.ref_live['host'][h_id]['initial_state_type']
+        self.logcheckresults.append(posted_data)
 
-        start = time.time()
-        self.statsmgr.counter('backend-post.lcr', 1)
-
-        # Send to the backend
-        try:
-            response = self.backend.post(endpoint='logcheckresult', data=posted_data)
-        except BackendException as exp:  # pragma: no cover - should not happen
-            logger.error('Error when posting LCR to the backend, data: %s', posted_data)
-            print('Error when posting LCR to the backend, data: %s', posted_data)
-            logger.error("Exception: %s", exp)
-            print("Exception: %s / %s", exp, exp.response)
-            ret = False
-        else:
-            if response['_status'] == 'ERR':  # pragma: no cover - should not happen
-                logger.error('Error when posting LCR to the backend, data: %s', posted_data)
-                logger.error('Issues: %s', response['_issues'])
-                print('Issues: %s', response['_issues'])
-                ret = False
-
-        self.statsmgr.timer('backend-post-time.lcr', time.time() - start)
-        return ret
+        # start = time.time()
+        # self.statsmgr.counter('backend-post.lcr', 1)
+        #
+        # # Send to the backend
+        # try:
+        #     response = self.backend.post(endpoint='logcheckresult', data=posted_data)
+        # except BackendException as exp:  # pragma: no cover - should not happen
+        #     logger.error('Error when posting LCR to the backend, data: %s', posted_data)
+        #     print('Error when posting LCR to the backend, data: %s', posted_data)
+        #     logger.error("Exception: %s", exp)
+        #     print("Exception: %s / %s", exp, exp.response)
+        #     ret = False
+        # else:
+        #     if response['_status'] == 'ERR':  # pragma: no cover - should not happen
+        #         logger.error('Error when posting LCR to the backend, data: %s', posted_data)
+        #         logger.error('Issues: %s', response['_issues'])
+        #         print('Issues: %s', response['_issues'])
+        #         ret = False
+        #
+        # self.statsmgr.timer('backend-post-time.lcr', time.time() - start)
+        # return ret
 
     def update_status(self, brok):
         # pylint: disable=too-many-locals
@@ -718,174 +721,6 @@ class AlignakBackendBroker(BaseModule):
                 self.backend_connection_retry_planned = \
                     int(time.time()) + self.backend_connection_retry_delay
 
-    def send_to_backend(self, type_data, name, data):
-        """
-        Send data to alignak backend
-
-        :param type_data: one of ['livestate_host', 'livestate_service', 'log_host', 'log_service']
-        :type type_data: str
-        :param name: name of host or service
-        :type name: str
-        :param data: dictionary with data to add / update
-        :type data: dict
-        :return: True if send is ok, False otherwise
-        :rtype: bool
-        """
-        if not self.backend_connected and int(time.time() > self.backend_connection_retry_planned):
-            self.backend_connected = self.backend_connection()
-
-        if not self.backend_connected:
-            logger.error("Alignak backend connection is not available. "
-                         "Skipping objects update.")
-            return None
-        logger.debug("Send to backend: %s, %s", type_data, data)
-
-        headers = {
-            'Content-Type': 'application/json',
-        }
-        ret = True
-        if type_data == 'livestate_host':
-            headers['If-Match'] = self.ref_live['host'][self.mapping['host'][name]]['_etag']
-            try:
-                start = time.time()
-                self.statsmgr.counter('backend-patch.host', 1)
-                response = self.backend.patch(
-                    'host/%s' % self.ref_live['host'][self.mapping['host'][name]]['_id'],
-                    data, headers, True)
-                self.statsmgr.timer('backend-patch-time.host', time.time() - start)
-                if response['_status'] == 'ERR':  # pragma: no cover - should not happen
-                    logger.error('%s', response['_issues'])
-                    ret = False
-                else:
-                    self.ref_live['host'][self.mapping['host'][name]]['_etag'] = response['_etag']
-            except BackendException as exp:  # pragma: no cover - should not happen
-                logger.error('Patch livestate for host %s error', self.mapping['host'][name])
-                logger.error('Data: %s', data)
-                logger.exception("Exception: %s", exp)
-                if exp.code == 404:
-                    logger.error('Seems the host %s deleted in the Backend',
-                                 self.mapping['host'][name])
-                else:
-                    self.backend_connected = False
-                    self.backend_connection_retry_planned = \
-                        int(time.time()) + self.backend_connection_retry_delay
-        elif type_data == 'livestate_service':
-            headers['If-Match'] = self.ref_live['service'][self.mapping['service'][name]]['_etag']
-            try:
-                start = time.time()
-                self.statsmgr.counter('backend-patch.service', 1)
-                response = self.backend.patch(
-                    'service/%s' % self.ref_live['service'][self.mapping['service'][name]]['_id'],
-                    data, headers, True)
-                self.statsmgr.timer('backend-patch-time.service', time.time() - start)
-                if response['_status'] == 'ERR':  # pragma: no cover - should not happen
-                    logger.error('%s', response['_issues'])
-                    ret = False
-                else:
-                    self.ref_live['service'][self.mapping['service'][name]]['_etag'] = response[
-                        '_etag']
-            except BackendException as exp:  # pragma: no cover - should not happen
-                logger.error('Patch livestate for service %s error', self.mapping['service'][name])
-                logger.error('Data: %s', data)
-                logger.exception("Exception: %s", exp)
-                if exp.code == 404:
-                    logger.error('Seems the service %s deleted in the Backend',
-                                 self.mapping['service'][name])
-                else:
-                    self.backend_connected = False
-                    self.backend_connection_retry_planned = \
-                        int(time.time()) + self.backend_connection_retry_delay
-
-        return ret
-
-    def manage_brok(self, brok):
-        """
-        We get the data to manage
-
-        :param brok: Brok object
-        :type brok: object
-        :return: False if broks were not managed by the module
-        """
-        if not self.logged_in:
-            if not self.backend_connection():
-                logger.debug("Not logged-in, ignoring broks...")
-                return False
-
-        brok.prepare()
-
-        logger.debug("manage_brok receives a Brok:")
-        logger.debug("\t-Brok: %s - %s", brok.type, brok.data)
-
-        try:
-            endpoint = ''
-            name = ''
-            # Temporary: get concerned item for tracking received broks
-            if 'contact_name' in brok.data:
-                contact_name = brok.data['contact_name']
-                if brok.data['contact_name'] not in self.mapping['user']:
-                    logger.debug("Got a brok %s for an unknown user: '%s' (%s)",
-                                 brok.type, contact_name, brok.data)
-                    return False
-                endpoint = 'user'
-                name = contact_name
-            else:
-                if 'host_name' in brok.data:
-                    host_name = brok.data['host_name']
-                    if brok.data['host_name'] not in self.mapping['host']:
-                        logger.debug("Got a brok %s for an unknown host: '%s' (%s)",
-                                     brok.type, host_name, brok.data)
-                        return False
-                    endpoint = 'host'
-                    name = host_name
-                    if 'service_description' in brok.data:
-                        service_name = '__'.join([host_name, brok.data['service_description']])
-                        endpoint = 'service'
-                        name = service_name
-                        if service_name not in self.mapping['service']:
-                            logger.debug("Got a brok %s for an unknown service: '%s' (%s)",
-                                         brok.type, service_name, brok.data)
-                            return False
-            if name:
-                logger.debug("Received a brok: %s, for %s '%s'", brok.type, endpoint, name)
-            else:
-                logger.debug("Received a brok: %s", brok.type)
-            logger.debug("Brok data: %s", brok.data)
-
-            start = time.time()
-            self.statsmgr.counter('managed-broks-type-count.%s' % brok.type, 1)
-
-            ret = False
-            if brok.type in ['new_conf']:
-                ret = self.get_refs()
-
-            if brok.type in ['program_status', 'update_program_status']:
-                ret = self.update_program_status(brok)
-
-            if brok.type == 'host_next_schedule':
-                ret = self.update_next_check(brok.data, 'host')
-            if brok.type == 'service_next_schedule':
-                ret = self.update_next_check(brok.data, 'service')
-
-            if brok.type in ['update_host_status', 'update_service_status',
-                             'update_contact_status']:
-                ret = self.update_status(brok)
-
-            if brok.type in ['host_check_result', 'service_check_result']:
-                ret = self.check_result(brok.data)
-
-            if brok.type in ['acknowledge_raise', 'acknowledge_expire',
-                             'downtime_raise', 'downtime_expire']:
-                ret = self.update_actions(brok)
-
-            self.statsmgr.timer('managed-broks-type-time-%s' % brok.type, time.time() - start)
-
-            return ret
-        except Exception as exp:  # pragma: no cover - should not happen
-            logger.exception("Manage brok exception: %s", exp)
-            print("Manage brok exception: %s", exp)
-
-        return False
-
     def update_actions(self, brok):
         """We manage the acknowledge and downtime broks
 
@@ -982,6 +817,196 @@ class AlignakBackendBroker(BaseModule):
             self.statsmgr.counter('backend-post.%s' % endpoint, 1)
             self.backend.post(endpoint, where)
 
+    def send_to_backend(self, type_data, name, data):
+        """
+        Send data to alignak backend
+
+        :param type_data: one of ['livestate_host', 'livestate_service', 'log_host', 'log_service']
+        :type type_data: str
+        :param name: name of host or service
+        :type name: str
+        :param data: dictionary with data to add / update
+        :type data: dict
+        :return: True if send is ok, False otherwise
+        :rtype: bool
+        """
+        if not self.backend_connected and int(time.time() > self.backend_connection_retry_planned):
+            self.backend_connected = self.backend_connection()
+
+        if not self.backend_connected:
+            logger.error("Alignak backend connection is not available. "
+                         "Skipping objects update.")
+            return None
+        logger.debug("Send to backend: %s, %s", type_data, data)
+
+        headers = {
+            'Content-Type': 'application/json',
+        }
+        ret = True
+        if type_data == 'livestate_host':
+            headers['If-Match'] = self.ref_live['host'][self.mapping['host'][name]]['_etag']
+            try:
+                start = time.time()
+                self.statsmgr.counter('backend-patch.host', 1)
+                response = self.backend.patch(
+                    'host/%s' % self.ref_live['host'][self.mapping['host'][name]]['_id'],
+                    data, headers, True)
+                self.statsmgr.timer('backend-patch-time.host', time.time() - start)
+                if response['_status'] == 'ERR':  # pragma: no cover - should not happen
+                    logger.error('%s', response['_issues'])
+                    ret = False
+                else:
+                    self.ref_live['host'][self.mapping['host'][name]]['_etag'] = response['_etag']
+            except BackendException as exp:  # pragma: no cover - should not happen
+                logger.error('Patch livestate for host %s error', self.mapping['host'][name])
+                logger.error('Data: %s', data)
+                logger.exception("Exception: %s", exp)
+                if exp.code == 404:
+                    logger.error('Seems the host %s deleted in the Backend',
+                                 self.mapping['host'][name])
+                else:
+                    self.backend_connected = False
+                    self.backend_connection_retry_planned = \
+                        int(time.time()) + self.backend_connection_retry_delay
+        elif type_data == 'livestate_service':
+            headers['If-Match'] = self.ref_live['service'][self.mapping['service'][name]]['_etag']
+            try:
+                start = time.time()
+                self.statsmgr.counter('backend-patch.service', 1)
+                response = self.backend.patch(
+                    'service/%s' % self.ref_live['service'][self.mapping['service'][name]]['_id'],
+                    data, headers, True)
+                self.statsmgr.timer('backend-patch-time.service', time.time() - start)
+                if response['_status'] == 'ERR':  # pragma: no cover - should not happen
+                    logger.error('%s', response['_issues'])
+                    ret = False
+                else:
+                    self.ref_live['service'][self.mapping['service'][name]]['_etag'] = response[
+                        '_etag']
+            except BackendException as exp:  # pragma: no cover - should not happen
+                logger.error('Patch livestate for service %s error', self.mapping['service'][name])
+                logger.error('Data: %s', data)
+                logger.exception("Exception: %s", exp)
+                if exp.code == 404:
+                    logger.error('Seems the service %s deleted in the Backend',
+                                 self.mapping['service'][name])
+                else:
+                    self.backend_connected = False
+                    self.backend_connection_retry_planned = \
+                        int(time.time()) + self.backend_connection_retry_delay
+        elif type_data == 'lcrs':
+            try:
+                start = time.time()
+                self.statsmgr.counter('backend-post.lcr', len(self.logcheckresults))
+                response = self.backend.post(endpoint='logcheckresult',
+                                             data=self.logcheckresults)
+                self.logcheckresults = []
+            except BackendException as exp:  # pragma: no cover - should not happen
+                logger.error('Error when posting LCR to the backend, data: %s',
+                             self.logcheckresults)
+                logger.error("Exception: %s", exp)
+                self.backend_connected = False
+                self.backend_connection_retry_planned = \
+                    int(time.time()) + self.backend_connection_retry_delay
+            else:
+                self.statsmgr.timer('backend-post-time.lcr', time.time() - start)
+
+                if response['_status'] == 'ERR':  # pragma: no cover - should not happen
+                    logger.error('Error when posting LCR to the backend, data: %s',
+                                 self.logcheckresults)
+                    logger.error('Issues: %s', response['_issues'])
+                    ret = False
+
+        return ret
+
+    def manage_brok(self, brok):
+        """
+        We get the data to manage
+
+        :param brok: Brok object
+        :type brok: object
+        :return: False if broks were not managed by the module
+        """
+        if not self.logged_in:
+            if not self.backend_connection():
+                logger.debug("Not logged-in, ignoring broks...")
+                return False
+
+        brok.prepare()
+
+        logger.debug("manage_brok receives a Brok:")
+        logger.debug("\t-Brok: %s - %s", brok.type, brok.data)
+
+        try:
+            endpoint = ''
+            name = ''
+            # Temporary: get concerned item for tracking received broks
+            if 'contact_name' in brok.data:
+                contact_name = brok.data['contact_name']
+                if brok.data['contact_name'] not in self.mapping['user']:
+                    logger.debug("Got a brok %s for an unknown user: '%s' (%s)",
+                                 brok.type, contact_name, brok.data)
+                    return False
+                endpoint = 'user'
+                name = contact_name
+            else:
+                if 'host_name' in brok.data:
+                    host_name = brok.data['host_name']
+                    if brok.data['host_name'] not in self.mapping['host']:
+                        logger.debug("Got a brok %s for an unknown host: '%s' (%s)",
+                                     brok.type, host_name, brok.data)
+                        return False
+                    endpoint = 'host'
+                    name = host_name
+                    if 'service_description' in brok.data:
+                        service_name = '__'.join([host_name, brok.data['service_description']])
+                        endpoint = 'service'
+                        name = service_name
+                        if service_name not in self.mapping['service']:
+                            logger.debug("Got a brok %s for an unknown service: '%s' (%s)",
+                                         brok.type, service_name, brok.data)
+                            return False
+            if name:
+                logger.debug("Received a brok: %s, for %s '%s'", brok.type, endpoint, name)
+            else:
+                logger.debug("Received a brok: %s", brok.type)
+            logger.debug("Brok data: %s", brok.data)
+
+            start = time.time()
+            self.statsmgr.counter('managed-broks-type-count.%s' % brok.type, 1)
+
+            ret = False
+            if brok.type in ['new_conf']:
+                ret = self.get_refs()
+
+            if brok.type in ['program_status', 'update_program_status']:
+                ret = self.update_program_status(brok)
+
+            if brok.type == 'host_next_schedule':
+                ret = self.update_next_check(brok.data, 'host')
+            if brok.type == 'service_next_schedule':
+                ret = self.update_next_check(brok.data, 'service')
+
+            if brok.type in ['update_host_status', 'update_service_status',
+                             'update_contact_status']:
+                ret = self.update_status(brok)
+
+            if brok.type in ['host_check_result', 'service_check_result']:
+                ret = self.check_result(brok.data)
+
+            if brok.type in ['acknowledge_raise', 'acknowledge_expire',
+                             'downtime_raise', 'downtime_expire']:
+                ret = self.update_actions(brok)
+
+            self.statsmgr.timer('managed-broks-type-time-%s' % brok.type, time.time() - start)
+
+            return ret
+        except Exception as exp:  # pragma: no cover - should not happen
+            logger.exception("Manage brok exception: %s", exp)
+            print("Manage brok exception: %s", exp)
+
+        return False
+
     def main(self):
         """
         Main loop of the process
@@ -1002,6 +1027,9 @@ class AlignakBackendBroker(BaseModule):
                     logger.debug("queue length: %s", queue_size)
                     self.statsmgr.gauge('queue-size', queue_size)
 
+                # Reset backend lists
+                self.logcheckresults = []
+
                 message = self.to_q.get_nowait()
                 start = time.time()
                 for brok in message:
@@ -1012,9 +1040,13 @@ class AlignakBackendBroker(BaseModule):
 
                 logger.debug("time to manage %s broks (%d secs)", len(message), time.time() - start)
                 self.statsmgr.timer('managed-broks-time', time.time() - start)
+
+                if self.logcheckresults:
+                    self.send_to_backend('lcrs', None, None)
+
             except Queue.Empty:
                 # logger.debug("No message in the module queue")
-                time.sleep(0.01)
+                time.sleep(0.1)
 
         logger.info("stopping...")
         logger.info("stopped")

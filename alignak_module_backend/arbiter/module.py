@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak contrib team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak contrib team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak contrib projet.
 #
@@ -118,6 +118,8 @@ class AlignakBackendArbiter(BaseModule):
         self.backend_username = getattr(mod_conf, 'username', '')
         self.backend_password = getattr(mod_conf, 'password', '')
         self.backend_generate = getattr(mod_conf, 'allowgeneratetoken', False)
+
+        self.backend_count = int(getattr(mod_conf, 'backend_count', '50'))
 
         if not self.backend.token:
             logger.warning("no user token configured. "
@@ -353,7 +355,9 @@ class AlignakBackendArbiter(BaseModule):
         """
         self.configraw['realms'] = {}
         self.configraw['realms_name'] = {}
-        all_realms = self.backend.get_all('realm', {'embedded': json.dumps({'_children': 1})})
+        params = {"max_results": self.backend_count,
+                  "embedded": json.dumps({'_children': 1})}
+        all_realms = self.backend.get_all('realm', params)
         logger.info("Got %d realms",
                     len(all_realms['_items']))
         for realm in all_realms['_items']:
@@ -387,7 +391,8 @@ class AlignakBackendArbiter(BaseModule):
         :return: None
         """
         self.configraw['commands'] = {}
-        all_commands = self.backend.get_all('command')
+        params = {"max_results": self.backend_count}
+        all_commands = self.backend.get_all('command', params)
         logger.info("Got %d commands",
                     len(all_commands['_items']))
         for command in all_commands['_items']:
@@ -422,7 +427,8 @@ class AlignakBackendArbiter(BaseModule):
         :return: None
         """
         self.configraw['timeperiods'] = {}
-        all_timeperiods = self.backend.get_all('timeperiod')
+        params = {"max_results": self.backend_count}
+        all_timeperiods = self.backend.get_all('timeperiod', params)
         logger.info("Got %d timeperiods",
                     len(all_timeperiods['_items']))
         for timeperiod in all_timeperiods['_items']:
@@ -456,7 +462,8 @@ class AlignakBackendArbiter(BaseModule):
         :return: None
         """
         self.configraw['contactgroups'] = {}
-        all_contactgroups = self.backend.get_all('usergroup')
+        params = {"max_results": self.backend_count}
+        all_contactgroups = self.backend.get_all('usergroup', params)
         logger.info("Got %d contactgroups",
                     len(all_contactgroups['_items']))
         for contactgroup in all_contactgroups['_items']:
@@ -489,7 +496,8 @@ class AlignakBackendArbiter(BaseModule):
         :return: None
         """
         self.configraw['contacts'] = {}
-        params = {"where": '{"_is_template": false}'}
+        params = {"max_results": self.backend_count,
+                  "where": '{"_is_template": false}'}
         all_contacts = self.backend.get_all('user', params)
         logger.info("Got %d contacts",
                     len(all_contacts['_items']))
@@ -553,7 +561,8 @@ class AlignakBackendArbiter(BaseModule):
         :return: None
         """
         self.configraw['hostgroups'] = {}
-        all_hostgroups = self.backend.get_all('hostgroup')
+        params = {"max_results": self.backend_count}
+        all_hostgroups = self.backend.get_all('hostgroup', params)
         logger.info("Got %d hostgroups",
                     len(all_hostgroups['_items']))
         for hostgroup in all_hostgroups['_items']:
@@ -586,7 +595,9 @@ class AlignakBackendArbiter(BaseModule):
         :return: None
         """
         self.configraw['hosts'] = {}
-        all_hosts = self.backend.get_all('host', {"where": '{"_is_template": false}'})
+        params = {"max_results": self.backend_count,
+                  "where": '{"_is_template": false}'}
+        all_hosts = self.backend.get_all('host', params)
         logger.info("Got %d hosts", len(all_hosts['_items']))
 
         for host in all_hosts['_items']:
@@ -720,7 +731,8 @@ class AlignakBackendArbiter(BaseModule):
         :return: None
         """
         self.configraw['servicegroups'] = {}
-        all_servicegroups = self.backend.get_all('servicegroup')
+        params = {"max_results": self.backend_count}
+        all_servicegroups = self.backend.get_all('servicegroup', params)
         logger.info("Got %d servicegroups",
                     len(all_servicegroups['_items']))
         for servicegroup in all_servicegroups['_items']:
@@ -759,7 +771,8 @@ class AlignakBackendArbiter(BaseModule):
         :return: None
         """
         self.configraw['services'] = {}
-        params = {"where": '{"_is_template": false}'}
+        params = {"max_results": self.backend_count,
+                  "where": '{"_is_template": false}'}
         all_services = self.backend.get_all('service', params)
         logger.info("Got %d services", len(all_services['_items']))
 
@@ -899,7 +912,8 @@ class AlignakBackendArbiter(BaseModule):
         :return: None
         """
         self.configraw['hostdependencies'] = {}
-        all_hostdependencies = self.backend.get_all('hostdependency')
+        params = {"max_results": self.backend_count}
+        all_hostdependencies = self.backend.get_all('hostdependency', params)
         logger.info("Got %d hostdependencies",
                     len(all_hostdependencies['_items']))
         for hostdependency in all_hostdependencies['_items']:
@@ -938,7 +952,8 @@ class AlignakBackendArbiter(BaseModule):
         :return: None
         """
         self.configraw['hostescalations'] = {}
-        all_hostescalations = self.backend.get_all('hostescalation')
+        params = {"max_results": self.backend_count}
+        all_hostescalations = self.backend.get_all('hostescalation', params)
         logger.info("Got %d hostescalations",
                     len(all_hostescalations['_items']))
         for hostescalation in all_hostescalations['_items']:
@@ -976,7 +991,8 @@ class AlignakBackendArbiter(BaseModule):
         :return: None
         """
         self.configraw['servicedependencies'] = {}
-        all_servicedependencies = self.backend.get_all('servicedependency')
+        params = {"max_results": self.backend_count}
+        all_servicedependencies = self.backend.get_all('servicedependency', params)
         logger.info("Got %d servicedependencies",
                     len(all_servicedependencies['_items']))
         for servicedependency in all_servicedependencies['_items']:
@@ -1031,7 +1047,8 @@ class AlignakBackendArbiter(BaseModule):
         :return: None
         """
         self.configraw['serviceescalations'] = {}
-        all_serviceescalations = self.backend.get_all('serviceescalation')
+        params = {"max_results": self.backend_count}
+        all_serviceescalations = self.backend.get_all('serviceescalation', params)
         logger.info("Got %d serviceescalations",
                     len(all_serviceescalations['_items']))
         for serviceescalation in all_serviceescalations['_items']:

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak contrib team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak contrib team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak contrib projet.
 #
@@ -476,7 +476,7 @@ class AlignakBackendBroker(BaseModule):
             contact_name = brok.data['contact_name']
             if brok.data['contact_name'] not in self.mapping['user']:
                 logger.warning("Got a brok for an unknown user: '%s'", contact_name)
-                return
+                return None
             endpoint = 'user'
             name = contact_name
             item_id = self.mapping['user'][name]
@@ -484,7 +484,7 @@ class AlignakBackendBroker(BaseModule):
             host_name = brok.data['host_name']
             if brok.data['host_name'] not in self.mapping['host']:
                 logger.warning("Got a brok for an unknown host: '%s'", host_name)
-                return
+                return None
             endpoint = 'host'
             name = host_name
             item_id = self.mapping['host'][name]
@@ -495,7 +495,7 @@ class AlignakBackendBroker(BaseModule):
                 item_id = self.mapping['service'][name]
                 if service_name not in self.mapping['service']:
                     logger.warning("Got a brok for an unknown service: '%s'", service_name)
-                    return
+                    return None
 
         # Sort brok properties
         sorted_brok_properties = sorted(brok.data)
@@ -737,7 +737,7 @@ class AlignakBackendBroker(BaseModule):
         if not self.backend_connected:
             logger.error("Alignak backend connection is not available. "
                          "Skipping objects update.")
-            return
+            return None
         logger.debug("Send to backend: %s, %s", type_data, data)
 
         headers = {

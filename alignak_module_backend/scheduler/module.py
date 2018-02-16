@@ -96,6 +96,7 @@ class AlignakBackendScheduler(BaseModule):
                                statsd_enabled=(getattr(mod_conf, 'statsd_enabled', '0') != '0'))
 
         self.url = getattr(mod_conf, 'api_url', 'http://localhost:5000')
+        logger.info("Alignak backend endpoint: %s", self.url)
         self.backend = Backend(self.url, self.client_processes)
         self.backend.token = getattr(mod_conf, 'token', '')
         self.backend_connected = False

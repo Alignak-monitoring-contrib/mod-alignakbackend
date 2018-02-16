@@ -96,6 +96,7 @@ class AlignakBackendBroker(BaseModule):
                                statsd_enabled=(getattr(mod_conf, 'statsd_enabled', '0') != '0'))
 
         self.url = getattr(mod_conf, 'api_url', 'http://localhost:5000')
+        logger.info("Alignak backend endpoint: %s", self.url)
         self.backend_connected = False
         self.backend_connection_retry_planned = 0
         try:
@@ -110,6 +111,8 @@ class AlignakBackendBroker(BaseModule):
         self.backend_generate = getattr(mod_conf, 'allowgeneratetoken', False)
 
         self.backend_count = int(getattr(mod_conf, 'backend_count', '50'))
+        logger.info("backend pagination count: %d items", self.backend_count)
+
         self.backend_token = getattr(mod_conf, 'token', '')
         self.backend = Backend(self.url, self.client_processes)
 
@@ -901,10 +904,12 @@ class AlignakBackendBroker(BaseModule):
                         int(time.time()) + self.backend_connection_retry_delay
         elif type_data == 'lcrs':
             try:
-                start = time.time()
-                self.statsmgr.counter('backend-post.lcr', len(self.logcheckresults))
-                response = self.backend.post(endpoint='logcheckresult',
-                                             data=self.logcheckresults)
+                while self.logcheckresults:
+                    start = time.time()
+                    lcrs = self.logcheckresults[100:]
+                    self.statsmgr.counter('backend-post.lcr', len(lcrs))
+                    response = self.backend.post(endpoint='logcheckresult', data=lcrs)
+                    del self.logcheckresults[100:]
                 self.logcheckresults = []
             except BackendException as exp:  # pragma: no cover - should not happen
                 logger.error('Error when posting LCR to the backend, data: %s',

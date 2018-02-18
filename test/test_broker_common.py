@@ -145,13 +145,16 @@ class TestBrokerCommon(unittest2.TestCase):
         # Set test mode for alignak backend
         os.environ['TEST_ALIGNAK_BACKEND'] = '1'
         os.environ['ALIGNAK_BACKEND_MONGO_DBNAME'] = 'alignak-module-backend-test'
+        os.environ['ALIGNAK_BACKEND_CONFIGURATION_FILE'] = './cfg/settings/settings.json'
+
+        if os.path.exists('/tmp/alignak-backend_alignak-module-backend-test.log'):
+            os.remove('/tmp/alignak-backend_alignak-module-backend-test.log')
 
         # Delete used mongo DBs
         print ("Deleting Alignak backend DB...")
         exit_code = subprocess.call(
             shlex.split(
-                'mongo %s --eval "db.dropDatabase()"' % os.environ[
-                    'ALIGNAK_BACKEND_MONGO_DBNAME'])
+                'mongo %s --eval "db.dropDatabase()"' % os.environ['ALIGNAK_BACKEND_MONGO_DBNAME'])
         )
         assert exit_code == 0
 
@@ -335,6 +338,7 @@ class TestBrokerCommon(unittest2.TestCase):
         self.brokmodule.manage_brok(b)
         # Check the log check results prepared list
         assert len(self.brokmodule.logcheckresults) == 1
+        print("LCR: %s" % self.brokmodule.logcheckresults[0])
         # Send data to the backend
         self.brokmodule.send_to_backend('lcrs', '', '')
 
@@ -344,8 +348,9 @@ class TestBrokerCommon(unittest2.TestCase):
         number = 0
         updated = 0
         for index, item in enumerate(r['_items']):
+            print("Item: %s is %s" % (item['name'], item['ls_state']))
             self.assertEqual(item['ls_state'], 'UP')
-            self.assertEqual(item['ls_state_id'], 1)
+            self.assertEqual(item['ls_state_id'], 0)
             self.assertEqual(item['ls_state_type'], 'HARD')
             self.assertEqual(item['ls_last_check'], 1444427104)
             self.assertEqual(item['ls_last_state'], 'UNREACHABLE')
@@ -376,7 +381,7 @@ class TestBrokerCommon(unittest2.TestCase):
         new_updated = 0
         for index, item in enumerate(r['_items']):
             self.assertEqual(item['ls_state'], 'UP')
-            self.assertEqual(item['ls_state_id'], 1)
+            self.assertEqual(item['ls_state_id'], 0)
             self.assertEqual(item['ls_state_type'], 'HARD')
             self.assertEqual(item['ls_last_check'], 1444427104)
             self.assertEqual(item['ls_last_state'], 'UNREACHABLE')
@@ -820,6 +825,30 @@ class TestBrokerCommon(unittest2.TestCase):
         print("Updated: %s" % new_updated)
         # The item do not have its _updated field changed!
         self.assertEqual(updated, new_updated)
+
+    def test_03_3_manage_brok_host(self):
+        """Test posting many broks"""
+        self.brokmodule.get_refs()
+        self.assertEqual(len(self.brokmodule.ref_live['host']), 1)
+
+        r = self.backend.delete('logcheckresult', {})
+
+        # Simulate many host UP brok
+        # ----------------------------
+        data = json.loads(open('cfg/brok_host_srv001_up.json').read())
+        b = Brok({'data': data, 'type': 'host_check_result'}, False)
+        b.prepare()
+        for x in range(0, 200):
+            # Simulate the main module function
+            self.brokmodule.manage_brok(b)
+        # Check the log check results prepared list
+        assert len(self.brokmodule.logcheckresults) == 200
+        # Send LCRs data to the backend
+        self.brokmodule.send_to_backend('lcrs', '', '')
+
+        time.sleep(3)
+        r = self.backend.get_all('logcheckresult')
+        self.assertEqual(len(r['_items']), 200)
 
     def test_04_manage_brok_service(self):
         """Test service livestate is updated with an alignak brok"""

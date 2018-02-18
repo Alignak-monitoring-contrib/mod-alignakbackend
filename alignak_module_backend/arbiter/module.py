@@ -111,6 +111,7 @@ class AlignakBackendArbiter(BaseModule):
                                statsd_enabled=(getattr(mod_conf, 'statsd_enabled', '0') != '0'))
 
         self.url = getattr(mod_conf, 'api_url', 'http://localhost:5000')
+        logger.info("Alignak backend endpoint: %s", self.url)
         self.backend = Backend(self.url, self.client_processes)
         self.backend.token = getattr(mod_conf, 'token', '')
         self.backend_connected = False
@@ -120,6 +121,7 @@ class AlignakBackendArbiter(BaseModule):
         self.backend_generate = getattr(mod_conf, 'allowgeneratetoken', False)
 
         self.backend_count = int(getattr(mod_conf, 'backend_count', '50'))
+        logger.info("backend pagination count: %d items", self.backend_count)
 
         if not self.backend.token:
             logger.warning("no user token configured. "
@@ -1208,12 +1210,21 @@ class AlignakBackendArbiter(BaseModule):
         self.next_action_check = int(now) + self.action_check
         self.next_daemons_state = int(now) + self.daemons_state
 
-        logger.info("next configuration reload check in %s seconds ---",
-                    (self.next_check - int(now)))
-        logger.info("next actions check in %s seconds ---",
-                    (self.next_action_check - int(now)))
-        logger.info("next update daemons state in %s seconds ---",
-                    (self.next_daemons_state - int(now)))
+        if self.verify_modification:
+            logger.info("next configuration reload check in %s seconds ---",
+                        (self.next_check - int(now)))
+        else:
+            logger.info("no configuration reload check")
+        if self.action_check:
+            logger.info("next actions check in %s seconds ---",
+                        (self.next_action_check - int(now)))
+        else:
+            logger.info("no actions check")
+        if self.daemons_state:
+            logger.info("next update daemons state in %s seconds ---",
+                        (self.next_daemons_state - int(now)))
+        else:
+            logger.info("no daemons state update")
         return self.config
 
     def hook_tick(self, arbiter):
@@ -1235,7 +1246,7 @@ class AlignakBackendArbiter(BaseModule):
 
         try:
             now = int(time.time())
-            if now > self.next_check:
+            if self.verify_modification and now > self.next_check:
                 logger.info("Check if system configuration changed in the backend...")
                 logger.debug("Now is: %s", datetime.utcnow().strftime(self.backend_date_format))
                 logger.debug("Last configuration loading time is: %s", self.time_loaded_conf)
@@ -1333,7 +1344,7 @@ class AlignakBackendArbiter(BaseModule):
                     (self.next_check - now)
                 )
 
-            if now > self.next_action_check:
+            if self.action_check and now > self.next_action_check:
                 logger.debug("Check if acknowledgements are required...")
                 self.get_acknowledge(arbiter)
                 logger.debug("Check if downtime scheduling are required...")
@@ -1345,7 +1356,7 @@ class AlignakBackendArbiter(BaseModule):
                 logger.debug("next actions check in %s seconds ---",
                              (self.next_action_check - int(now)))
 
-            if now > self.next_daemons_state:
+            if self.daemons_state and now > self.next_daemons_state:
                 logger.debug("Update daemons state in the backend...")
                 self.update_daemons_state(arbiter)
 
@@ -1378,9 +1389,13 @@ class AlignakBackendArbiter(BaseModule):
         if not self.backend_connected:
             return
 
-        all_ack = self.backend.get_all('actionacknowledge',
-                                       {'where': '{"processed": false}',
-                                        'embedded': '{"host": 1, "service": 1, "user": 1}'})
+        try:
+            all_ack = self.backend.get_all('actionacknowledge',
+                                           {'where': '{"processed": false}',
+                                            'embedded': '{"host": 1, "service": 1, "user": 1}'})
+        except BackendException as exp:  # pragma: no cover - should not happen
+            logger.debug("Exception: %s", exp)
+            return
 
         self.statsmgr.counter('action.acknowledge', len(all_ack['_items']))
 

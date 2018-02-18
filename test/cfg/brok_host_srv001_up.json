@@ -14,7 +14,7 @@
   "percent_state_change": 0.0,
   "state": "UP",
   "last_chk": 1444427104,
-  "last_state_id": 0,
+  "last_state_id": 4,
   "end_time": 0,
   "timeout": 0,
   "current_event_id": 10,
@@ -36,8 +36,7 @@
   "current_problem_id": 0,
   "host_name": "srv001",
   "check_interval": 5,
-  "state_id": 1,
+  "state_id": 0,
   "has_been_checked": 1,
-  "perf_data": "rta=0.049000ms;2.000000;3.000000;0.000000 pl=0%;50;80;0",
-  "uuid": "bca7ba24c8624421a7d5267a3a00cc07"
+  "perf_data": "rta=0.049000ms;2.000000;3.000000;0.000000 pl=0%;50;80;0"
 }

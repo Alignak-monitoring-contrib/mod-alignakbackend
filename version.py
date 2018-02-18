@@ -17,7 +17,7 @@ __pkg_name__ = u"alignak_module_backend"
 __module_types__ = u"backend"
 
 # Application manifest
-__version__ = u"1.1.1"
+__version__ = u"1.1.2"
 __author__ = u"David Durieux"
 __author_email__ = u"david.durieux@alignak.net"
 __copyright__ = u"(c) 2015-2017 - %s" % __author__

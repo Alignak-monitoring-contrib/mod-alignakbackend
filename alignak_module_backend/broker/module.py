@@ -904,12 +904,14 @@ class AlignakBackendBroker(BaseModule):
                         int(time.time()) + self.backend_connection_retry_delay
         elif type_data == 'lcrs':
             try:
+                logger.debug("Posting %d LCRs to the backend", len(self.logcheckresults))
                 while self.logcheckresults:
                     start = time.time()
-                    lcrs = self.logcheckresults[100:]
+                    lcrs = self.logcheckresults[:100]
                     self.statsmgr.counter('backend-post.lcr', len(lcrs))
                     response = self.backend.post(endpoint='logcheckresult', data=lcrs)
-                    del self.logcheckresults[100:]
+                    logger.debug("Posted %d LCRs", len(lcrs))
+                    del self.logcheckresults[:100]
                 self.logcheckresults = []
             except BackendException as exp:  # pragma: no cover - should not happen
                 logger.error('Error when posting LCR to the backend, data: %s',

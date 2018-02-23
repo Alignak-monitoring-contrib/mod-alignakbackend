@@ -344,6 +344,23 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         brok = Brok({'type': 'update_program_status', 'data': brok_data})
         brok.prepare()
 
+        # As default, we do not manage this brok !
+        assert self.brokmodule.manage_update_program_status is False
+
+        # Send program status brok
+        self.brokmodule.manage_brok(brok)
+
+        # Get alignak endpoint resources after the brok
+        name = u'my_alignak'
+        params = {'sort': '_id', 'where': '{"name": "%s"}' % name}
+        all_alignak = self.backend.get_all('alignak', params)
+        # Still no alignak configuration resource
+        self.assertEqual(0, len(all_alignak['_items']))
+
+        # -------
+        # Now we manage this brok !
+        self.brokmodule.manage_update_program_status = True
+
         # Send program status brok
         self.brokmodule.manage_brok(brok)
 

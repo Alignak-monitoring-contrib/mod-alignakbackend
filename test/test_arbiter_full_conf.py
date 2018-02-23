@@ -139,6 +139,10 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
         brok = Brok({'type': 'update_program_status', 'data': brok_data})
         brok.prepare()
 
+        # -------
+        # Configure to manage this brok (default is to ignore...) !
+        self.brokmodule.manage_update_program_status = True
+
         # Send program status brok
         self.brokmodule.manage_brok(brok)
         # This has created an `alignak` resource...
@@ -321,7 +325,9 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
         for host in self.objects['hosts']:
             print("Got host: %s" % host)
             for key, value in host.iteritems():
-                if not key.startswith('ls_') and not key.startswith('_'):
+                if not key.startswith('ls_') and \
+                        not key.startswith('_') and \
+                        not key.startswith('trigger'):
                     self.assertTrue(Host.properties[key])
 
     def test_realms(self):
@@ -349,7 +355,10 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
         for serv in self.objects['services']:
             print("Got service: %s" % serv)
             for key, value in serv.iteritems():
-                if not key.startswith('ls_') and not key.startswith('_') and not key in ['alias']:
+                if not key.startswith('ls_') and \
+                        not key.startswith('_') and \
+                        not key in ['alias'] and \
+                        not key.startswith('trigger'):
                     self.assertTrue(Service.properties[key])
 
     def test_servicegroups(self):

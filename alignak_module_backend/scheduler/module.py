@@ -83,6 +83,9 @@ class AlignakBackendScheduler(BaseModule):
             "Number of processes used by backend client: %s", self.client_processes
         )
 
+        self.backend_count = int(getattr(mod_conf, 'backend_count', '50'))
+        logger.info("backend pagination count: %d items", self.backend_count)
+
         logger.info("StatsD configuration: %s:%s, prefix: %s, enabled: %s",
                     getattr(mod_conf, 'statsd_host', 'localhost'),
                     int(getattr(mod_conf, 'statsd_port', '8125')),
@@ -185,7 +188,8 @@ class AlignakBackendScheduler(BaseModule):
         # Get data from the backend
         try:
             start = time.time()
-            response = self.backend.get_all('alignakretention')
+            params = {"max_results": self.backend_count}
+            response = self.backend.get_all('alignakretention', params)
             for host in response['_items']:
                 # clean unusable keys
                 hostname = host['host']
@@ -235,7 +239,8 @@ class AlignakBackendScheduler(BaseModule):
             start_time = time.time()
 
             # get list of retention_data
-            response = self.backend.get_all('alignakretention')
+            params = {"max_results": self.backend_count}
+            response = self.backend.get_all('alignakretention', params)
             db_hosts = {}
             for host in response['_items']:
                 db_hosts[host['host']] = host

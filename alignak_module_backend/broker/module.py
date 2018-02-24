@@ -116,6 +116,9 @@ class AlignakBackendBroker(BaseModule):
         self.backend_token = getattr(mod_conf, 'token', '')
         self.backend = Backend(self.url, self.client_processes)
 
+        self.manage_update_program_status = getattr(mod_conf, 'update_program_status', '0') == '1'
+        logger.info("manage update_program_status broks: %s", self.manage_update_program_status)
+
         # Log in to the backend
         self.logged_in = False
         self.backend_connected = self.backend_connection()
@@ -991,7 +994,8 @@ class AlignakBackendBroker(BaseModule):
             if brok.type in ['new_conf']:
                 ret = self.get_refs()
 
-            if brok.type in ['program_status', 'update_program_status']:
+            if self.manage_update_program_status and \
+                    brok.type in ['program_status', 'update_program_status']:
                 ret = self.update_program_status(brok)
 
             if brok.type == 'host_next_schedule':

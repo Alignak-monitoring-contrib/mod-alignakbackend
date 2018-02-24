@@ -487,8 +487,8 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
         self.assertEqual(len(self.objects['hosts']), 1)
         for host in self.objects['hosts']:
             for key, value in host.iteritems():
-                print("Got: %s = %s", key, value)
-                if not key.startswith('ls_'):
+                print("Got: %s = %s" % (key, value))
+                if not key.startswith('ls_') and not key.startswith('trigger'):
                     self.assertTrue(Host.properties[key])
 
         self.assertEqual(reference, self.objects['hosts'])
@@ -750,7 +750,7 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
         self.assertEqual(sorted_reference, sorted_list)
         for serv in self.objects['services']:
             for key, value in serv.iteritems():
-                if not key.startswith('ls_'):
+                if not key.startswith('ls_') and not key.startswith('trigger'):
                     self.assertTrue(Service.properties[key])
 
     def test_servicegroups(self):
@@ -768,10 +768,6 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
             },
         ]
         self.assertEqual(reference, self.objects['servicegroups'])
-
-    def test_triggers(self):
-        reference = []
-        self.assertEqual(reference, self.objects['triggers'])
 
     def test_hostdependencies(self):
         reference = []

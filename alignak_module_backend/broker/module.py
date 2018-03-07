@@ -586,14 +586,22 @@ class AlignakBackendBroker(BaseModule):
                 else:
                     update = True
                     logger.info("Updated %s: %s.", endpoint, name)
+
+                if endpoint == 'host':
+                    self.ref_live['host'][item['name']]['_etag'] = response['_etag']
+                elif endpoint == 'service':
+                    self.ref_live['service'][item['name']]['_etag'] = response['_etag']
             except BackendException as exp:  # pragma: no cover - should not happen
                 logger.error("Update %s '%s' failed", endpoint, name)
                 logger.error("Data: %s", differences)
-                logger.exception("Exception: %s", exp)
                 if exp.code == 404:
                     logger.error('Seems the %s %s deleted in the Backend',
                                  endpoint, name)
+                elif exp.code == 412:
+                    logger.error('Seems the %s %s was modified in the Backend',
+                                 endpoint, name)
                 else:
+                    logger.exception("Exception: %s", exp)
                     self.backend_connected = False
                     self.backend_connection_retry_planned = \
                         int(time.time()) + self.backend_connection_retry_delay
@@ -727,10 +735,15 @@ class AlignakBackendBroker(BaseModule):
             except BackendException as exp:  # pragma: no cover - should not happen
                 logger.error("Update alignak '%s' failed", name)
                 logger.error("Data: %s", brok.data)
-                logger.exception("Exception: %s / %s", exp, exp.response)
-                self.backend_connected = False
-                self.backend_connection_retry_planned = \
-                    int(time.time()) + self.backend_connection_retry_delay
+                if exp.code == 404:
+                    logger.error('Seems the alignak %s deleted in the Backend', name)
+                elif exp.code == 412:
+                    logger.error('Seems the alignak %s was modified in the Backend', name)
+                else:
+                    logger.exception("Exception: %s / %s", exp, exp.response)
+                    self.backend_connected = False
+                    self.backend_connection_retry_planned = \
+                        int(time.time()) + self.backend_connection_retry_delay
 
     def update_actions(self, brok):
         """We manage the acknowledge and downtime broks
@@ -875,6 +888,10 @@ class AlignakBackendBroker(BaseModule):
                 if exp.code == 404:
                     logger.error('Seems the host %s deleted in the Backend',
                                  self.mapping['host'][name])
+                elif exp.code == 412:
+                    logger.error('Seems the host %s was modified in the Backend',
+                                 self.mapping['host'][name])
+                    ret = False
                 else:
                     self.backend_connected = False
                     self.backend_connection_retry_planned = \
@@ -901,6 +918,10 @@ class AlignakBackendBroker(BaseModule):
                 if exp.code == 404:
                     logger.error('Seems the service %s deleted in the Backend',
                                  self.mapping['service'][name])
+                elif exp.code == 412:
+                    logger.error('Seems the service %s was modified in the Backend',
+                                 self.mapping['service'][name])
+                    ret = False
                 else:
                     self.backend_connected = False
                     self.backend_connection_retry_planned = \

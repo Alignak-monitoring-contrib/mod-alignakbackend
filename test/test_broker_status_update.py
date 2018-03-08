@@ -864,7 +864,7 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         data[prop] = value
         brok = Brok({'type': 'update_service_status', 'data': data})
         brok.prepare()
-        print("Brok: %s" % brok)
+        print("Before: %s" % brok)
 
         # Send service status brok
         self.brokmodule.manage_brok(brok)
@@ -880,7 +880,7 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
         my_changed_service.fill_data_brok_from(data, 'full_status')
         brok_bis = Brok({'type': 'update_service_status', 'data': data})
         brok_bis.prepare()
-        print("Brok: %s" % brok_bis)
+        print("After: %s" % brok_bis)
 
         # Broks data are equal, nothing changed
         self.assertEqual(brok.data, brok_bis.data)
@@ -896,6 +896,9 @@ class TestBrokerStatusUpdate(unittest2.TestCase):
 
         for prop in ['event_handler_enabled', 'active_checks_enabled', 'passive_checks_enabled',
                      'flap_detection_enabled', 'check_freshness', 'notifications_enabled']:
+            # Update several times...
+            self.assertTrue(self.check_service_brok(prop, True))
+            self.assertTrue(self.check_service_brok(prop, False))
             self.assertTrue(self.check_service_brok(prop, True))
             self.assertTrue(self.check_service_brok(prop, False))
 

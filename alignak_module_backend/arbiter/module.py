@@ -540,7 +540,9 @@ class AlignakBackendArbiter(BaseModule):
                 contact['service_notifications_enabled'] = False
 
             for key, value in contact['customs'].iteritems():
-                contact[key] = value
+                if key[0] not in ['_']:
+                    key = '_' + key
+                contact[key.upper()] = value
             self.clean_unusable_keys(contact)
             del contact['notes']
             del contact['ui_preferences']
@@ -703,7 +705,9 @@ class AlignakBackendArbiter(BaseModule):
                 if host['realm'] is None:
                     del host['realm']
             for key, value in host['customs'].iteritems():
-                host[key] = value
+                if key[0] not in ['_']:
+                    key = '_' + key
+                host[key.upper()] = value
 
             # Fix #9: inconsistent state when no retention module exists
             if not self.retention_actived and 'ls_last_state' in host:
@@ -881,7 +885,9 @@ class AlignakBackendArbiter(BaseModule):
             if 'alias' in service and service['alias'] == '':
                 del service['alias']
             for key, value in service['customs'].iteritems():
-                service[key] = value
+                if key[0] not in ['_']:
+                    key = '_' + key
+                service[key.upper()] = value
 
             # Fix #9: inconsistent state when no retention module exists
             if not self.retention_actived and 'ls_last_state' in service:

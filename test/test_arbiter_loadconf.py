@@ -80,8 +80,13 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
         data_cmd_http = cls.backend.post("command", data)
 
         # add user
-        data = {'name': 'jeronimo', 'host_notification_period': timeperiods_id,
-                'service_notification_period': timeperiods_id, '_realm': cls.realm_all}
+        data = {
+            'name': 'jeronimo',
+            'customs': {'_OS': 'linux', 'licence': 'free ;)'},
+            'host_notification_period': timeperiods_id,
+            'service_notification_period': timeperiods_id,
+            '_realm': cls.realm_all
+        }
         data_user_jeronimo = cls.backend.post("user", data)
 
         # add usergroup
@@ -100,6 +105,7 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
         data['check_command'] = data_cmd_ping['_id']
         del data['realm']
         data['_realm'] = cls.realm_all
+        data['customs'] = {'_OS': 'linux', 'licence': 'free ;)'}
         data['users'] = [data_user_jeronimo['_id']]
         data['usergroups'] = [data_usergroup['_id']]
         cls.data_host = cls.backend.post("host", data)
@@ -132,6 +138,7 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
         data['host'] = cls.data_host['_id']
         data['check_command'] = data_cmd_http['_id']
         data['_realm'] = cls.realm_all
+        data['customs'] = {'_OS': 'linux', 'licence': 'free ;)'}
         data['users'] = [data_user_jeronimo['_id']]
         data['usergroups'] = [data_usergroup['_id']]
         cls.data_srv_http = cls.backend.post("service", data)
@@ -264,6 +271,10 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
             },
             # the test created user has default notifications (eg. enabled)
             {
+                # Variables defined in customs properties are prefixed with _ and uppercased!
+                '_OS': 'linux',
+                '_LICENCE': 'free ;)',
+                # Other properties are as is
                 u'definition_order': 50,
                 u'service_notifications_enabled': False,
                 u'can_submit_commands': False,
@@ -392,6 +403,10 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
     def test_hosts(self):
         reference = [
             {
+                # Variables defined in customs properties are prefixed with _ and uppercased!
+                '_OS': 'linux',
+                '_LICENCE': 'free ;)',
+                # Other properties are as is
                 'realm': u'All',
                 u'active_checks_enabled': True,
                 u'icon_image_alt': u'',
@@ -488,7 +503,8 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
         for host in self.objects['hosts']:
             for key, value in host.iteritems():
                 print("Got: %s = %s" % (key, value))
-                if not key.startswith('ls_') and not key.startswith('trigger'):
+                if not key.startswith('ls_') and not key.startswith('_') \
+                        and not key.startswith('trigger'):
                     self.assertTrue(Host.properties[key])
 
         self.assertEqual(reference, self.objects['hosts'])
@@ -534,6 +550,10 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
         self.maxDiff = None
         reference = [
             {
+                # Variables defined in customs properties are prefixed with _ and uppercased!
+                '_OS': 'linux',
+                '_LICENCE': 'free ;)',
+                # Other properties are as is
                 'hostgroup_name': '',
                 u'active_checks_enabled': True,
                 u'icon_image_alt': u'',
@@ -750,7 +770,8 @@ class TestArbiterLoadConfiguration(unittest2.TestCase):
         self.assertEqual(sorted_reference, sorted_list)
         for serv in self.objects['services']:
             for key, value in serv.iteritems():
-                if not key.startswith('ls_') and not key.startswith('trigger'):
+                if not key.startswith('ls_') and not key.startswith('_') and \
+                        not key.startswith('trigger'):
                     self.assertTrue(Service.properties[key])
 
     def test_servicegroups(self):

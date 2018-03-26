@@ -588,9 +588,11 @@ class AlignakBackendBroker(BaseModule):
                     logger.info("Updated %s: %s.", endpoint, name)
 
                 if endpoint == 'host':
-                    self.ref_live['host'][item['name']]['_etag'] = response['_etag']
+                    self.ref_live['host'][self.mapping['host'][host_name]]['_etag'] = \
+                        response['_etag']
                 elif endpoint == 'service':
-                    self.ref_live['service'][item['name']]['_etag'] = response['_etag']
+                    self.ref_live['service'][self.mapping['service'][service_name]]['_etag'] = \
+                        response['_etag']
             except BackendException as exp:  # pragma: no cover - should not happen
                 logger.error("Update %s '%s' failed", endpoint, name)
                 logger.error("Data: %s", differences)

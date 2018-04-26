@@ -359,6 +359,7 @@ class TestBrokerAckDowntime(unittest2.TestCase):
 
         actionack = self.backend.get_all('actionacknowledge')
         self.assertEqual(len(actionack['_items']), 1)
+        self.assertEqual(actionack['_items'][0]['processed'], True)
         self.assertEqual(actionack['_items'][0]['notified'], True)
 
         services = self.backend.get_all('service')
@@ -388,6 +389,8 @@ class TestBrokerAckDowntime(unittest2.TestCase):
         self.brokmodule.manage_brok(b)
 
         actionack = self.backend.get_all('actionacknowledge')
+        actionack = self.backend.get('actionacknowledge')
+        print("Acjs: %s" % actionack)
         self.assertEqual(len(actionack['_items']), 1)
         self.assertEqual(actionack['_items'][0]['host'], self.data_host['_id'])
         self.assertEqual(actionack['_items'][0]['service'], self.data_srv_http['_id'])

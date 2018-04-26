@@ -1269,8 +1269,8 @@ class AlignakBackendArbiter(BaseModule):
                 ]
                 self.configuration_reload_required = False
                 for resource in resources:
-                    ret = self.backend.get(resource, {'where': '{"_updated":{"$gte": "' +
-                                                               self.time_loaded_conf + '"}}'})
+                    ret = self.backend.get(resource, {'where': '{"_updated":{"$gte": "%s"}}'
+                                                               % self.time_loaded_conf})
                     if ret['_meta']['total'] > 0:
                         logger.info(" - backend updated resource: %s, count: %d",
                                     resource, ret['_meta']['total'])

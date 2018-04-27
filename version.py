@@ -17,10 +17,10 @@ __pkg_name__ = u"alignak_module_backend"
 __module_types__ = u"backend"
 
 # Application manifest
-__version__ = u"1.3.0"
+__version__ = u"1.3.1"
 __author__ = u"David Durieux"
 __author_email__ = u"david.durieux@alignak.net"
-__copyright__ = u"(c) 2015-2017 - %s" % __author__
+__copyright__ = u"(c) 2015-2018 - %s" % __author__
 __license__ = u"GNU Affero General Public License, version 3"
 __git_url__ = u"https://github.com/Alignak-monitoring-contrib/alignak-module-backend"
 __doc_url__ = u"http://alignak-doc.readthedocs.io/en/latest"

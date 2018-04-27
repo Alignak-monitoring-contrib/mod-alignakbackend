@@ -18,7 +18,7 @@ install:
 script:
   - pip freeze  # so to help eventual debug: know what exact versions are in use can be rather useful.
   # Code static analysis
-  - pycodestyle --max-line-length=100 --exclude='*.pyc, *.cfg, *.log' --ignore='E402' alignak_module_backend/*
+  - pycodestyle --max-line-length=100 --exclude='*.pyc, *.cfg, *.log' --ignore='E402' --ignore='W504' alignak_module_backend/*
   - pylint --rcfile=.pylintrc alignak_module_backend/*
   # Code dynamic analysis
   - cd test

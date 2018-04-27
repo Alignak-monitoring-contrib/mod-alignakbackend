@@ -105,6 +105,9 @@ class AlignakBackendBroker(BaseModule):
                                                               '10'))
         except ValueError:
             self.backend_connection_retry_delay = 10
+        logger.info("backend connection retry delay: %.2f seconds",
+                    self.backend_connection_retry_delay)
+
         self.backend_errors_count = 0
         self.backend_username = getattr(mod_conf, 'username', '')
         self.backend_password = getattr(mod_conf, 'password', '')
@@ -456,28 +459,6 @@ class AlignakBackendBroker(BaseModule):
         #     del self.ref_live['host'][h_id]['initial_state_type']
         self.logcheckresults.append(posted_data)
 
-        # start = time.time()
-        # self.statsmgr.counter('backend-post.lcr', 1)
-        #
-        # # Send to the backend
-        # try:
-        #     response = self.backend.post(endpoint='logcheckresult', data=posted_data)
-        # except BackendException as exp:  # pragma: no cover - should not happen
-        #     logger.error('Error when posting LCR to the backend, data: %s', posted_data)
-        #     print('Error when posting LCR to the backend, data: %s', posted_data)
-        #     logger.error("Exception: %s", exp)
-        #     print("Exception: %s / %s", exp, exp.response)
-        #     ret = False
-        # else:
-        #     if response['_status'] == 'ERR':  # pragma: no cover - should not happen
-        #         logger.error('Error when posting LCR to the backend, data: %s', posted_data)
-        #         logger.error('Issues: %s', response['_issues'])
-        #         print('Issues: %s', response['_issues'])
-        #         ret = False
-        #
-        # self.statsmgr.timer('backend-post-time.lcr', time.time() - start)
-        # return ret
-
     def update_status(self, brok):
         # pylint: disable=too-many-locals
         """We manage the status change for a backend host/service/contact
@@ -756,15 +737,15 @@ class AlignakBackendBroker(BaseModule):
         """
         host_name = brok.data['host']
         if host_name not in self.mapping['host']:
-            logger.warning("Updating action for a brok for an unknown host: '%s'", host_name)
-            return
+            logger.error("Updating action for a brok for an unknown host: '%s'", host_name)
+            return False
         service_name = ''
         if 'service' in brok.data:
             service_name = '__'.join([host_name, brok.data['service']])
             if service_name not in self.mapping['service']:
-                logger.warning("Updating action for a brok for an unknown service: '%s'",
-                               service_name)
-                return
+                logger.error("Updating action for a brok for an unknown service: '%s'",
+                             service_name)
+                return False
 
         data_to_update = {}
         endpoint = 'actionacknowledge'
@@ -789,7 +770,7 @@ class AlignakBackendBroker(BaseModule):
 
         if 'service' in brok.data:
             # it's a service
-            self.send_to_backend('livestate_service', service_name, data_to_update)
+            cr = self.send_to_backend('livestate_service', service_name, data_to_update)
             where['service'] = self.mapping['service'][service_name]
         else:
             # it's a host
@@ -808,8 +789,9 @@ class AlignakBackendBroker(BaseModule):
                 'If-Match': actions['_items'][0]['_etag']
             }
             self.statsmgr.counter('backend-patch.%s' % endpoint, 1)
-            self.backend.patch(
-                endpoint + '/' + actions['_items'][0]['_id'], {"notified": True}, headers, True)
+            cr = self.backend.patch(endpoint + '/' + actions['_items'][0]['_id'],
+                                    {"notified": True}, headers, True)
+            return cr['_status'] == 'OK'
         else:
             # case 2: the acknowledge / downtime do not come from the backend, it's an external
             # command so we create a new entry
@@ -821,7 +803,10 @@ class AlignakBackendBroker(BaseModule):
             if users['_items']:
                 where['user'] = users['_items'][0]['_id']
             else:
-                return
+                logger.error("User '%s' is unknown, ack/downtime is set by admin",
+                             brok.data['author'])
+                users = self.backend.get_all('user', {'where': '{"name":"admin"}'})
+                where['user'] = users['_items'][0]['_id']
 
             if brok.type in ['acknowledge_raise', 'downtime_raise']:
                 where['action'] = 'add'
@@ -841,7 +826,8 @@ class AlignakBackendBroker(BaseModule):
                 where['fixed'] = bool(brok.data['fixed'])
                 where['duration'] = int(brok.data['duration'])
             self.statsmgr.counter('backend-post.%s' % endpoint, 1)
-            self.backend.post(endpoint, where)
+            cr = self.backend.post(endpoint, where)
+            return cr['_status'] == 'OK'
 
     def send_to_backend(self, type_data, name, data):
         """
@@ -873,7 +859,7 @@ class AlignakBackendBroker(BaseModule):
             headers['If-Match'] = self.ref_live['host'][self.mapping['host'][name]]['_etag']
             try:
                 start = time.time()
-                self.statsmgr.counter('backend-patch.host', 1)
+                # self.statsmgr.counter('backend-patch.host', 1)
                 response = self.backend.patch(
                     'host/%s' % self.ref_live['host'][self.mapping['host'][name]]['_id'],
                     data, headers, True)
@@ -899,22 +885,30 @@ class AlignakBackendBroker(BaseModule):
                     self.backend_connection_retry_planned = \
                         int(time.time()) + self.backend_connection_retry_delay
         elif type_data == 'livestate_service':
-            headers['If-Match'] = self.ref_live['service'][self.mapping['service'][name]]['_etag']
+            service_id = self.mapping['service'][name]
+            headers['If-Match'] = self.ref_live['service'][service_id]['_etag']
             try:
                 start = time.time()
                 self.statsmgr.counter('backend-patch.service', 1)
-                response = self.backend.patch(
-                    'service/%s' % self.ref_live['service'][self.mapping['service'][name]]['_id'],
-                    data, headers, True)
+                logger.debug("Send to backend: %s, %s (_etag: %s) - %s",
+                             type_data, name,
+                             self.ref_live['service'][service_id]['_etag'],
+                             data)
+                response = self.backend.patch('service/%s' %
+                                              self.ref_live['service'][service_id]['_id'],
+                                              data, headers, True)
                 self.statsmgr.timer('backend-patch-time.service', time.time() - start)
                 if response['_status'] == 'ERR':  # pragma: no cover - should not happen
                     logger.error('%s', response['_issues'])
                     ret = False
                 else:
-                    self.ref_live['service'][self.mapping['service'][name]]['_etag'] = response[
-                        '_etag']
+                    self.ref_live['service'][service_id]['_etag'] = response['_etag']
+                    logger.debug("Updated _etag: %s, %s (_etag: %s)",
+                                 type_data, name,
+                                 self.ref_live['service'][self.mapping['service'][name]]['_etag'])
             except BackendException as exp:  # pragma: no cover - should not happen
-                logger.error('Patch livestate for service %s error', self.mapping['service'][name])
+                logger.error('Patch livestate for %s/%s %s error',
+                             type_data, name, self.mapping['service'][name])
                 logger.error('Data: %s', data)
                 logger.exception("Exception: %s", exp)
                 if exp.code == 404:
@@ -929,6 +923,7 @@ class AlignakBackendBroker(BaseModule):
                     self.backend_connection_retry_planned = \
                         int(time.time()) + self.backend_connection_retry_delay
         elif type_data == 'lcrs':
+            response = {'_status': 'OK'}
             try:
                 logger.debug("Posting %d LCRs to the backend", len(self.logcheckresults))
                 while self.logcheckresults:
@@ -1042,7 +1037,6 @@ class AlignakBackendBroker(BaseModule):
             return ret
         except Exception as exp:  # pragma: no cover - should not happen
             logger.exception("Manage brok exception: %s", exp)
-            print("Manage brok exception: %s", exp)
 
         return False
 

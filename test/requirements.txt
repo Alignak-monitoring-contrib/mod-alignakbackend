@@ -2,7 +2,7 @@
 -r ../requirements.txt
 
 # alignak
--e git+https://github.com/Alignak-monitoring/alignak.git@develop#egg=alignak
+-e git+https://github.com/Alignak-monitoring/alignak.git@python3#egg=alignak
 # alignak backend
 -e git+https://github.com/Alignak-monitoring-contrib/alignak-backend.git@develop#egg=alignak-backend
 # alignak backend import script

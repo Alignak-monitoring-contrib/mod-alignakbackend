@@ -94,7 +94,7 @@ class TestBrokerConnection(unittest2.TestCase):
         response = requests.post(endpoint + '/user', json=data, headers=headers,
                                  auth=cls.auth)
         resp = response.json()
-        print("Created a new user: %s" % resp)
+        print(("Created a new user: %s" % resp))
 
     @classmethod
     def tearDownClass(cls):
@@ -338,7 +338,7 @@ class TestBrokerCommon(unittest2.TestCase):
         self.brokmodule.manage_brok(b)
         # Check the log check results prepared list
         assert len(self.brokmodule.logcheckresults) == 1
-        print("LCR: %s" % self.brokmodule.logcheckresults[0])
+        print(("LCR: %s" % self.brokmodule.logcheckresults[0]))
         # Send data to the backend
         self.brokmodule.send_to_backend('lcrs', '', '')
 
@@ -348,7 +348,7 @@ class TestBrokerCommon(unittest2.TestCase):
         number = 0
         updated = 0
         for index, item in enumerate(r['_items']):
-            print("Item: %s is %s" % (item['name'], item['ls_state']))
+            print(("Item: %s is %s" % (item['name'], item['ls_state'])))
             self.assertEqual(item['ls_state'], 'UP')
             self.assertEqual(item['ls_state_id'], 0)
             self.assertEqual(item['ls_state_type'], 'HARD')
@@ -440,7 +440,7 @@ class TestBrokerCommon(unittest2.TestCase):
             new_updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
-        print("Updated: %s" % new_updated)
+        print(("Updated: %s" % new_updated))
         # The item do not have its _updated field changed!
         self.assertEqual(updated, new_updated)
 
@@ -491,7 +491,7 @@ class TestBrokerCommon(unittest2.TestCase):
             new_updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
-        print("Updated: %s" % new_updated)
+        print(("Updated: %s" % new_updated))
         # The item do not have its _updated field changed!
         self.assertEqual(updated, new_updated)
 
@@ -545,21 +545,21 @@ class TestBrokerCommon(unittest2.TestCase):
 
         # --- #1 - Post a real host UP brok
         data = {
-            u'last_time_unreachable': 0, u'last_problem_id': 0, u'retry_interval': 0,
-            u'last_event_id': 0, u'problem_has_been_acknowledged': False,
-            u'command_name': u'_internal_host_up', u'last_state': u'UNREACHABLE',
-            u'latency': 0.9299669266, u'last_state_type': u'HARD',
-            u'last_hard_state_change': 1496234084, u'last_time_up': 1496234084,
-            u'percent_state_change': 0.0, u'state': u'UP', u'last_chk': 1496234083,
-            u'last_state_id': 0, u'end_time': 0, u'timeout': 0, u'current_event_id': 17,
-            u'execution_time': 0, u'start_time': 0, u'return_code': 0, u'state_type': u'HARD',
-            u'state_id': 0, u'in_checking': False, u'early_timeout': 0,
-            u'in_scheduled_downtime': False, u'attempt': 1, u'state_type_id': 1,
-            u'acknowledgement_type': 1, u'last_state_change': 1496234084.930904,
-            u'last_time_down': 0, 'instance_id': u'7de9f30b2e9649dd98d5d5be8ebe6e3b',
-            u'long_output': u'Host assumed to be UP', u'current_problem_id': 0,
-            u'host_name': u'srv001', u'check_interval': 5, u'output': u'Host assumed to be UP',
-            u'has_been_checked': 1, u'perf_data': u''
+            'last_time_unreachable': 0, 'last_problem_id': 0, 'retry_interval': 0,
+            'last_event_id': 0, 'problem_has_been_acknowledged': False,
+            'command_name': '_internal_host_up', 'last_state': 'UNREACHABLE',
+            'latency': 0.9299669266, 'last_state_type': 'HARD',
+            'last_hard_state_change': 1496234084, 'last_time_up': 1496234084,
+            'percent_state_change': 0.0, 'state': 'UP', 'last_chk': 1496234083,
+            'last_state_id': 0, 'end_time': 0, 'timeout': 0, 'current_event_id': 17,
+            'execution_time': 0, 'start_time': 0, 'return_code': 0, 'state_type': 'HARD',
+            'state_id': 0, 'in_checking': False, 'early_timeout': 0,
+            'in_scheduled_downtime': False, 'attempt': 1, 'state_type_id': 1,
+            'acknowledgement_type': 1, 'last_state_change': 1496234084.930904,
+            'last_time_down': 0, 'instance_id': '7de9f30b2e9649dd98d5d5be8ebe6e3b',
+            'long_output': 'Host assumed to be UP', 'current_problem_id': 0,
+            'host_name': 'srv001', 'check_interval': 5, 'output': 'Host assumed to be UP',
+            'has_been_checked': 1, 'perf_data': ''
         }
         b = Brok({'data': data, 'type': 'host_check_result'}, False)
         # Simulate the main module function
@@ -611,26 +611,26 @@ class TestBrokerCommon(unittest2.TestCase):
             new_updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
-        print("Updated: %s" % new_updated)
+        print(("Updated: %s" % new_updated))
         # The item do not have its _updated field changed!
         self.assertEqual(updated, new_updated)
 
         # --- #2 - Post a real host UP brok
         data = {
-            u'last_time_unreachable': 0, u'last_problem_id': 0, u'retry_interval': 0,
-            u'last_event_id': 0, u'problem_has_been_acknowledged': False,
-            u'command_name': u'_internal_host_up', u'last_state': u'UP', u'latency': 0.8838100433,
-            u'last_state_type': u'HARD', u'last_hard_state_change': 1496234084,
-            u'last_time_up': 1496237384, u'percent_state_change': 0.0, u'state': u'UP',
-            u'last_chk': 1496237383, u'last_state_id': 0, u'end_time': 0, u'timeout': 0,
-            u'current_event_id': 17, u'execution_time': 0, u'start_time': 0, u'return_code': 0,
-            u'state_type': u'HARD', u'state_id': 0, u'in_checking': False, u'early_timeout': 0,
-            u'in_scheduled_downtime': False, u'attempt': 1, u'state_type_id': 1,
-            u'acknowledgement_type': 1, u'last_state_change': 1496234084.930904,
-            u'last_time_down': 0, 'instance_id': u'7de9f30b2e9649dd98d5d5be8ebe6e3b',
-            u'long_output': u'Host assumed to be UP', u'current_problem_id': 0,
-            u'host_name': u'srv001', u'check_interval': 5, u'output': u'Host assumed to be UP',
-            u'has_been_checked': 1, u'perf_data': u''
+            'last_time_unreachable': 0, 'last_problem_id': 0, 'retry_interval': 0,
+            'last_event_id': 0, 'problem_has_been_acknowledged': False,
+            'command_name': '_internal_host_up', 'last_state': 'UP', 'latency': 0.8838100433,
+            'last_state_type': 'HARD', 'last_hard_state_change': 1496234084,
+            'last_time_up': 1496237384, 'percent_state_change': 0.0, 'state': 'UP',
+            'last_chk': 1496237383, 'last_state_id': 0, 'end_time': 0, 'timeout': 0,
+            'current_event_id': 17, 'execution_time': 0, 'start_time': 0, 'return_code': 0,
+            'state_type': 'HARD', 'state_id': 0, 'in_checking': False, 'early_timeout': 0,
+            'in_scheduled_downtime': False, 'attempt': 1, 'state_type_id': 1,
+            'acknowledgement_type': 1, 'last_state_change': 1496234084.930904,
+            'last_time_down': 0, 'instance_id': '7de9f30b2e9649dd98d5d5be8ebe6e3b',
+            'long_output': 'Host assumed to be UP', 'current_problem_id': 0,
+            'host_name': 'srv001', 'check_interval': 5, 'output': 'Host assumed to be UP',
+            'has_been_checked': 1, 'perf_data': ''
         }
         b = Brok({'data': data, 'type': 'host_check_result'}, False)
         # Simulate the main module function
@@ -681,26 +681,26 @@ class TestBrokerCommon(unittest2.TestCase):
             new_updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
-        print("Updated: %s" % new_updated)
+        print(("Updated: %s" % new_updated))
         # The item do not have its _updated field changed!
         self.assertEqual(updated, new_updated)
 
         # --- #3 - Post a real host UP brok
         data = {
-            u'last_time_unreachable': 0, u'last_problem_id': 0, u'retry_interval': 0,
-            u'last_event_id': 0, u'problem_has_been_acknowledged': False,
-            u'command_name': u'_internal_host_up', u'last_state': u'UP', u'latency': 0.8838100433,
-            u'last_state_type': u'HARD', u'last_hard_state_change': 1496234084,
-            u'last_time_up': 1496237384, u'percent_state_change': 0.0, u'state': u'UP',
-            u'last_chk': 1496237383, u'last_state_id': 0, u'end_time': 0, u'timeout': 0,
-            u'current_event_id': 17, u'execution_time': 0, u'start_time': 0, u'return_code': 0,
-            u'state_type': u'HARD', u'state_id': 0, u'in_checking': False, u'early_timeout': 0,
-            u'in_scheduled_downtime': False, u'attempt': 1, u'state_type_id': 1,
-            u'acknowledgement_type': 1, u'last_state_change': 1496234084.930904,
-            u'last_time_down': 0, 'instance_id': u'7de9f30b2e9649dd98d5d5be8ebe6e3b',
-            u'long_output': u'Host assumed to be UP', u'current_problem_id': 0,
-            u'host_name': u'srv001', u'check_interval': 5, u'output': u'Host assumed to be UP',
-            u'has_been_checked': 1, u'perf_data': u''
+            'last_time_unreachable': 0, 'last_problem_id': 0, 'retry_interval': 0,
+            'last_event_id': 0, 'problem_has_been_acknowledged': False,
+            'command_name': '_internal_host_up', 'last_state': 'UP', 'latency': 0.8838100433,
+            'last_state_type': 'HARD', 'last_hard_state_change': 1496234084,
+            'last_time_up': 1496237384, 'percent_state_change': 0.0, 'state': 'UP',
+            'last_chk': 1496237383, 'last_state_id': 0, 'end_time': 0, 'timeout': 0,
+            'current_event_id': 17, 'execution_time': 0, 'start_time': 0, 'return_code': 0,
+            'state_type': 'HARD', 'state_id': 0, 'in_checking': False, 'early_timeout': 0,
+            'in_scheduled_downtime': False, 'attempt': 1, 'state_type_id': 1,
+            'acknowledgement_type': 1, 'last_state_change': 1496234084.930904,
+            'last_time_down': 0, 'instance_id': '7de9f30b2e9649dd98d5d5be8ebe6e3b',
+            'long_output': 'Host assumed to be UP', 'current_problem_id': 0,
+            'host_name': 'srv001', 'check_interval': 5, 'output': 'Host assumed to be UP',
+            'has_been_checked': 1, 'perf_data': ''
         }
         b = Brok({'data': data, 'type': 'host_check_result'}, False)
         # Simulate the main module function
@@ -751,27 +751,27 @@ class TestBrokerCommon(unittest2.TestCase):
             new_updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
-        print("Updated: %s" % new_updated)
+        print(("Updated: %s" % new_updated))
         # The item do not have its _updated field changed!
         self.assertEqual(updated, new_updated)
 
         # --- #4 - Post a real host DOWN brok
         data = {
-            u'last_time_unreachable': 0, u'last_problem_id': 0, u'retry_interval': 0,
-            u'last_event_id': 0, u'problem_has_been_acknowledged': False,
-            u'command_name': u'check_nrpe_alive', u'last_state': u'UP',
-            u'latency': 1.491920948, u'last_state_type': u'HARD',
-            u'last_hard_state_change': 1496240268, u'last_time_up': 0, u'percent_state_change': 4.1,
-            u'state': u'DOWN', u'last_chk': 1496240268, u'last_state_id': 0, u'end_time': 0,
-            u'timeout': 0, u'current_event_id': 31, u'execution_time': 0.1163659096,
-            u'start_time': 0, u'return_code': 3, u'state_type': u'HARD', u'state_id': 1,
-            u'in_checking': False, u'early_timeout': 0, u'in_scheduled_downtime': False,
-            u'attempt': 0, u'state_type_id': 1, u'acknowledgement_type': 1,
-            u'last_state_change': 1496234084.0, u'last_time_down': 1496240268,
-            'instance_id': u'16d0a854a3a5479fbfe0c9155392ca64',
-            u'long_output': u'Host is DOWN', u'current_problem_id': 0, u'host_name': u'srv001',
-            u'check_interval': 5, u'output': u'Host is DOWN', u'has_been_checked': 1,
-            u'perf_data': u''
+            'last_time_unreachable': 0, 'last_problem_id': 0, 'retry_interval': 0,
+            'last_event_id': 0, 'problem_has_been_acknowledged': False,
+            'command_name': 'check_nrpe_alive', 'last_state': 'UP',
+            'latency': 1.491920948, 'last_state_type': 'HARD',
+            'last_hard_state_change': 1496240268, 'last_time_up': 0, 'percent_state_change': 4.1,
+            'state': 'DOWN', 'last_chk': 1496240268, 'last_state_id': 0, 'end_time': 0,
+            'timeout': 0, 'current_event_id': 31, 'execution_time': 0.1163659096,
+            'start_time': 0, 'return_code': 3, 'state_type': 'HARD', 'state_id': 1,
+            'in_checking': False, 'early_timeout': 0, 'in_scheduled_downtime': False,
+            'attempt': 0, 'state_type_id': 1, 'acknowledgement_type': 1,
+            'last_state_change': 1496234084.0, 'last_time_down': 1496240268,
+            'instance_id': '16d0a854a3a5479fbfe0c9155392ca64',
+            'long_output': 'Host is DOWN', 'current_problem_id': 0, 'host_name': 'srv001',
+            'check_interval': 5, 'output': 'Host is DOWN', 'has_been_checked': 1,
+            'perf_data': ''
         }
         b = Brok({'data': data, 'type': 'host_check_result'}, False)
         # Simulate the main module function
@@ -822,7 +822,7 @@ class TestBrokerCommon(unittest2.TestCase):
             new_updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
-        print("Updated: %s" % new_updated)
+        print(("Updated: %s" % new_updated))
         # The item do not have its _updated field changed!
         self.assertEqual(updated, new_updated)
 
@@ -891,7 +891,7 @@ class TestBrokerCommon(unittest2.TestCase):
             updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
-        print("Updated: %s" % updated)
+        print(("Updated: %s" % updated))
 
         # Simulate a service next scheduler brok
         data = json.loads(open('cfg/brok_service_ping_next_check.json').read())
@@ -925,7 +925,7 @@ class TestBrokerCommon(unittest2.TestCase):
             new_updated = item['_updated']
             number += 1
         self.assertEqual(1, number)
-        print("Updated: %s" % new_updated)
+        print(("Updated: %s" % new_updated))
         # The item do not have its _updated field changed!
         self.assertEqual(updated, new_updated)
 
@@ -948,21 +948,21 @@ class TestBrokerCommon(unittest2.TestCase):
 
         # --- Post a real service check result brok
         for i in range(0,9):
-            data = {            u'last_time_unreachable': 1498188961, u'last_problem_id': 2, u'retry_interval': 0,
-                u'last_event_id': 2, u'problem_has_been_acknowledged': False, u'last_time_critical': 0,
-                u'last_time_warning': 1498132868, u'command_name': u'_echo', u'last_state': u'OK',
-                u'latency': 0, u'current_event_id': 11, u'last_state_type': u'HARD',
-                u'last_hard_state_change': 1498190476, u'percent_state_change': 34.3, u'state': u'OK',
-                u'last_chk': 1498191517, u'last_state_id': 0, u'host_name': u'srv001',
-                u'timeout': 0, u'last_time_unknown': 0, u'execution_time': 0.0, u'start_time': 0,
-                u'return_code': 0, u'state_type': u'HARD', u'state_id': 0,
-                u'service_description': u'ping', u'in_checking': False, u'early_timeout': 0,
-                u'in_scheduled_downtime': False, u'attempt': 1, u'state_type_id': 1,
-                u'acknowledgement_type': 1, u'last_state_change': 1498190476.866557,
-                'instance_id': u'936d0f5e6c10471f8d23fbe62a384f24', u'long_output': u'',
-                u'current_problem_id': 0, u'last_time_ok': 1498191518, u'check_interval': 5,
-                u'output': u'OK: uptime: 16:42h, boot: 2017-06-22 11:35:44 (UTC)',
-                u'has_been_checked': 1, u'perf_data': u"'uptime'=60173s;2100;90000", u'end_time': 0
+            data = {            'last_time_unreachable': 1498188961, 'last_problem_id': 2, 'retry_interval': 0,
+                'last_event_id': 2, 'problem_has_been_acknowledged': False, 'last_time_critical': 0,
+                'last_time_warning': 1498132868, 'command_name': '_echo', 'last_state': 'OK',
+                'latency': 0, 'current_event_id': 11, 'last_state_type': 'HARD',
+                'last_hard_state_change': 1498190476, 'percent_state_change': 34.3, 'state': 'OK',
+                'last_chk': 1498191517, 'last_state_id': 0, 'host_name': 'srv001',
+                'timeout': 0, 'last_time_unknown': 0, 'execution_time': 0.0, 'start_time': 0,
+                'return_code': 0, 'state_type': 'HARD', 'state_id': 0,
+                'service_description': 'ping', 'in_checking': False, 'early_timeout': 0,
+                'in_scheduled_downtime': False, 'attempt': 1, 'state_type_id': 1,
+                'acknowledgement_type': 1, 'last_state_change': 1498190476.866557,
+                'instance_id': '936d0f5e6c10471f8d23fbe62a384f24', 'long_output': '',
+                'current_problem_id': 0, 'last_time_ok': 1498191518, 'check_interval': 5,
+                'output': 'OK: uptime: 16:42h, boot: 2017-06-22 11:35:44 (UTC)',
+                'has_been_checked': 1, 'perf_data': "'uptime'=60173s;2100;90000", 'end_time': 0
             }
             b = Brok({'data': data, 'type': 'service_check_result'}, False)
             # Simulate the main module function
@@ -998,16 +998,16 @@ class TestBrokerCommon(unittest2.TestCase):
                 new_updated = item['_updated']
                 number += 1
             self.assertEqual(1, number)
-            print("Updated: %s" % new_updated)
+            print(("Updated: %s" % new_updated))
             # The item do not have its _updated field changed!
             self.assertEqual(updated, new_updated)
 
         # --- Post a real service next check brok
         for i in range(0,9):
             data = {
-                'instance_id': u'c54d19e52f5d46fb976d373ee4bae3c9',
-                u'service_description': u'ping', u'next_chk': 1498197600,
-                u'in_checking': True, u'host_name': u'srv001'
+                'instance_id': 'c54d19e52f5d46fb976d373ee4bae3c9',
+                'service_description': 'ping', 'next_chk': 1498197600,
+                'in_checking': True, 'host_name': 'srv001'
             }
             b = Brok({'data': data, 'type': 'service_next_schedule'}, False)
             b.prepare()
@@ -1038,7 +1038,7 @@ class TestBrokerCommon(unittest2.TestCase):
                 new_updated = item['_updated']
                 number += 1
             self.assertEqual(1, number)
-            print("Updated: %s" % new_updated)
+            print(("Updated: %s" % new_updated))
             # The item do not have its _updated field changed!
             self.assertEqual(updated, new_updated)
 

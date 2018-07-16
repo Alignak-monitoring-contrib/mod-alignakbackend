@@ -60,9 +60,9 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
         time.sleep(3)
 
         test_dir = os.path.dirname(os.path.realpath(__file__))
-        print("Current test directory: %s" % test_dir)
+        print(("Current test directory: %s" % test_dir))
 
-        print("Feeding Alignak backend... %s" % test_dir)
+        print(("Feeding Alignak backend... %s" % test_dir))
         exit_code = subprocess.call(
             shlex.split(
                 'alignak-backend-import --delete %s/cfg/default/_main.cfg' % test_dir)
@@ -104,37 +104,37 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
         # Get a program status brok
         brok_data = {
             # Some general information
-            u'alignak_name': u'my_alignak',
-            u'instance_id': u'176064a1b30741d39452415097807ab0',
-            u'instance_name': u'scheduler-master',
+            'alignak_name': 'my_alignak',
+            'instance_id': '176064a1b30741d39452415097807ab0',
+            'instance_name': 'scheduler-master',
 
             # Some running information
-            u'program_start': 1493969754,
-            u'daemon_mode': 1,
-            u'pid': 68989,
-            u'last_alive': 1493970641,
-            u'last_command_check': 1493970641,
-            u'last_log_rotation': 1493970641,
-            u'is_running': 1,
+            'program_start': 1493969754,
+            'daemon_mode': 1,
+            'pid': 68989,
+            'last_alive': 1493970641,
+            'last_command_check': 1493970641,
+            'last_log_rotation': 1493970641,
+            'is_running': 1,
 
             # Some configuration parameters
-            u'process_performance_data': True,
-            u'passive_service_checks_enabled': True,
-            u'event_handlers_enabled': True,
-            u'command_file': u'',
-            u'global_host_event_handler': None,
-            u'interval_length': 60,
-            u'modified_host_attributes': 0,
-            u'check_external_commands': True,
-            u'modified_service_attributes': 0,
-            u'passive_host_checks_enabled': True,
-            u'global_service_event_handler': None,
-            u'notifications_enabled': True,
-            u'check_service_freshness': True,
-            u'check_host_freshness': True,
-            u'flap_detection_enabled': True,
-            u'active_service_checks_enabled': True,
-            u'active_host_checks_enabled': True
+            'process_performance_data': True,
+            'passive_service_checks_enabled': True,
+            'event_handlers_enabled': True,
+            'command_file': '',
+            'global_host_event_handler': None,
+            'interval_length': 60,
+            'modified_host_attributes': 0,
+            'check_external_commands': True,
+            'modified_service_attributes': 0,
+            'passive_host_checks_enabled': True,
+            'global_service_event_handler': None,
+            'notifications_enabled': True,
+            'check_service_freshness': True,
+            'check_host_freshness': True,
+            'flap_detection_enabled': True,
+            'active_service_checks_enabled': True,
+            'active_host_checks_enabled': True
         }
         brok = Brok({'type': 'update_program_status', 'data': brok_data})
         brok.prepare()
@@ -152,19 +152,19 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
         fake_arb = Arbiter()
         self.arbmodule.hook_read_configuration(fake_arb)
         configuration = self.arbmodule.get_alignak_configuration()
-        print("Configuration: %s" % configuration)
+        print(("Configuration: %s" % configuration))
         expected = brok_data.copy()
-        print("Expected: %s" % expected)
-        expected[u'name'] = expected.pop('alignak_name')
+        print(("Expected: %s" % expected))
+        expected['name'] = expected.pop('alignak_name')
         # Some fields are valued as default by the backend
-        configuration.pop(u'_created')
-        configuration.pop(u'_updated')
-        configuration.pop(u'_id')
-        configuration.pop(u'_etag')
-        configuration.pop(u'_realm')
-        configuration.pop(u'_sub_realm')
-        configuration.pop(u'_links')
-        configuration.pop(u'schema_version')
+        configuration.pop('_created')
+        configuration.pop('_updated')
+        configuration.pop('_id')
+        configuration.pop('_etag')
+        configuration.pop('_realm')
+        configuration.pop('_sub_realm')
+        configuration.pop('_links')
+        configuration.pop('schema_version')
         # TODO need add this new fields in alignak brok creation
         for field_name in ['use_timezone',
                            'illegal_macro_output_chars', 'illegal_object_name_chars',
@@ -185,47 +185,47 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
                            'host_freshness_check_interval', 'accept_passive_service_checks',
                            'service_freshness_check_interval', 'additional_freshness_latency']:
             configuration.pop(field_name)
-        expected[u'alias'] = expected[u'name']
-        expected[u'notes'] = u''
-        expected[u'notes_url'] = u''
-        expected[u'global_host_event_handler'] = str(expected[u'global_host_event_handler'])
-        expected[u'global_service_event_handler'] = u'None'
+        expected['alias'] = expected['name']
+        expected['notes'] = ''
+        expected['notes_url'] = ''
+        expected['global_host_event_handler'] = str(expected['global_host_event_handler'])
+        expected['global_service_event_handler'] = 'None'
         self.assertEqual(configuration, expected)
 
         # Get another program status brok
         brok_data = {
             # Some general information
-            u'alignak_name': u'my_alignak_2',
-            u'instance_id': u'176064a1b30741d39452415097807ab0',
-            u'instance_name': u'scheduler-master',
+            'alignak_name': 'my_alignak_2',
+            'instance_id': '176064a1b30741d39452415097807ab0',
+            'instance_name': 'scheduler-master',
 
             # Some running information
-            u'program_start': 1493969754,
-            u'daemon_mode': 1,
-            u'pid': 68989,
-            u'last_alive': 1493970641,
-            u'last_command_check': 1493970641,
-            u'last_log_rotation': 1493970641,
-            u'is_running': 1,
+            'program_start': 1493969754,
+            'daemon_mode': 1,
+            'pid': 68989,
+            'last_alive': 1493970641,
+            'last_command_check': 1493970641,
+            'last_log_rotation': 1493970641,
+            'is_running': 1,
 
             # Some configuration parameters
-            u'process_performance_data': True,
-            u'passive_service_checks_enabled': True,
-            u'event_handlers_enabled': True,
-            u'command_file': u'',
-            u'global_host_event_handler': 'None',
-            u'interval_length': 60,
-            u'modified_host_attributes': 0,
-            u'check_external_commands': True,
-            u'modified_service_attributes': 0,
-            u'passive_host_checks_enabled': True,
-            u'global_service_event_handler': 'None',
-            u'notifications_enabled': True,
-            u'check_service_freshness': True,
-            u'check_host_freshness': True,
-            u'flap_detection_enabled': True,
-            u'active_service_checks_enabled': True,
-            u'active_host_checks_enabled': True
+            'process_performance_data': True,
+            'passive_service_checks_enabled': True,
+            'event_handlers_enabled': True,
+            'command_file': '',
+            'global_host_event_handler': 'None',
+            'interval_length': 60,
+            'modified_host_attributes': 0,
+            'check_external_commands': True,
+            'modified_service_attributes': 0,
+            'passive_host_checks_enabled': True,
+            'global_service_event_handler': 'None',
+            'notifications_enabled': True,
+            'check_service_freshness': True,
+            'check_host_freshness': True,
+            'flap_detection_enabled': True,
+            'active_service_checks_enabled': True,
+            'active_host_checks_enabled': True
         }
         brok = Brok({'type': 'update_program_status', 'data': brok_data})
         brok.prepare()
@@ -241,14 +241,14 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
         self.arbmodule.hook_read_configuration(fake_arb)
         configuration = self.arbmodule.get_alignak_configuration()
         # Some fields are valued as default by the backend
-        configuration.pop(u'_created')
-        configuration.pop(u'_updated')
-        configuration.pop(u'_id')
-        configuration.pop(u'_etag')
-        configuration.pop(u'_realm')
-        configuration.pop(u'_sub_realm')
-        configuration.pop(u'_links')
-        configuration.pop(u'schema_version')
+        configuration.pop('_created')
+        configuration.pop('_updated')
+        configuration.pop('_id')
+        configuration.pop('_etag')
+        configuration.pop('_realm')
+        configuration.pop('_sub_realm')
+        configuration.pop('_links')
+        configuration.pop('schema_version')
         # TODO need add this new fields in alignak brok creation
         for field_name in ['use_timezone',
                            'illegal_macro_output_chars', 'illegal_object_name_chars',
@@ -272,21 +272,21 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
         self.assertEqual(configuration, expected)
 
     def test_commands(self):
-        self.assertEqual(len(self.objects['commands']), 105)
+        self.assertEqual(len(self.objects['commands']), 107)
         for comm in self.objects['commands']:
-            for key, value in comm.iteritems():
+            for key, value in comm.items():
                 self.assertTrue(Command.properties[key])
 
     def test_hostescalations(self):
         self.assertEqual(len(self.objects['hostescalations']), 2)
         for item in self.objects['hostescalations']:
-            for key, value in item.iteritems():
+            for key, value in item.items():
                 self.assertTrue(Hostescalation.properties[key])
 
     def test_contacts(self):
         self.assertEqual(len(self.objects['contacts']), 8)
         for cont in self.objects['contacts']:
-            for key, value in cont.iteritems():
+            for key, value in cont.items():
                 # problem in alignak because not defined
                 if key not in ['can_update_livestate', 'skill_level', 'webui_visible'] \
                         and not key.startswith('_'):
@@ -301,13 +301,13 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
     def test_serviceescalations(self):
         self.assertEqual(len(self.objects['serviceescalations']), 3)
         for item in self.objects['serviceescalations']:
-            for key, value in item.iteritems():
+            for key, value in item.items():
                 self.assertTrue(Serviceescalation.properties[key])
 
     def test_hostgroups(self):
         self.assertEqual(len(self.objects['hostgroups']), 9)
         for hostgrp in self.objects['hostgroups']:
-            for key, value in hostgrp.iteritems():
+            for key, value in hostgrp.items():
                 # problem in alignak because not defined
                 if key not in ['hostgroup_members']:
                     self.assertTrue(Hostgroup.properties[key])
@@ -315,7 +315,7 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
     def test_contactgroups(self):
         self.assertEqual(len(self.objects['contactgroups']), 4)
         for contact in self.objects['contactgroups']:
-            for key, value in contact.iteritems():
+            for key, value in contact.items():
                 # problem in alignak because not defined
                 if key not in ['contactgroup_members', 'notes']:
                     self.assertTrue(Contactgroup.properties[key])
@@ -323,8 +323,8 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
     def test_hosts(self):
         self.assertEqual(len(self.objects['hosts']), 13)
         for host in self.objects['hosts']:
-            print("Got host: %s" % host)
-            for key, value in host.iteritems():
+            print(("Got host: %s" % host))
+            for key, value in host.items():
                 if not key.startswith('ls_') and \
                         not key.startswith('_') and \
                         not key.startswith('trigger'):
@@ -333,28 +333,28 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
     def test_realms(self):
         self.assertEqual(len(self.objects['realms']), 5)
         for realm in self.objects['realms']:
-            print("Got realm: %s" % realm)
-            for key, value in realm.iteritems():
+            print(("Got realm: %s" % realm))
+            for key, value in realm.items():
                 self.assertTrue(Realm.properties[key])
             if realm['realm_name'] == 'All':
                 members = realm['realm_members'].split(',')
-                print("Realm All members: %s", members)
+                print(("Realm All members: %s", members))
                 self.assertEqual(len(members), 2)
                 for member in members:
-                    self.assertIn(member, [u'Europe', u'US'])
+                    self.assertIn(member, ['Europe', 'US'])
             if realm['realm_name'] == 'Europe':
                 members = realm['realm_members'].split(',')
-                print("Realm Europe members: %s", members)
+                print(("Realm Europe members: %s", members))
                 self.assertEqual(len(members), 2)
                 for member in members:
-                    self.assertIn(member, [u'Italy', u'France'])
+                    self.assertIn(member, ['Italy', 'France'])
 
     def test_services(self):
         # As of #80, ... 94
         self.assertEqual(len(self.objects['services']), 94)
         for serv in self.objects['services']:
-            print("Got service: %s" % serv)
-            for key, value in serv.iteritems():
+            print(("Got service: %s" % serv))
+            for key, value in serv.items():
                 if not key.startswith('ls_') and \
                         not key.startswith('_') and \
                         not key in ['alias'] and \
@@ -364,7 +364,7 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
     def test_servicegroups(self):
         self.assertEqual(len(self.objects['servicegroups']), 6)
         for grp in self.objects['servicegroups']:
-            for key, value in grp.iteritems():
+            for key, value in grp.items():
                 # problem in alignak because not defined
                 if key not in ['servicegroup_members']:
                     self.assertTrue(Servicegroup.properties[key])
@@ -372,7 +372,7 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
     def test_hostdependencies(self):
         self.assertEqual(len(self.objects['hostdependencies']), 3)
         for grp in self.objects['hostdependencies']:
-            for key, value in grp.iteritems():
+            for key, value in grp.items():
                 # Do not exist in Alignak, but do not disturb...
                 if key not in ['notes', 'alias']:
                     self.assertTrue(Hostdependency.properties[key])
@@ -380,7 +380,7 @@ class TestArbiterFullConfiguration(unittest2.TestCase):
     def test_servicedependencies(self):
         self.assertEqual(len(self.objects['servicedependencies']), 1)
         for grp in self.objects['servicedependencies']:
-            for key, value in grp.iteritems():
+            for key, value in grp.items():
                 # Do not exist in Alignak, but do not disturb...
                 if key not in ['notes', 'alias']:
                     self.assertTrue(Servicedependency.properties[key])

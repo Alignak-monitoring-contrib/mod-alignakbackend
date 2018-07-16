@@ -333,14 +333,14 @@ class TestScheduler(unittest2.TestCase):
         reference = {
             'srv001': {
                 'latency': 0,
-                'last_state_type': u'HARD',
-                'state': u'UP',
+                'last_state_type': 'HARD',
+                'state': 'UP',
                 'last_chk': 0,
             },
             'srv002': {
                 'latency': 0,
-                'last_state_type': u'HARD',
-                'state': u'UP',
+                'last_state_type': 'HARD',
+                'state': 'UP',
                 'last_chk': 0,
             }
         }
@@ -349,14 +349,14 @@ class TestScheduler(unittest2.TestCase):
         reference = {
             ('srv001', 'check_http'): {
                 'latency': 0,
-                'last_state_type': u'HARD',
-                'state': u'OK',
+                'last_state_type': 'HARD',
+                'state': 'OK',
                 'last_chk': 0,
             },
             ('srv002', 'check_https'): {
                 'latency': 0,
-                'last_state_type': u'HARD',
-                'state': u'WARNING',
+                'last_state_type': 'HARD',
+                'state': 'WARNING',
                 'last_chk': 0,
             }
         }

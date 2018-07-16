@@ -202,11 +202,12 @@ class AlignakBackendScheduler(BaseModule):
                     if key in host:
                         del host[key]
                 all_data['hosts'][hostname] = host
+
             logger.info('%d hosts loaded from retention', len(all_data['hosts']))
-            self.statsmgr.counter('load.host', len(all_data['hosts']))
+            self.statsmgr.counter('retention-load.hosts', len(all_data['hosts']))
             logger.info('%d services loaded from retention', len(all_data['services']))
-            self.statsmgr.counter('load.service', len(all_data['services']))
-            self.statsmgr.timer('load.time', time.time() - start)
+            self.statsmgr.counter('retention-load.services', len(all_data['services']))
+            self.statsmgr.timer('retention-load.time', time.time() - start)
 
             scheduler.restore_retention_data(all_data)
         except BackendException:
@@ -249,9 +250,11 @@ class AlignakBackendScheduler(BaseModule):
             for host in data_to_save['hosts']:
                 data_to_save['hosts'][host]['retention_services'] = {}
                 data_to_save['hosts'][host]['host'] = host
-            for service in data_to_save['services']:
-                data_to_save['hosts'][service[0]]['retention_services'][service[1]] = \
-                    data_to_save['services'][service]
+            if 'services' in data_to_save:
+                # Scheduler old-school: two separate dictionaries!
+                for service in data_to_save['services']:
+                    data_to_save['hosts'][service[0]]['retention_services'][service[1]] = \
+                        data_to_save['services'][service]
 
             for host in data_to_save['hosts']:
                 if host in db_hosts:
@@ -280,10 +283,10 @@ class AlignakBackendScheduler(BaseModule):
                         self.backend_connected = False
                         return False
             logger.info('%d hosts saved in retention', len(data_to_save['hosts']))
-            self.statsmgr.counter('save.host', len(data_to_save['hosts']))
+            self.statsmgr.counter('retention-save.hosts', len(data_to_save['hosts']))
             logger.info('%d services saved in retention', len(data_to_save['services']))
-            self.statsmgr.counter('save.service', len(data_to_save['services']))
-            self.statsmgr.timer('save.time', time.time() - start_time)
+            self.statsmgr.counter('retention-save.services', len(data_to_save['services']))
+            self.statsmgr.timer('retention-save.time', time.time() - start_time)
 
             now = time.time()
             logger.info("Retention saved in %s seconds", (now - start_time))

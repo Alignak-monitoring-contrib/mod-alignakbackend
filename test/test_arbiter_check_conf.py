@@ -178,13 +178,12 @@ class TestArbiterConfigCheck(unittest2.TestCase):
         print("Configuration check - get test setup created objects")
         self.arbmodule.next_check = now - 1
         self.arbmodule.time_loaded_conf = datetime.utcfromtimestamp(now - 5).strftime(self.arbmodule.backend_date_format)
-        print("Next check: %s" % (next_check))
+        print(("Next check: %s" % (next_check)))
         assert self.arbmodule.configuration_reload_required is False
         assert self.arbmodule.configuration_reload_changelog == []
         self.arbmodule.hook_tick(arb)
-        print("Next check: %s / %s" % (next_check, self.arbmodule.next_check))
+        print(("Next check: %s / %s" % (next_check, self.arbmodule.next_check)))
         assert self.arbmodule.next_check > now
-        assert self.arbmodule.configuration_reload_required is True
         assert len(self.arbmodule.configuration_reload_changelog) == 16
         # Nothing changed becaused only the host livestate got updated
 
@@ -262,7 +261,7 @@ class TestArbiterConfigCheck(unittest2.TestCase):
                 item = log['item']
                 assert '_updated' in item
                 assert item['level'] == 'ERROR'
-                assert item['message'] == "The arbiter pid file (%s) is not available. " \
+                assert item['message'] == "Problem with the arbiter pid file (%s). " \
                                           "Configuration reload notification was not raised." \
                                           % arb.pidfile
         # No arbiter PID file exists!
@@ -298,16 +297,9 @@ class TestArbiterConfigCheck(unittest2.TestCase):
                 item = log['item']
                 assert '_updated' in item
                 assert item['level'] == 'ERROR'
-                if not got_invalid_file:
-                    assert item['message'] == "The arbiter pid file (%s) is not available. " \
-                                              "Configuration reload notification was not raised." \
-                                              % arb.pidfile
-                    got_invalid_file = True
-                else:
-                    assert item['message'] == "The arbiter pid (%s) stored in file (%s) is not " \
-                                              "for an existing process. " \
-                                              "Configuration reload notification was not raised." \
-                                              % (123456, arb.pidfile)
+                assert item['message'] == "Problem with the arbiter pid file (%s). " \
+                                          "Configuration reload notification was not raised." \
+                                          % arb.pidfile
         # No arbiter PID file exists remains in the log!
         # Invalid arbiter PID!
 

@@ -23,7 +23,7 @@ This module is used to send logs and livestate to alignak-backend with broker
 
 import time
 import json
-import Queue
+import queue
 import logging
 
 from alignak.stats import Stats
@@ -650,11 +650,11 @@ class AlignakBackendBroker(BaseModule):
 
         # Set event handlers as strings - simple protectection
         if 'global_host_event_handler' in brok.data and \
-                not isinstance(brok.data['global_host_event_handler'], basestring):
+                not isinstance(brok.data['global_host_event_handler'], str):
             brok.data['global_host_event_handler'] = str(brok.data['global_host_event_handler'])
 
         if 'global_service_event_handler' in brok.data and \
-                not isinstance(brok.data['global_service_event_handler'], basestring):
+                not isinstance(brok.data['global_service_event_handler'], str):
             brok.data['global_service_event_handler'] = \
                 str(brok.data['global_service_event_handler'])
 
@@ -792,42 +792,42 @@ class AlignakBackendBroker(BaseModule):
             cr = self.backend.patch(endpoint + '/' + actions['_items'][0]['_id'],
                                     {"notified": True}, headers, True)
             return cr['_status'] == 'OK'
+
+        # case 2: the acknowledge / downtime do not come from the backend, it's an external
+        # command so we create a new entry
+        where['notified'] = True
+        # try find the user
+        self.statsmgr.counter('backend-getall.user', 1)
+        users = self.backend.get_all('user',
+                                     {'where': '{"name":"' + brok.data['author'] + '"}'})
+        if users['_items']:
+            where['user'] = users['_items'][0]['_id']
         else:
-            # case 2: the acknowledge / downtime do not come from the backend, it's an external
-            # command so we create a new entry
-            where['notified'] = True
-            # try find the user
-            self.statsmgr.counter('backend-getall.user', 1)
-            users = self.backend.get_all('user',
-                                         {'where': '{"name":"' + brok.data['author'] + '"}'})
-            if users['_items']:
-                where['user'] = users['_items'][0]['_id']
-            else:
-                logger.error("User '%s' is unknown, ack/downtime is set by admin",
-                             brok.data['author'])
-                users = self.backend.get_all('user', {'where': '{"name":"admin"}'})
-                where['user'] = users['_items'][0]['_id']
+            logger.error("User '%s' is unknown, ack/downtime is set by admin",
+                         brok.data['author'])
+            users = self.backend.get_all('user', {'where': '{"name":"admin"}'})
+            where['user'] = users['_items'][0]['_id']
 
-            if brok.type in ['acknowledge_raise', 'downtime_raise']:
-                where['action'] = 'add'
-            else:
-                where['action'] = 'delete'
-            where['_realm'] = self.ref_live['host'][where['host']]['_realm']
+        if brok.type in ['acknowledge_raise', 'downtime_raise']:
+            where['action'] = 'add'
+        else:
+            where['action'] = 'delete'
+        where['_realm'] = self.ref_live['host'][where['host']]['_realm']
 
-            if endpoint == 'actionacknowledge':
-                if brok.data['sticky'] == 2:
-                    where['sticky'] = False
-                else:
-                    where['sticky'] = True
-                where['notify'] = bool(brok.data['notify'])
-            elif endpoint == 'actiondowntime':
-                where['start_time'] = int(brok.data['start_time'])
-                where['end_time'] = int(brok.data['end_time'])
-                where['fixed'] = bool(brok.data['fixed'])
-                where['duration'] = int(brok.data['duration'])
-            self.statsmgr.counter('backend-post.%s' % endpoint, 1)
-            cr = self.backend.post(endpoint, where)
-            return cr['_status'] == 'OK'
+        if endpoint == 'actionacknowledge':
+            if brok.data['sticky'] == 2:
+                where['sticky'] = False
+            else:
+                where['sticky'] = True
+            where['notify'] = bool(brok.data['notify'])
+        elif endpoint == 'actiondowntime':
+            where['start_time'] = int(brok.data['start_time'])
+            where['end_time'] = int(brok.data['end_time'])
+            where['fixed'] = bool(brok.data['fixed'])
+            where['duration'] = int(brok.data['duration'])
+        self.statsmgr.counter('backend-post.%s' % endpoint, 1)
+        cr = self.backend.post(endpoint, where)
+        return cr['_status'] == 'OK'
 
     def send_to_backend(self, type_data, name, data):
         """
@@ -1014,7 +1014,8 @@ class AlignakBackendBroker(BaseModule):
 
             if self.manage_update_program_status and \
                     brok.type in ['program_status', 'update_program_status']:
-                ret = self.update_program_status(brok)
+                self.update_program_status(brok)
+                ret = None
 
             if brok.type == 'host_next_schedule':
                 ret = self.update_next_check(brok.data, 'host')
@@ -1026,7 +1027,8 @@ class AlignakBackendBroker(BaseModule):
                 ret = self.update_status(brok)
 
             if brok.type in ['host_check_result', 'service_check_result']:
-                ret = self.check_result(brok.data)
+                self.check_result(brok.data)
+                ret = None
 
             if brok.type in ['acknowledge_raise', 'acknowledge_expire',
                              'downtime_raise', 'downtime_expire']:
@@ -1077,7 +1079,7 @@ class AlignakBackendBroker(BaseModule):
                 if self.logcheckresults:
                     self.send_to_backend('lcrs', None, None)
 
-            except Queue.Empty:
+            except queue.Empty:
                 # logger.debug("No message in the module queue")
                 time.sleep(0.1)
 

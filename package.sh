@@ -75,7 +75,7 @@ pkg_description="Alignak backend modules for Alignak"
 pkg_url="http://alignak.net"
 pkg_team="Alignak Team (contact@alignak.net)"
 
-version=`python -c "from alignak_backend import __version__;print(__version__)"`
+version=`python -c "from version import __version__;print(__version__)"`
 version_date=`date "+%Y-%m-%d"`
 
 mkdir -p dist

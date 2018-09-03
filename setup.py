@@ -42,7 +42,7 @@ for subdir, dirs, files in os.walk(package_name):
                                      "", subdir))
     # Configuration directory
     elif subdir and 'etc' in subdir:
-        target = os.path.join('etc/alignak',
+        target = os.path.join('share/alignak/etc',
                               re.sub(r"^(%s\/|%s$)" % (
                                   os.path.join(package_name, 'etc'),
                                   os.path.join(package_name, 'etc')),
@@ -102,7 +102,7 @@ setup(
     data_files = data_files,
 
     # Dependencies (if some) ...
-    install_requires=['alignak_backend_client'],
+    install_requires=['six', 'alignak_backend_client'],
 
     # Entry points (if some) ...
     entry_points={

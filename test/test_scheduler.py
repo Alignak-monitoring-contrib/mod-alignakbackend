@@ -228,7 +228,8 @@ class TestScheduler(unittest2.TestCase):
         ]
 
         for host in hosts['_items']:
-            for key in ['_created', '_etag', '_id', '_links', '_updated', '_user']:
+            for key in ['_created', '_etag', '_id', '_links', '_updated', '_user',
+                        'schema_version']:
                 del host[key]
 
         self.assertEqual(2, len(hosts['_items']))
@@ -311,7 +312,8 @@ class TestScheduler(unittest2.TestCase):
         ]
 
         for host in hosts['_items']:
-            for key in ['_created', '_etag', '_id', '_links', '_updated', '_user']:
+            for key in ['_created', '_etag', '_id', '_links', '_updated', '_user',
+                        'schema_version']:
                 del host[key]
 
         self.assertEqual(3, len(hosts['_items']))
